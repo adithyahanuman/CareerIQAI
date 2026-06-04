@@ -40,19 +40,19 @@
       const email = user.email || '';
       const domain = email.includes('@') ? email.split('@')[1] : null;
       let role = 'user';
-      if (email.includes('admin')) {
-        role = 'admin';
-      } else {
-        try {
-          const snap = await db.collection('users').doc(user.uid).get();
-          if (snap.exists && snap.data().role) role = snap.data().role;
-        } catch (e) { }
-      }
+      let name = user.displayName || email.split('@')[0];
+      try {
+        const snap = await db.collection('users').doc(user.uid).get();
+        if (snap.exists) {
+          if (snap.data().role) role = snap.data().role;
+          if (snap.data().name) name = snap.data().name;
+        }
+      } catch (e) { }
       currentSession = {
         user: {
           id: user.uid, uid: user.uid,
           email: user.email,
-          name: user.displayName || email.split('@')[0],
+          name: name,
           picture: user.photoURL,
           domain, role,
           verified: user.emailVerified
@@ -316,7 +316,7 @@
   };
 
   // ---- Email Auth ----
-  const handleEmailAuth = async (email, password, isSignup = false) => {
+  const handleEmailAuth = async (email, password, isSignup = false, name = '', phone = '') => {
     const validation = await validateDomain(email);
     if (!validation.allowed) {
       window.location.href = getBaseUrl() + '/auth/access-denied.html?email=' + encodeURIComponent(email);
@@ -326,6 +326,13 @@
     let cred;
     if (isSignup) {
       cred = await auth.createUserWithEmailAndPassword(email, password);
+      
+      if (name) {
+        try {
+          await cred.user.updateProfile({ displayName: name });
+        } catch(e) {}
+      }
+
       const baseUrl = getBaseUrl();
       if (baseUrl.startsWith('http')) {
         const actionCodeSettings = {
@@ -342,11 +349,18 @@
 
     await AuditLog.add(isSignup ? 'SIGNUP_SUCCESS' : 'LOGIN_SUCCESS', {}, email, true);
     try {
-      await db.collection('users').doc(cred.user.uid).set({
-        email, name: email.split('@')[0],
-        domain: validation.domain.domain, org: validation.domain.org_name,
+      const userData = {
+        email,
+        domain: validation.domain.domain,
+        org: validation.domain.org_name,
         lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
+      };
+      if (name) userData.name = name;
+      else if (isSignup) userData.name = email.split('@')[0];
+      
+      if (phone) userData.phone = phone;
+
+      await db.collection('users').doc(cred.user.uid).set(userData, { merge: true });
     } catch (e) { }
     
     let role = 'user';
