@@ -53,6 +53,7 @@
           id: user.uid, uid: user.uid,
           email: user.email,
           name: name,
+          displayName: name,
           picture: user.photoURL,
           domain, role,
           verified: user.emailVerified
