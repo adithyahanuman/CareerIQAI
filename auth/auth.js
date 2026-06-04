@@ -397,15 +397,18 @@
       if (isAdminEmail(email)) {
         userData.role = 'admin';
       }
-      if (name) {
-        userData.name = name;
-      } else if (isSignup) {
-        userData.name = email.split('@')[0];
+      
+      if (isSignup) {
+        if (name) {
+          userData.name = name;
+        } else {
+          userData.name = email.split('@')[0];
+        }
+        
+        userData.displayName = displayName || name || email.split('@')[0];
+        
+        if (phone) userData.phone = phone;
       }
-      
-      userData.displayName = displayName || name || email.split('@')[0];
-      
-      if (phone) userData.phone = phone;
 
       await db.collection('users').doc(cred.user.uid).set(userData, { merge: true });
     } catch (e) { }
