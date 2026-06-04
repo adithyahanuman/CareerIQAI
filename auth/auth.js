@@ -239,7 +239,11 @@
     let cred;
     if (isSignup) {
       cred = await auth.createUserWithEmailAndPassword(email, password);
-      await cred.user.sendEmailVerification();
+      const actionCodeSettings = {
+        url: getBaseUrl() + '/auth/verify-email.html',
+        handleCodeInApp: false
+      };
+      await cred.user.sendEmailVerification(actionCodeSettings);
     } else {
       cred = await auth.signInWithEmailAndPassword(email, password);
     }
