@@ -120,12 +120,28 @@
 
       // Handle Resend
       window.resendEmail = async () => {
+        const currentUser = firebase.auth().currentUser;
+        if (!currentUser) {
+          CareerIQAuth.Toast.show('User session not found. Please log in again.', 'error');
+          return;
+        }
+
         const resendBtn = document.getElementById('resendBtn');
         const countdownText = document.getElementById('countdownText');
         const countdownSpan = document.getElementById('countdown');
         
         try {
-          await user.sendEmailVerification();
+          const baseUrl = CareerIQAuth.getBaseUrl();
+          if (baseUrl.startsWith('http')) {
+            const actionCodeSettings = {
+              url: baseUrl + '/auth/verify-email.html',
+              handleCodeInApp: false
+            };
+            await currentUser.sendEmailVerification(actionCodeSettings);
+          } else {
+            await currentUser.sendEmailVerification();
+          }
+          
           CareerIQAuth.Toast.show('Verification email resent!', 'success');
           
           resendBtn.style.display = 'none';

@@ -326,11 +326,16 @@
     let cred;
     if (isSignup) {
       cred = await auth.createUserWithEmailAndPassword(email, password);
-      const actionCodeSettings = {
-        url: getBaseUrl() + '/auth/verify-email.html',
-        handleCodeInApp: false
-      };
-      await cred.user.sendEmailVerification(actionCodeSettings);
+      const baseUrl = getBaseUrl();
+      if (baseUrl.startsWith('http')) {
+        const actionCodeSettings = {
+          url: baseUrl + '/auth/verify-email.html',
+          handleCodeInApp: false
+        };
+        await cred.user.sendEmailVerification(actionCodeSettings);
+      } else {
+        await cred.user.sendEmailVerification();
+      }
     } else {
       cred = await auth.signInWithEmailAndPassword(email, password);
     }
