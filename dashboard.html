@@ -10,13 +10,14 @@
   <style>
     /* Custom Dashboard Overrides */
     body {
-      background: #0b0d12;
-      color: #ffffff;
+      background: var(--bg-primary);
+      color: var(--text-primary);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       font-family: 'Outfit', sans-serif;
       margin: 0;
+      transition: background 0.3s, color 0.3s;
     }
     
     /* Top Navbar */
@@ -25,8 +26,9 @@
       justify-content: space-between;
       align-items: center;
       padding: 16px 32px;
-      background: #11131a;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      transition: background 0.3s, border-color 0.3s;
     }
     
     .nav-left {
@@ -54,7 +56,7 @@
     .brand-text {
       font-size: 20px;
       font-weight: 800;
-      color: #ffffff;
+      color: var(--text-primary);
       letter-spacing: -0.5px;
     }
     
@@ -81,13 +83,13 @@
     .user-name {
       font-size: 14px;
       font-weight: 600;
-      color: #ffffff;
+      color: var(--text-primary);
       margin-bottom: 2px;
     }
     
     .user-email {
       font-size: 12px;
-      color: #8b949e;
+      color: var(--text-secondary);
     }
     
     .user-avatar {
@@ -107,14 +109,14 @@
       display: flex;
       align-items: center;
       gap: 16px;
-      border-left: 1px solid rgba(255,255,255,0.1);
+      border-left: 1px solid var(--border);
       padding-left: 24px;
     }
     
     .theme-toggle-btn {
       background: transparent;
       border: none;
-      color: #8b949e;
+      color: var(--text-secondary);
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -124,13 +126,13 @@
     }
     
     .theme-toggle-btn:hover {
-      color: #ffffff;
+      color: var(--text-primary);
     }
     
     .btn-logout {
       background: transparent;
-      border: 1px solid rgba(255,255,255,0.15);
-      color: #ffffff;
+      border: 1px solid var(--border-strong);
+      color: var(--text-primary);
       padding: 8px 16px;
       border-radius: 6px;
       font-size: 13px;
@@ -141,8 +143,8 @@
     }
     
     .btn-logout:hover {
-      background: rgba(255,255,255,0.05);
-      border-color: rgba(255,255,255,0.3);
+      background: var(--bg-glass-hover);
+      border-color: var(--border-strong);
     }
     
     /* Main Content */
@@ -157,13 +159,14 @@
     
     /* Welcome Card */
     .welcome-card {
-      background: linear-gradient(145deg, #161b22, #11141a);
-      border: 1px solid rgba(255,255,255,0.06);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
       border-radius: 16px;
       padding: 40px;
       position: relative;
       overflow: hidden;
       margin-bottom: 24px;
+      transition: background 0.3s, border-color 0.3s;
     }
     
     .welcome-card::after {
@@ -188,7 +191,7 @@
     .welcome-title {
       font-size: 36px;
       font-weight: 800;
-      color: #ffffff;
+      color: var(--text-primary);
       margin: 0 0 8px 0;
       line-height: 1.2;
     }
@@ -199,7 +202,7 @@
     
     .welcome-subtitle {
       font-size: 15px;
-      color: #8b949e;
+      color: var(--text-secondary);
       margin-bottom: 28px;
     }
     
@@ -231,12 +234,13 @@
     }
     
     .stat-card {
-      background: #14171f;
-      border: 1px solid rgba(255,255,255,0.06);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
       border-radius: 16px;
       padding: 24px;
       display: flex;
       flex-direction: column;
+      transition: background 0.3s, border-color 0.3s;
     }
     
     .stat-icon-wrapper {
@@ -266,16 +270,17 @@
     
     .stat-label {
       font-size: 13px;
-      color: #8b949e;
+      color: var(--text-secondary);
       font-weight: 500;
     }
     
     /* Coming Soon Card */
     .coming-soon-card {
-      background: #14171f;
-      border: 1px solid rgba(255,255,255,0.06);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
       border-radius: 16px;
       padding: 28px 32px;
+      transition: background 0.3s, border-color 0.3s;
     }
     
     .cs-header {
@@ -288,7 +293,7 @@
     .cs-title {
       font-size: 18px;
       font-weight: 700;
-      color: #ffffff;
+      color: var(--text-primary);
       margin: 0;
     }
     
@@ -306,7 +311,7 @@
     
     .cs-desc {
       font-size: 14px;
-      color: #8b949e;
+      color: var(--text-secondary);
       line-height: 1.6;
       margin: 0;
     }
@@ -537,13 +542,7 @@
         window.location.href = 'index.html';
       });
       
-      // Theme toggle handler (if implemented in auth.js Theme)
-      const themeBtn = document.getElementById('themeToggle');
-      if (themeBtn && window.CareerIQAuth.Theme) {
-        themeBtn.addEventListener('click', () => {
-          window.CareerIQAuth.Theme.toggle();
-        });
-      }
+
     };
 
     if (window.CareerIQAuth) {
