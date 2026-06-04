@@ -53,6 +53,11 @@
           if (snap.data().role) role = snap.data().role;
           if (snap.data().name) name = snap.data().name;
           if (snap.data().displayName) displayName = snap.data().displayName;
+          
+          if (user.displayName && user.displayName !== email.split('@')[0] && displayName === email.split('@')[0]) {
+            displayName = user.displayName;
+            await db.collection('users').doc(user.uid).update({ displayName: user.displayName });
+          }
         }
       } catch (e) { }
       if (isAdminEmail(email)) {
