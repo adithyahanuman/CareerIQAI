@@ -305,9 +305,13 @@
         try {
           var result = await CareerIQAuth.handleEmailAuth(emailEl.value.trim().toLowerCase(), passEl.value, false);
           if (result && result.ok) {
+            const fbUser = firebase.auth().currentUser;
             if (result.role === 'admin' || result.role === 'super_admin') {
               CareerIQAuth.Toast.show('Welcome back, Admin!', 'success');
               CareerIQAuth.smoothRedirect(CareerIQAuth.getBaseUrl() + '/admin/index.html', 'Taking you to Admin Panel…');
+            } else if (fbUser && !fbUser.emailVerified) {
+              CareerIQAuth.Toast.show('Please verify your email address.', 'warning');
+              CareerIQAuth.smoothRedirect(CareerIQAuth.getBaseUrl() + '/auth/verify-email.html', 'Taking you to verify email page…');
             } else {
               CareerIQAuth.Toast.show('Welcome back!', 'success');
               CareerIQAuth.smoothRedirect(CareerIQAuth.getBaseUrl() + '/dashboard.html', 'Taking you to your dashboard…');
