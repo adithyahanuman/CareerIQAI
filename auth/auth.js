@@ -24,8 +24,7 @@
 
   const isAdminEmail = (email) => {
     if (!email) return false;
-    const normalized = email.toLowerCase().trim();
-    return normalized === 'admin.careeriqai@gmail.com' || normalized === 'admin.careriqai@gmail.com';
+    return email.toLowerCase().trim() === 'admin.careeriqai@gmail.com';
   };
 
   // ---- Storage (localStorage helpers) ----
