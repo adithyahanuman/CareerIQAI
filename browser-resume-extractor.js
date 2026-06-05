@@ -37,10 +37,8 @@ const ResumeExtractor = (function() {
       throw new Error("pdfjsLib is not loaded. Please include pdf.js before running extraction.");
     }
     
-    // Set worker src if not set
-    if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    }
+    // Always set worker src to ensure CDN worker is used
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
     const loadingTask = pdfjsLib.getDocument({ data: fileArrayBuffer });
     const pdf = await loadingTask.promise;

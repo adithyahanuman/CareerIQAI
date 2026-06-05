@@ -145,14 +145,16 @@ const OnboardingWizard = {
       this.data = {};
     }
 
-    // 3. Setup UI bindings
+    // 3. Pre-fill form from saved data synchronously to avoid race conditions
+    this.populateForm();
+
+    // 4. Setup UI bindings
     this.setupNavigation();
-    this.setupAutoSave();
     this.setupComplexInputs();
     this.updateProgressUI();
 
-    // Pre-fill form from saved data
-    setTimeout(() => this.populateForm(), 100);
+    // 5. Setup Auto-save AFTER form is populated to prevent saving blank fields
+    this.setupAutoSave();
 
     // Initial check on industry max selections (safe check)
     if (typeof this.updateIndustryCounter === 'function') {
@@ -179,12 +181,13 @@ const OnboardingWizard = {
 
     const skipBtn = document.querySelector('.onboarding-skip');
     if (skipBtn) {
-      skipBtn.addEventListener('click', (e) => {
+      skipBtn.addEventListener('click', async (e) => {
         e.preventDefault();
         CareerIQAuth.Toast.show('Skipping setup. Redirecting to Dashboard...', 'info');
-        if (this.userEmail) {
-          CareerIQAuth.Storage.set(`onboarding_complete_${btoa(this.userEmail)}`, true);
-        }
+        
+        this.data.onboarding_complete = true;
+        await this.saveData();
+
         setTimeout(() => {
           window.location.href = '../dashboard.html';
         }, 800);
@@ -275,8 +278,8 @@ const OnboardingWizard = {
   collectStepData(n) {
     const card = document.getElementById(`step${n}`);
     
-    // Inputs & Selects & Textareas
-    card.querySelectorAll('input:not([type="radio"]):not([type="checkbox"]):not(.chip-text-input), select, textarea').forEach(el => {
+    // Inputs & Selects & Textareas (excluding file inputs to avoid storing dummy C:\fakepath paths)
+    card.querySelectorAll('input:not([type="radio"]):not([type="checkbox"]):not([type="file"]):not(.chip-text-input), select, textarea').forEach(el => {
       if (el.id) this.data[el.id] = el.value;
     });
 
@@ -338,7 +341,7 @@ const OnboardingWizard = {
       const { db } = window.CareerIQAuth;
 
       // ── Store ALL collected data directly in Firebase ──
-      const allData = { ...this.data, onboarding_complete: true };
+      const allData = { ...this.data };
 
       await db.collection("user_profiles").doc(this.user.uid).set(allData, { merge: true });
 
@@ -419,15 +422,22 @@ const OnboardingWizard = {
         try {
           if (window.ResumeExtractor) {
             const extracted = await window.ResumeExtractor.extractFromFile(file);
-            this.data.resumeText = extracted.raw_text;
-            this.data.resumeExtractedAt = new Date().toISOString();
-            fileNameDisplay.textContent = file.name + ' (Extracted)';
+            if (extracted && extracted.raw_text) {
+              this.data.resumeText = extracted.raw_text;
+              this.data.resumeExtractedAt = new Date().toISOString();
+              fileNameDisplay.textContent = file.name + ' (Extracted)';
+              CareerIQAuth.Toast.show('Resume text extracted successfully!', 'success');
+            } else {
+              throw new Error("No text content could be extracted from PDF.");
+            }
           } else {
+            console.error('ResumeExtractor is not loaded on window.');
+            CareerIQAuth.Toast.show('Error: Resume text extractor script is not loaded.', 'error');
             fileNameDisplay.textContent = file.name;
           }
         } catch (err) {
           console.error('Extraction error:', err);
-          CareerIQAuth.Toast.show('Failed to extract text, but file accepted.', 'error');
+          CareerIQAuth.Toast.show('Failed to extract text: ' + err.message, 'error');
           fileNameDisplay.textContent = file.name;
         } finally {
           if (submitBtn) submitBtn.disabled = false;
@@ -445,6 +455,8 @@ const OnboardingWizard = {
           fileZone.classList.remove('hidden');
           fileInfo.classList.add('hidden');
           delete this.data.resumeName;
+          delete this.data.resumeText;
+          delete this.data.resumeExtractedAt;
           this.saveData();
         });
       }
