@@ -165,17 +165,31 @@ const OnboardingWizard = {
   setupNavigation() {
     document.querySelectorAll('.btn-next').forEach(btn => {
       btn.addEventListener('click', () => {
-        if (this.validateStep(this.currentStep)) {
-          this.collectStepData(this.currentStep);
-          this.goToStep(this.currentStep + 1);
+        console.log(`[Onboarding] btn-next clicked. currentStep = ${this.currentStep}`);
+        try {
+          const isValid = this.validateStep(this.currentStep);
+          console.log(`[Onboarding] validateStep result: ${isValid}`);
+          if (isValid) {
+            this.collectStepData(this.currentStep);
+            this.goToStep(this.currentStep + 1);
+          }
+        } catch (error) {
+          console.error('[Onboarding] Error in btn-next click handler:', error);
+          CareerIQAuth.Toast.show('Navigation error: ' + error.message, 'error');
         }
       });
     });
 
     document.querySelectorAll('.btn-back-step').forEach(btn => {
       btn.addEventListener('click', () => {
-        this.collectStepData(this.currentStep);
-        this.goToStep(this.currentStep - 1);
+        console.log(`[Onboarding] btn-back-step clicked. currentStep = ${this.currentStep}`);
+        try {
+          this.collectStepData(this.currentStep);
+          this.goToStep(this.currentStep - 1);
+        } catch (error) {
+          console.error('[Onboarding] Error in btn-back-step click handler:', error);
+          CareerIQAuth.Toast.show('Navigation error: ' + error.message, 'error');
+        }
       });
     });
 
@@ -185,8 +199,12 @@ const OnboardingWizard = {
         e.preventDefault();
         CareerIQAuth.Toast.show('Skipping setup. Redirecting to Dashboard...', 'info');
         
-        this.data.onboarding_complete = true;
-        await this.saveData();
+        try {
+          this.data.onboarding_complete = true;
+          await this.saveData();
+        } catch (error) {
+          console.warn('[Onboarding] Failed to save skip state:', error);
+        }
 
         setTimeout(() => {
           window.location.href = '../dashboard.html';
@@ -196,115 +214,149 @@ const OnboardingWizard = {
   },
 
   goToStep(n) {
-    if (n < 1) n = 1;
-    if (n > this.totalSteps) {
-      this.complete();
-      return;
-    }
-
-    const currentCard = document.getElementById(`step${this.currentStep}`);
-    const nextCard = document.getElementById(`step${n}`);
-
-    // Animate out current
-    currentCard.classList.add('leaving');
-    
-    setTimeout(() => {
-      currentCard.style.display = 'none';
-      currentCard.classList.remove('leaving');
-      
-      // Animate in next
-      nextCard.style.display = 'block';
-      this.currentStep = n;
-      this.updateProgressUI();
-
-      if (n === this.totalSteps) {
-        this.renderSummary();
+    console.log(`[Onboarding] goToStep from ${this.currentStep} to ${n}`);
+    try {
+      if (n < 1) n = 1;
+      if (n > this.totalSteps) {
+        this.complete();
+        return;
       }
-    }, 300);
+
+      const currentCard = document.getElementById(`step${this.currentStep}`);
+      const nextCard = document.getElementById(`step${n}`);
+
+      if (!currentCard || !nextCard) {
+        throw new Error(`Step card elements not found: step${this.currentStep} or step${n}`);
+      }
+
+      // Animate out current
+      currentCard.classList.add('leaving');
+      
+      setTimeout(() => {
+        currentCard.style.display = 'none';
+        currentCard.classList.remove('leaving');
+        
+        // Animate in next
+        nextCard.style.display = 'block';
+        this.currentStep = n;
+        this.updateProgressUI();
+
+        if (n === this.totalSteps) {
+          this.renderSummary();
+        }
+      }, 300);
+    } catch (error) {
+      console.error('[Onboarding] Error in goToStep:', error);
+      CareerIQAuth.Toast.show('Transition error: ' + error.message, 'error');
+    }
   },
 
   updateProgressUI() {
-    // Text
-    document.querySelector('.progress-current').textContent = `Step ${this.currentStep} of ${this.totalSteps}`;
-    
-    // Bar
-    const progress = (this.currentStep / this.totalSteps) * 100;
-    document.querySelector('.progress-bar-fill').style.width = `${progress}%`;
-
-    // Dots
-    document.querySelectorAll('.step-dot').forEach((dot, index) => {
-      dot.className = 'step-dot';
-      if (index + 1 === this.currentStep) {
-        dot.classList.add('active');
-      } else if (index + 1 < this.currentStep) {
-        dot.classList.add('completed');
+    try {
+      // Text
+      const textEl = document.querySelector('.progress-current');
+      if (textEl) textEl.textContent = `Step ${this.currentStep} of ${this.totalSteps}`;
+      
+      // Bar
+      const barEl = document.querySelector('.progress-bar-fill');
+      if (barEl) {
+        const progress = (this.currentStep / this.totalSteps) * 100;
+        barEl.style.width = `${progress}%`;
       }
-    });
+
+      // Dots
+      document.querySelectorAll('.step-dot').forEach((dot, index) => {
+        dot.className = 'step-dot';
+        if (index + 1 === this.currentStep) {
+          dot.classList.add('active');
+        } else if (index + 1 < this.currentStep) {
+          dot.classList.add('completed');
+        }
+      });
+    } catch (e) {
+      console.warn('[Onboarding] Failed to update progress UI:', e);
+    }
   },
 
   validateStep(n) {
-    if (n === 3) {
-      if (!this.data.resumeName) {
-        CareerIQAuth.Toast.show('Please upload your CV / Resume to complete onboarding.', 'error');
-        const fileZone = document.getElementById('resumeUploadZone');
-        if (fileZone) fileZone.classList.add('error');
-        return false;
+    console.log(`[Onboarding] validating step ${n}`);
+    try {
+      if (n === 3) {
+        if (!this.data.resumeName) {
+          CareerIQAuth.Toast.show('Please upload your CV / Resume to complete onboarding.', 'error');
+          const fileZone = document.getElementById('resumeUploadZone');
+          if (fileZone) fileZone.classList.add('error');
+          return false;
+        }
+        return true;
       }
-      return true;
-    }
-    // Simple validation: check if required fields are filled
-    const card = document.getElementById(`step${n}`);
-    if (!card) return true;
-    const requiredInputs = card.querySelectorAll('[required]');
-    let isValid = true;
+      // Simple validation: check if required fields are filled
+      const card = document.getElementById(`step${n}`);
+      if (!card) return true;
+      const requiredInputs = card.querySelectorAll('[required]');
+      let isValid = true;
 
-    requiredInputs.forEach(input => {
-      if (!input.value.trim()) {
-        isValid = false;
-        input.classList.add('error');
-        
-        // Remove error on input
-        const clearErr = () => { input.classList.remove('error'); input.removeEventListener('input', clearErr); };
-        input.addEventListener('input', clearErr);
+      requiredInputs.forEach(input => {
+        if (!input.value || !input.value.trim()) {
+          isValid = false;
+          input.classList.add('error');
+          
+          // Remove error on input
+          const clearErr = () => { input.classList.remove('error'); input.removeEventListener('input', clearErr); };
+          input.addEventListener('input', clearErr);
+        }
+      });
+
+      if (!isValid) {
+        CareerIQAuth.Toast.show('Please fill in all required fields.', 'error');
       }
-    });
-
-    if (!isValid) {
-      CareerIQAuth.Toast.show('Please fill in all required fields.', 'error');
+      return isValid;
+    } catch (e) {
+      console.error(`[Onboarding] Error in validateStep for step ${n}:`, e);
+      CareerIQAuth.Toast.show('Validation error: ' + e.message, 'error');
+      return false;
     }
-    return isValid;
   },
 
   collectStepData(n) {
-    const card = document.getElementById(`step${n}`);
-    
-    // Inputs & Selects & Textareas (excluding file inputs to avoid storing dummy C:\fakepath paths)
-    card.querySelectorAll('input:not([type="radio"]):not([type="checkbox"]):not([type="file"]):not(.chip-text-input), select, textarea').forEach(el => {
-      if (el.id) this.data[el.id] = el.value;
-    });
+    console.log(`[Onboarding] collecting step data for step ${n}`);
+    try {
+      const card = document.getElementById(`step${n}`);
+      if (!card) return;
+      
+      // Inputs & Selects & Textareas (excluding file inputs to avoid storing dummy C:\fakepath paths)
+      card.querySelectorAll('input:not([type="radio"]):not([type="checkbox"]):not([type="file"]):not(.chip-text-input), select, textarea').forEach(el => {
+        if (el.id) this.data[el.id] = el.value;
+      });
 
-    // Radios
-    const radios = card.querySelectorAll('input[type="radio"]:checked');
-    radios.forEach(r => {
-      if (r.name) this.data[r.name] = r.value;
-    });
+      // Radios
+      const radios = card.querySelectorAll('input[type="radio"]:checked');
+      radios.forEach(r => {
+        if (r.name) this.data[r.name] = r.value;
+      });
 
-    // Checkboxes (multi-select)
-    const checkboxGroups = {};
-    card.querySelectorAll('input[type="checkbox"]').forEach(c => {
-      if (c.name) {
-        if (!checkboxGroups[c.name]) checkboxGroups[c.name] = [];
-        if (c.checked) checkboxGroups[c.name].push(c.value);
-      }
-    });
-    Object.keys(checkboxGroups).forEach(k => this.data[k] = checkboxGroups[k]);
+      // Checkboxes (multi-select)
+      const checkboxGroups = {};
+      card.querySelectorAll('input[type="checkbox"]').forEach(c => {
+        if (c.name) {
+          if (!checkboxGroups[c.name]) checkboxGroups[c.name] = [];
+          if (c.checked) checkboxGroups[c.name].push(c.value);
+        }
+      });
+      Object.keys(checkboxGroups).forEach(k => this.data[k] = checkboxGroups[k]);
 
-    // Chip inputs
-    Object.keys(this.chipInputs).forEach(k => {
-      this.data[k] = this.chipInputs[k].getValues();
-    });
+      // Chip inputs
+      Object.keys(this.chipInputs).forEach(k => {
+        if (this.chipInputs[k] && typeof this.chipInputs[k].getValues === 'function') {
+          this.data[k] = this.chipInputs[k].getValues();
+        }
+      });
 
-    this.saveData();
+      this.saveData();
+    } catch (e) {
+      console.error(`[Onboarding] Error in collectStepData for step ${n}:`, e);
+      CareerIQAuth.Toast.show('Data collection error: ' + e.message, 'error');
+    }
   },
 
   setupAutoSave() {
