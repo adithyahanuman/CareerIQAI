@@ -487,20 +487,30 @@ const OnboardingWizard = {
   populateForm() {
     // Fill text/select
     Object.keys(this.data).forEach(key => {
-      const el = document.getElementById(key);
-      if (el && el.tagName !== 'INPUT') { // For textareas, selects
-        el.value = this.data[key];
-      } else if (el && el.type !== 'radio' && el.type !== 'checkbox') {
-        el.value = this.data[key];
+      try {
+        const el = document.getElementById(key);
+        if (el) {
+          if (el.tagName !== 'INPUT') { // For textareas, selects
+            el.value = this.data[key];
+          } else if (el.type !== 'radio' && el.type !== 'checkbox') {
+            el.value = this.data[key];
+          }
+        }
+      } catch (e) {
+        console.warn(`Failed to populate field ${key}:`, e);
       }
     });
 
     // Fill radios
     Object.keys(this.data).forEach(key => {
       const val = this.data[key];
-      if (typeof val === 'string') {
-        const radio = document.querySelector(`input[type="radio"][name="${key}"][value="${val}"]`);
-        if (radio) radio.checked = true;
+      if (typeof val === 'string' && val.length < 128) {
+        try {
+          const radio = document.querySelector(`input[type="radio"][name="${key}"][value="${val}"]`);
+          if (radio) radio.checked = true;
+        } catch (e) {
+          console.warn(`Failed to populate radio ${key}:`, e);
+        }
       }
     });
 
@@ -509,8 +519,12 @@ const OnboardingWizard = {
       const val = this.data[key];
       if (Array.isArray(val)) {
         val.forEach(v => {
-          const cb = document.querySelector(`input[type="checkbox"][name="${key}"][value="${v}"]`);
-          if (cb) cb.checked = true;
+          try {
+            const cb = document.querySelector(`input[type="checkbox"][name="${key}"][value="${v}"]`);
+            if (cb) cb.checked = true;
+          } catch (e) {
+            console.warn(`Failed to populate checkbox ${key}:`, e);
+          }
         });
       }
     });
@@ -518,7 +532,11 @@ const OnboardingWizard = {
     // Fill chips
     Object.keys(this.chipInputs).forEach(key => {
       if (this.data[key]) {
-        this.chipInputs[key].loadValues(this.data[key]);
+        try {
+          this.chipInputs[key].loadValues(this.data[key]);
+        } catch (e) {
+          console.warn(`Failed to populate chips for ${key}:`, e);
+        }
       }
     });
 
