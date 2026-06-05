@@ -396,6 +396,16 @@
       <a href="admin/index.html" class="btn-continue" style="background:#f59e0b; margin-left: 12px; display: none;" id="adminLink">
         Admin Panel
       </a>
+      
+      <button id="uploadResumeBtn" class="btn-continue" style="background: transparent; color: var(--text-primary); border: 1px solid var(--border); margin-left: 12px; cursor: pointer;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="17 8 12 3 7 8"></polyline>
+          <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+        Upload Resume
+      </button>
+      <input type="file" id="resumeFileInput" accept=".pdf,.doc,.docx" style="display: none;" />
     </div>
     
     <!-- Stats Grid -->
@@ -454,6 +464,11 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  
+  <!-- PDF Extractor Dependencies -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="./browser-resume-extractor.js"></script>
+
   <script src="./auth/auth.js?v=2.0.0"></script>
   <script>
     const initApp = async () => {
@@ -546,6 +561,48 @@
         await Session.destroy();
         window.location.href = 'index.html';
       });
+
+      // Resume Upload Handler
+      const uploadResumeBtn = document.getElementById('uploadResumeBtn');
+      const resumeFileInput = document.getElementById('resumeFileInput');
+      
+      if (uploadResumeBtn && resumeFileInput) {
+        uploadResumeBtn.addEventListener('click', () => {
+          resumeFileInput.click();
+        });
+        
+        resumeFileInput.addEventListener('change', async (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          
+          if (!window.CareerIQAuth.Session.getUser()) return;
+          const uid = window.CareerIQAuth.Session.getUser().uid;
+          
+          const origText = uploadResumeBtn.innerHTML;
+          uploadResumeBtn.innerHTML = 'Extracting...';
+          uploadResumeBtn.disabled = true;
+          
+          try {
+            // Use our new browser-based advanced extraction logic
+            const extracted = await ResumeExtractor.extractFromFile(file);
+            
+            // Save to Firebase Firestore
+            await db.collection("user_profiles").doc(uid).set({
+              resumeText: extracted.raw_text,
+              resumeExtractedAt: new Date().toISOString()
+            }, { merge: true });
+            
+            alert(`Successfully extracted and saved text from ${file.name}!`);
+          } catch (err) {
+            console.error(err);
+            alert(`Failed to extract text: ${err.message}`);
+          } finally {
+            uploadResumeBtn.innerHTML = origText;
+            uploadResumeBtn.disabled = false;
+            resumeFileInput.value = '';
+          }
+        });
+      }
       
 
     };

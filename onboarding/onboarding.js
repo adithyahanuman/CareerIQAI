@@ -1,12 +1,6 @@
 /**
  * CareerIQ AI — Onboarding Wizard Logic
  *
- * 🔴 [SUPABASE] Save onboarding data:
- * await supabase.from('user_profiles').upsert({
- *   user_id: session.user.id,
- *   ...data
- * });
- *
  * 🔵 [FIREBASE]:
  * await setDoc(doc(db, 'user_profiles', uid), data, { merge: true });
  */
@@ -343,28 +337,22 @@ const OnboardingWizard = {
     try {
       const { db } = window.CareerIQAuth;
 
-      // ── Only store Step 1 (basic profile) + onboarding_complete flag in Firebase ──
-      // Step 2 (education/GPA) and Step 3 (CV/resume) are intentionally NOT stored
-      // here — they will be integrated with a separate database later.
-      const basicInfo = {};
-      if (this.data.fullName)            basicInfo.fullName        = this.data.fullName;
-      if (this.data.displayName)         basicInfo.displayName     = this.data.displayName;
-      if (this.data.phone)               basicInfo.phone           = this.data.phone;
-      if (this.data.onboarding_complete) basicInfo.onboarding_complete = true;
+      // ── Store ALL collected data directly in Firebase ──
+      const allData = { ...this.data, onboarding_complete: true };
 
-      await db.collection("user_profiles").doc(this.user.uid).set(basicInfo, { merge: true });
+      await db.collection("user_profiles").doc(this.user.uid).set(allData, { merge: true });
 
       // Keep users collection and Firebase Auth profile in sync with name/displayName
       const userUpdates = {};
-      if (basicInfo.fullName)    userUpdates.name        = basicInfo.fullName;
-      if (basicInfo.displayName) userUpdates.displayName = basicInfo.displayName;
-      if (basicInfo.phone)       userUpdates.phone       = basicInfo.phone;
+      if (allData.fullName)    userUpdates.name        = allData.fullName;
+      if (allData.displayName) userUpdates.displayName = allData.displayName;
+      if (allData.phone)       userUpdates.phone       = allData.phone;
 
       if (Object.keys(userUpdates).length > 0) {
         await db.collection("users").doc(this.user.uid).set(userUpdates, { merge: true });
         const firebaseUser = firebase.auth().currentUser;
-        if (firebaseUser && basicInfo.displayName && firebaseUser.displayName !== basicInfo.displayName) {
-          try { await firebaseUser.updateProfile({ displayName: basicInfo.displayName }); } catch (e) {}
+        if (firebaseUser && allData.displayName && firebaseUser.displayName !== allData.displayName) {
+          try { await firebaseUser.updateProfile({ displayName: allData.displayName }); } catch (e) {}
         }
       }
     } catch (e) {
@@ -410,7 +398,7 @@ const OnboardingWizard = {
         }
       });
       
-      const handleFileSelection = (file) => {
+      const handleFileSelection = async (file) => {
         const sizeLimit = 5 * 1024 * 1024; // 5MB
         if (file.size > sizeLimit) {
           CareerIQAuth.Toast.show('File is too large (max 5MB)', 'error');
@@ -419,10 +407,25 @@ const OnboardingWizard = {
         }
         
         // Show file details
-        fileNameDisplay.textContent = file.name;
+        fileNameDisplay.textContent = file.name + ' (Extracting text...)';
         fileZone.classList.add('hidden');
         fileInfo.classList.remove('hidden');
         fileZone.classList.remove('error');
+        
+        try {
+          if (window.ResumeExtractor) {
+            const extracted = await window.ResumeExtractor.extractFromFile(file);
+            this.data.resumeText = extracted.raw_text;
+            this.data.resumeExtractedAt = new Date().toISOString();
+            fileNameDisplay.textContent = file.name + ' (Extracted)';
+          } else {
+            fileNameDisplay.textContent = file.name;
+          }
+        } catch (err) {
+          console.error('Extraction error:', err);
+          CareerIQAuth.Toast.show('Failed to extract text, but file accepted.', 'error');
+          fileNameDisplay.textContent = file.name;
+        }
         
         // Store in data object
         this.data.resumeName = file.name;

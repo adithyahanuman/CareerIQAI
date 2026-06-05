@@ -5,6 +5,7 @@
   "main": "app.js",
   "scripts": {
     "start": "live-server --port=5500 --host=localhost --open=/index.html",
+    "extract": "node extract-resume.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -13,5 +14,9 @@
   "type": "commonjs",
   "devDependencies": {
     "live-server": "^1.2.2"
+  },
+  "dependencies": {
+    "pdfjs-dist": "^6.0.227",
+    "pdfreader": "^3.0.8"
   }
 }
