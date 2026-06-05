@@ -10,6 +10,8 @@ const AdminPanel = {
   users: [],
   usageProfiles: [],
   unsubscribers: [],
+  uploadsChart: null,
+  chartPeriodDays: 7,
 
   async init() {
     // 1. Auth & Role Check
@@ -72,6 +74,16 @@ const AdminPanel = {
     // Open modal buttons
     document.querySelectorAll('.btn-add').forEach(btn => {
       btn.addEventListener('click', () => this.openAddModal());
+    });
+
+    // Period selector buttons for uploads chart
+    document.querySelectorAll('.chart-period-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.chart-period-btn').forEach(b => b.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        this.chartPeriodDays = parseInt(e.currentTarget.dataset.days, 10);
+        this.renderUploadsChart();
+      });
     });
 
     // 4. Load initial data & Setup Real-time Listeners
@@ -166,34 +178,30 @@ const AdminPanel = {
   },
 
   renderUsageStats() {
-    const profiles = this.usageProfiles || [];
-    const withResume   = profiles.filter(p => !!p.resumeName);
-    const completed    = profiles.filter(p => !!p.onboarding_complete);
+    const profiles   = this.usageProfiles || [];
+    const withResume = profiles.filter(p => !!p.resumeName);
+    const completed  = profiles.filter(p => !!p.onboarding_complete);
 
-    // Find most recent upload
+    // Most recent upload timestamp
     let lastUploadStr = '—';
     const withDate = withResume
       .filter(p => !!p.resumeExtractedAt)
       .sort((a, b) => new Date(b.resumeExtractedAt) - new Date(a.resumeExtractedAt));
-    if (withDate.length > 0) {
-      lastUploadStr = this.formatDate(withDate[0].resumeExtractedAt);
-    }
+    if (withDate.length > 0) lastUploadStr = this.formatDate(withDate[0].resumeExtractedAt);
 
-    // Summary cards
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-    set('statTotalUploads',    withResume.length);
-    set('statUsersWithResume', withResume.length);
+    set('statTotalUploads',     withResume.length);
+    set('statUsersWithResume',  withResume.length);
     set('statProfilesComplete', completed.length);
-    set('statLastUpload',      lastUploadStr);
+    set('statLastUpload',       lastUploadStr);
 
-    // Badge on tab
     const badge = document.getElementById('usageCountBadge');
     if (badge) badge.textContent = profiles.length + ' users';
 
     // Per-user table
-    const tbody  = document.getElementById('usageTableBody');
-    const table  = document.getElementById('usageTable');
-    const empty  = document.getElementById('usageEmptyState');
+    const tbody = document.getElementById('usageTableBody');
+    const table = document.getElementById('usageTable');
+    const empty = document.getElementById('usageEmptyState');
     if (!tbody) return;
 
     if (profiles.length === 0) {
@@ -202,14 +210,12 @@ const AdminPanel = {
       if (empty) empty.style.display = 'flex';
       return;
     }
-
     if (table) table.style.display = 'table';
     if (empty) empty.style.display = 'none';
 
-    // Sort: users with resume first, then by upload date desc
     const sorted = [...profiles].sort((a, b) => {
       if (!!b.resumeName !== !!a.resumeName) return !!b.resumeName ? 1 : -1;
-      const da = a.resumeExtractedAt ? new Date(a.resumeExtractedAt).getTime() : 0;
+      const da  = a.resumeExtractedAt ? new Date(a.resumeExtractedAt).getTime() : 0;
       const db2 = b.resumeExtractedAt ? new Date(b.resumeExtractedAt).getTime() : 0;
       return db2 - da;
     });
@@ -234,34 +240,131 @@ const AdminPanel = {
           <td>${completeBadge}</td>
         </tr>`;
     }).join('');
+
+    // Also refresh the dashboard chart
+    this.renderUploadsChart();
+  },
+
+  renderUploadsChart() {
+    const canvas = document.getElementById('uploadsChart');
+    const emptyEl = document.getElementById('chartEmpty');
+    if (!canvas) return;
+
+    const days = this.chartPeriodDays || 7;
+    const profiles = this.usageProfiles || [];
+
+    // Build a map of date-string → upload count for the last N days
+    const now = new Date();
+    const labels = [];
+    const counts = {};
+
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - i);
+      const key = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }); // e.g. "05 Jun"
+      labels.push(key);
+      counts[key] = 0;
+    }
+
+    profiles.forEach(p => {
+      if (!p.resumeExtractedAt) return;
+      const d = new Date(p.resumeExtractedAt);
+      const key = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+      if (key in counts) counts[key]++;
+    });
+
+    const data = labels.map(l => counts[l]);
+    const totalInRange = data.reduce((s, v) => s + v, 0);
+
+    // Show empty state if no uploads in range
+    if (totalInRange === 0) {
+      canvas.style.display = 'none';
+      if (emptyEl) emptyEl.style.display = 'flex';
+      return;
+    }
+    canvas.style.display = 'block';
+    if (emptyEl) emptyEl.style.display = 'none';
+
+    // Destroy old chart instance before creating new one
+    if (this.uploadsChart) {
+      this.uploadsChart.destroy();
+      this.uploadsChart = null;
+    }
+
+    // Detect theme
+    const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+    const gridColor   = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+    const labelColor  = isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)';
+    const brandColor  = 'rgba(212,245,0,0.85)';
+    const brandFill   = isDark ? 'rgba(212,245,0,0.12)' : 'rgba(150,200,0,0.12)';
+
+    this.uploadsChart = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Uploads',
+          data,
+          borderColor: 'rgba(212,245,0,0.9)',
+          borderWidth: 2.5,
+          pointBackgroundColor: 'rgba(212,245,0,1)',
+          pointBorderColor: isDark ? '#0e1a05' : '#fff',
+          pointBorderWidth: 2,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          fill: true,
+          backgroundColor: brandFill,
+          tension: 0.4,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: isDark ? '#1a2a0a' : '#fff',
+            borderColor: 'rgba(212,245,0,0.3)',
+            borderWidth: 1,
+            titleColor: isDark ? '#d4f500' : '#333',
+            bodyColor: isDark ? '#ccc' : '#555',
+            padding: 10,
+            callbacks: {
+              label: ctx => ` ${ctx.parsed.y} upload${ctx.parsed.y !== 1 ? 's' : ''}`
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: gridColor },
+            ticks: { color: labelColor, font: { size: 11, family: 'Outfit' } }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: gridColor },
+            ticks: {
+              color: labelColor,
+              font: { size: 11, family: 'Outfit' },
+              stepSize: 1,
+              precision: 0
+            }
+          }
+        },
+        animation: { duration: 500, easing: 'easeOutQuart' }
+      }
+    });
   },
 
   renderStats() {
-    const domains = this.domains || [];
-    const users   = this.users   || [];
+    const domains  = this.domains  || [];
+    const users    = this.users    || [];
     const profiles = this.usageProfiles || [];
     const withResume = profiles.filter(p => !!p.resumeName).length;
 
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-    set('statTotalUsers',   users.length);
-    set('statTotalDomains', domains.length);
-    set('statBlocked',      withResume);  // repurpose blocked stat to show upload count
-
-    // Recent activity on dashboard (show recent resume uploads)
-    const list = document.getElementById('recentActivityList');
-    if (list) {
-      const recent = profiles
-        .filter(p => p.resumeExtractedAt)
-        .sort((a, b) => new Date(b.resumeExtractedAt) - new Date(a.resumeExtractedAt))
-        .slice(0, 5);
-
-      list.innerHTML = recent.map(p => `
-        <div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">
-          <span style="font-size:13px;">${p.fullName || p.displayName || 'User'} — <b>Resume Uploaded</b></span>
-          <span style="font-size:12px;color:var(--text-muted);">${this.formatDate(p.resumeExtractedAt)}</span>
-        </div>
-      `).join('') || '<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:12px;">No uploads yet</div>';
-    }
+    set('statTotalUsers',    users.length);
+    set('statTotalDomains',  domains.length);
+    set('statBlocked',       withResume);
   },
 
   renderDomainTable(filter = '') {

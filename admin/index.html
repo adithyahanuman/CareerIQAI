@@ -227,7 +227,42 @@
     .empty-title { font-size: 15px; font-weight: 700; color: var(--text-primary); }
     .empty-desc  { font-size: 13px; color: var(--text-muted); max-width: 280px; }
 
-    /* Coming soon panel */
+    /* Resume Uploads Chart */
+    .chart-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-xl); padding: 24px;
+      display: flex; flex-direction: column; gap: 0;
+    }
+    .chart-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .chart-title {
+      font-size: 15px; font-weight: 700;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .chart-period-btns {
+      display: flex; gap: 4px;
+    }
+    .chart-period-btn {
+      padding: 4px 10px; border-radius: var(--radius-full);
+      font-size: 11px; font-weight: 700; cursor: pointer;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text-muted); transition: all var(--transition);
+    }
+    .chart-period-btn.active {
+      background: rgba(212,245,0,0.1); border-color: var(--brand);
+      color: var(--brand-light);
+    }
+    .chart-period-btn:hover:not(.active) {
+      color: var(--text-primary); border-color: var(--border-strong);
+    }
+    .chart-wrap { position: relative; width: 100%; height: 220px; }
+    .chart-empty {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; height: 220px; gap: 8px;
+      color: var(--text-muted); font-size: 13px;
+    }
     .coming-soon-wrap {
       display: flex; align-items: center; justify-content: center;
       min-height: 400px;
@@ -400,17 +435,24 @@
 
       <!-- Activity + Quick Actions -->
       <div class="admin-section-grid">
-        <!-- Recent Activity -->
-        <div class="admin-activity-card">
-          <div class="admin-activity-title">
-            <div class="activity-dot"></div>
-            Recent Activity
+        <!-- Resume Uploads Chart -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">
+              <div class="activity-dot"></div>
+              Resume Uploads
+            </div>
+            <div class="chart-period-btns">
+              <button class="chart-period-btn active" data-days="7" id="chartPeriod7">7d</button>
+              <button class="chart-period-btn" data-days="14" id="chartPeriod14">14d</button>
+              <button class="chart-period-btn" data-days="30" id="chartPeriod30">30d</button>
+            </div>
           </div>
-          <div class="activity-list" id="recentActivityList">
-            <div class="empty-state" style="padding: 24px;">
-              <div class="empty-icon">📋</div>
-              <div class="empty-title">No recent activity</div>
-              <div class="empty-desc">Auth events will appear here</div>
+          <div class="chart-wrap">
+            <canvas id="uploadsChart"></canvas>
+            <div class="chart-empty" id="chartEmpty" style="display:none;">
+              <span style="font-size:32px;">📊</span>
+              <span>No uploads yet</span>
             </div>
           </div>
         </div>
@@ -703,8 +745,10 @@
   <!-- Toast container (auto-created by CareerIQAuth.Toast.init) -->
   <div id="toastContainer" class="toast-container"></div>
 
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <!-- Auth + Admin scripts -->
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script src="../auth/auth.js?v=2.0.0"></script>
