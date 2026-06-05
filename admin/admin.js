@@ -7,10 +7,9 @@ const AdminPanel = {
   currentTab: 'dashboard',
   domainToDelete: null,
   domains: [],
-  logs: [],
   users: [],
+  usageProfiles: [],
   unsubscribers: [],
-  auditFilter: 'all',
 
   async init() {
     // 1. Auth & Role Check
@@ -54,12 +53,11 @@ const AdminPanel = {
     setupBtn('cancelAddDomain', () => this.closeAddModal());
     setupBtn('cancelDeleteDomain', () => this.closeDeleteModal());
     setupBtn('confirmDeleteDomain', () => this.confirmDelete());
-    setupBtn('refreshLogsBtn', () => this.refreshData());
-    setupBtn('clearLogsBtn', () => this.clearLogs());
-    
+    setupBtn('refreshStatsBtn', () => this.loadUsageStats());
+
     // Hook up quick actions
     setupBtn('qaAddDomain', () => this.openAddModal());
-    setupBtn('qaViewAudit', () => this.switchTab('audit'));
+    setupBtn('qaViewUsage', () => this.switchTab('usage'));
     setupBtn('qaManageDomains', () => this.switchTab('domains'));
 
     // Handle add domain form submit
@@ -110,27 +108,21 @@ const AdminPanel = {
 
   setupListeners() {
     const db = window.CareerIQAuth.db;
-    
+
     // 1. Domains (Real-time listener)
     this.unsubscribers.push(
       db.collection('allowed_domains').orderBy('createdAt', 'desc').onSnapshot(snap => {
         this.domains = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         this.renderDomainTable(document.getElementById('domainSearch')?.value || '');
         this.renderStats();
-      }, err => console.error("Error listening to domains:", err))
+      }, err => console.error('Error listening to domains:', err))
     );
 
-    // 2. Audit Logs (Real-time listener, last 10 events)
-    this.unsubscribers.push(
-      db.collection('audit_logs').orderBy('createdAt', 'desc').limit(10).onSnapshot(snap => {
-        this.logs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        this.renderAuditTable();
-        this.renderStats();
-      }, err => console.error("Error listening to audit logs:", err))
-    );
-
-    // 3. Users (Static fetch taken until the point of time when admin logs in/loads page)
+    // 2. Users
     this.fetchUsersStatic();
+
+    // 3. Usage stats (loaded on demand & on init)
+    this.loadUsageStats();
   },
 
   async fetchUsersStatic() {
@@ -153,55 +145,122 @@ const AdminPanel = {
   },
 
   async refreshData() {
-    const icon = document.getElementById('refreshIcon');
-    if (icon) {
-      icon.classList.add('refreshing');
-      setTimeout(() => icon.classList.remove('refreshing'), 500);
-    }
-    
-    // Re-fetch static snapshot of users
     await this.fetchUsersStatic();
-    CareerIQAuth.Toast.show('Users list and stats updated', 'success');
+    await this.loadUsageStats();
+    CareerIQAuth.Toast.show('Data refreshed', 'success');
   },
 
-  async clearLogs() {
-    if (!confirm('Are you sure you want to clear all audit logs?')) return;
+  async loadUsageStats() {
+    const icon = document.getElementById('refreshStatsIcon');
+    if (icon) { icon.classList.add('refreshing'); setTimeout(() => icon.classList.remove('refreshing'), 500); }
+
+    const db = window.CareerIQAuth.db;
     try {
-      const db = window.CareerIQAuth.db;
-      const snap = await db.collection('audit_logs').get();
-      if (snap.empty) {
-        CareerIQAuth.Toast.show('No audit logs to clear', 'info');
-        return;
-      }
-      
-      const batch = db.batch();
-      snap.docs.forEach(doc => batch.delete(doc.ref));
-      await batch.commit();
-      CareerIQAuth.Toast.show('Audit logs cleared successfully', 'success');
-    } catch(err) {
-      CareerIQAuth.Toast.show('Failed to clear logs: ' + err.message, 'error');
+      const snap = await db.collection('user_profiles').get();
+      this.usageProfiles = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      this.renderUsageStats();
+    } catch (err) {
+      console.error('Error loading usage stats:', err);
+      CareerIQAuth.Toast.show('Failed to load usage stats: ' + err.message, 'error');
     }
+  },
+
+  renderUsageStats() {
+    const profiles = this.usageProfiles || [];
+    const withResume   = profiles.filter(p => !!p.resumeName);
+    const completed    = profiles.filter(p => !!p.onboarding_complete);
+
+    // Find most recent upload
+    let lastUploadStr = '—';
+    const withDate = withResume
+      .filter(p => !!p.resumeExtractedAt)
+      .sort((a, b) => new Date(b.resumeExtractedAt) - new Date(a.resumeExtractedAt));
+    if (withDate.length > 0) {
+      lastUploadStr = this.formatDate(withDate[0].resumeExtractedAt);
+    }
+
+    // Summary cards
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set('statTotalUploads',    withResume.length);
+    set('statUsersWithResume', withResume.length);
+    set('statProfilesComplete', completed.length);
+    set('statLastUpload',      lastUploadStr);
+
+    // Badge on tab
+    const badge = document.getElementById('usageCountBadge');
+    if (badge) badge.textContent = profiles.length + ' users';
+
+    // Per-user table
+    const tbody  = document.getElementById('usageTableBody');
+    const table  = document.getElementById('usageTable');
+    const empty  = document.getElementById('usageEmptyState');
+    if (!tbody) return;
+
+    if (profiles.length === 0) {
+      tbody.innerHTML = '';
+      if (table) table.style.display = 'none';
+      if (empty) empty.style.display = 'flex';
+      return;
+    }
+
+    if (table) table.style.display = 'table';
+    if (empty) empty.style.display = 'none';
+
+    // Sort: users with resume first, then by upload date desc
+    const sorted = [...profiles].sort((a, b) => {
+      if (!!b.resumeName !== !!a.resumeName) return !!b.resumeName ? 1 : -1;
+      const da = a.resumeExtractedAt ? new Date(a.resumeExtractedAt).getTime() : 0;
+      const db2 = b.resumeExtractedAt ? new Date(b.resumeExtractedAt).getTime() : 0;
+      return db2 - da;
+    });
+
+    tbody.innerHTML = sorted.map(p => {
+      const hasResume  = !!p.resumeName;
+      const isComplete = !!p.onboarding_complete;
+      const uploadDate = p.resumeExtractedAt ? this.formatDate(p.resumeExtractedAt) : '—';
+      const resumeBadge = hasResume
+        ? `<span class="status-badge status-active">✅ Uploaded</span>`
+        : `<span class="status-badge" style="background:rgba(239,68,68,0.1);color:var(--red);border:1px solid rgba(239,68,68,0.2);">Not uploaded</span>`;
+      const completeBadge = isComplete
+        ? `<span class="status-badge status-active">Complete</span>`
+        : `<span class="status-badge" style="background:rgba(255,255,255,0.05);color:var(--text-muted);">Pending</span>`;
+
+      return `
+        <tr>
+          <td><div style="font-weight:600">${p.fullName || p.displayName || '—'}</div></td>
+          <td style="font-size:12px;color:var(--text-muted);">${p.email || '—'}</td>
+          <td>${resumeBadge}</td>
+          <td style="font-size:12px;">${uploadDate}</td>
+          <td>${completeBadge}</td>
+        </tr>`;
+    }).join('');
   },
 
   renderStats() {
     const domains = this.domains || [];
-    const logs = this.logs || [];
-    const users = this.users || [];
-    const blocked = logs.filter(l => !l.allowed).length;
+    const users   = this.users   || [];
+    const profiles = this.usageProfiles || [];
+    const withResume = profiles.filter(p => !!p.resumeName).length;
 
-    if (document.getElementById('statTotalUsers')) document.getElementById('statTotalUsers').textContent = users.length;
-    if (document.getElementById('statTotalDomains')) document.getElementById('statTotalDomains').textContent = domains.length;
-    if (document.getElementById('statBlocked')) document.getElementById('statBlocked').textContent = blocked;
-    
-    // Recent activity on dashboard
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set('statTotalUsers',   users.length);
+    set('statTotalDomains', domains.length);
+    set('statBlocked',      withResume);  // repurpose blocked stat to show upload count
+
+    // Recent activity on dashboard (show recent resume uploads)
     const list = document.getElementById('recentActivityList');
     if (list) {
-      list.innerHTML = logs.slice(0, 5).map(l => `
-        <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border);">
-          <span style="font-size: 13px;">${l.email || l.domain || 'Unknown'} — <b>${l.event_type}</b></span>
-          <span style="font-size: 12px; color: var(--text-muted);">${this.formatDate(l.createdAt || l.created_at)}</span>
+      const recent = profiles
+        .filter(p => p.resumeExtractedAt)
+        .sort((a, b) => new Date(b.resumeExtractedAt) - new Date(a.resumeExtractedAt))
+        .slice(0, 5);
+
+      list.innerHTML = recent.map(p => `
+        <div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">
+          <span style="font-size:13px;">${p.fullName || p.displayName || 'User'} — <b>Resume Uploaded</b></span>
+          <span style="font-size:12px;color:var(--text-muted);">${this.formatDate(p.resumeExtractedAt)}</span>
         </div>
-      `).join('') || '<div style="color:var(--text-muted); font-size:13px; text-align:center; padding:12px;">No recent activity</div>';
+      `).join('') || '<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:12px;">No uploads yet</div>';
     }
   },
 
@@ -253,42 +312,6 @@ const AdminPanel = {
     `).join('');
   },
 
-  renderAuditTable() {
-    const tbody = document.getElementById('auditTableBody');
-    if (!tbody) return;
-
-    const filterVal = this.auditFilter || 'all';
-    let logs = this.logs || [];
-    const badge = document.getElementById('auditCountBadge');
-    if (badge) badge.textContent = logs.length;
-
-    if (filterVal === 'blocked') logs = logs.filter(l => !l.allowed);
-    if (filterVal === 'allowed') logs = logs.filter(l => l.allowed);
-
-    const emptyState = document.getElementById('auditEmptyState');
-    const table = document.getElementById('auditTable');
-
-    if (logs.length === 0) {
-      tbody.innerHTML = '';
-      if (emptyState) emptyState.style.display = 'flex';
-      if (table) table.style.display = 'none';
-      return;
-    }
-    
-    if (emptyState) emptyState.style.display = 'none';
-    if (table) table.style.display = 'table';
-
-    tbody.innerHTML = logs.map(l => `
-      <tr>
-        <td class="log-time">${this.formatDate(l.createdAt || l.created_at)}</td>
-        <td style="font-size:12px; font-weight:600;">${l.event_type}</td>
-        <td>${l.email || '-'}</td>
-        <td><span class="domain-text">${l.domain ? '@'+l.domain : '-'}</span></td>
-        <td class="${l.allowed ? 'log-allowed' : 'log-blocked'}">${l.allowed ? 'Allowed' : 'Blocked'}</td>
-        <td style="font-size:11px; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${l.user_agent || ''}">${this.formatUserAgent(l.user_agent)}</td>
-      </tr>
-    `).join('');
-  },
 
   renderUsersTable(filter = '') {
     const tbody = document.getElementById('userTableBody');
@@ -370,27 +393,10 @@ const AdminPanel = {
 
   setupSearch() {
     const input = document.getElementById('domainSearch');
-    if (input) {
-      input.addEventListener('input', (e) => {
-        this.renderDomainTable(e.target.value);
-      });
-    }
+    if (input) input.addEventListener('input', e => this.renderDomainTable(e.target.value));
 
     const userSearch = document.getElementById('userSearch');
-    if (userSearch) {
-      userSearch.addEventListener('input', (e) => {
-        this.renderUsersTable(e.target.value);
-      });
-    }
-
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-        e.currentTarget.classList.add('active');
-        this.auditFilter = e.currentTarget.dataset.filter || 'all';
-        this.renderAuditTable();
-      });
-    });
+    if (userSearch) userSearch.addEventListener('input', e => this.renderUsersTable(e.target.value));
   },
 
   // Modals

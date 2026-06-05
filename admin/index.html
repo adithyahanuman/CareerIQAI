@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin — CareerIQ AI</title>
-  <meta name="description" content="CareerIQ AI admin panel for managing allowed email domains, audit logs, and platform users." />
+  <meta name="description" content="CareerIQ AI admin panel for managing allowed email domains, usage statistics, and platform users." />
 
   <!-- Google Fonts: Outfit -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -152,39 +152,65 @@
       font-size: 18px; margin-bottom: 12px;
     }
 
-    /* Audit filter bar */
-    .audit-filter-bar {
-      display: flex; align-items: center; gap: 8px;
-      flex-wrap: wrap;
+    /* Usage Statistics */
+    .usage-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
     }
-    .filter-btn {
-      padding: 6px 14px; border-radius: var(--radius-full);
-      font-size: 12px; font-weight: 600;
-      background: transparent; border: 1px solid var(--border);
-      color: var(--text-muted); cursor: pointer;
-      transition: all var(--transition);
+    .usage-stat-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-xl); padding: 22px 24px;
+      position: relative; overflow: hidden;
+      transition: border-color var(--transition-md), box-shadow var(--transition-md);
     }
-    .filter-btn:hover { color: var(--text-primary); border-color: var(--border-strong); }
-    .filter-btn.active {
-      background: rgba(212,245,0,0.1); border-color: var(--brand);
-      color: var(--brand-light);
+    .usage-stat-card:hover {
+      border-color: rgba(212,245,0,0.3);
+      box-shadow: 0 4px 24px rgba(212,245,0,0.08);
     }
-    .btn-refresh, .btn-clear-logs {
+    .usage-stat-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: var(--gradient-brand); opacity: 0;
+      transition: opacity var(--transition-md);
+    }
+    .usage-stat-card:hover::before { opacity: 1; }
+    .usage-stat-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px;
+    }
+    .usage-stat-value {
+      font-size: 32px; font-weight: 800; color: var(--text-primary);
+      letter-spacing: -0.03em; margin-bottom: 4px;
+    }
+    .usage-stat-sub {
+      font-size: 12px; color: var(--text-muted);
+    }
+    .usage-stat-icon {
+      position: absolute; top: 20px; right: 20px;
+      font-size: 28px; opacity: 0.15;
+    }
+    .usage-user-table-wrap { overflow-x: auto; }
+    .usage-bar-cell { min-width: 120px; }
+    .usage-bar-track {
+      height: 6px; background: var(--bg-glass);
+      border-radius: var(--radius-full); overflow: hidden;
+      margin-top: 4px;
+    }
+    .usage-bar-fill {
+      height: 100%;
+      background: var(--gradient-brand);
+      border-radius: var(--radius-full);
+      transition: width 0.6s ease;
+    }
+    .btn-refresh-stats {
       display: flex; align-items: center; gap: 6px;
       padding: 7px 13px; border-radius: var(--radius-md);
       font-size: 12px; font-weight: 600; cursor: pointer;
-      transition: all var(--transition);
-    }
-    .btn-refresh {
       background: var(--bg-glass); border: 1px solid var(--border);
-      color: var(--text-secondary);
+      color: var(--text-secondary); transition: all var(--transition);
     }
-    .btn-refresh:hover { color: var(--text-primary); border-color: var(--border-strong); }
-    .btn-clear-logs {
-      background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.18);
-      color: var(--red);
-    }
-    .btn-clear-logs:hover { background: rgba(239,68,68,0.12); }
+    .btn-refresh-stats:hover { color: var(--text-primary); border-color: var(--border-strong); }
 
     /* Empty states */
     .empty-state {
@@ -312,7 +338,7 @@
     <nav class="admin-nav" id="adminNav" role="tablist">
       <button class="admin-nav-link active" data-tab="dashboard" role="tab" aria-selected="true" id="tab-dashboard">Dashboard</button>
       <button class="admin-nav-link" data-tab="domains" role="tab" aria-selected="false" id="tab-domains">Domains</button>
-      <button class="admin-nav-link" data-tab="audit" role="tab" aria-selected="false" id="tab-audit">Audit Logs</button>
+      <button class="admin-nav-link" data-tab="usage" role="tab" aria-selected="false" id="tab-usage">Usage Stats</button>
       <button class="admin-nav-link" data-tab="users" role="tab" aria-selected="false" id="tab-users">
         Users
       </button>
@@ -366,9 +392,9 @@
           <div style="font-size: 13px; color: var(--text-muted); font-weight: 600;">Total Domains</div>
         </div>
         <div class="admin-activity-card admin-stat-card">
-          <div class="admin-stat-icon">🛡️</div>
+          <div class="admin-stat-icon">📄</div>
           <div style="font-size: 24px; font-weight: 800; color: var(--text-primary);" id="statBlocked">0</div>
-          <div style="font-size: 13px; color: var(--text-muted); font-weight: 600;">Blocked Attempts</div>
+          <div style="font-size: 13px; color: var(--text-muted); font-weight: 600;">Resume Uploads</div>
         </div>
       </div>
 
@@ -396,9 +422,9 @@
             <div class="quick-action-icon">➕</div>
             Add Allowed Domain
           </button>
-          <button class="quick-action-btn" id="qaViewAudit">
-            <div class="quick-action-icon">📋</div>
-            View Audit Logs
+          <button class="quick-action-btn" id="qaViewUsage">
+            <div class="quick-action-icon">📊</div>
+            View Usage Stats
           </button>
           <button class="quick-action-btn" id="qaManageDomains">
             <div class="quick-action-icon">🌐</div>
@@ -463,61 +489,73 @@
       </div>
     </section>
 
-    <!-- ─── TAB 3: AUDIT LOGS ─── -->
-    <section class="tab-panel" id="panel-audit" role="tabpanel" aria-labelledby="tab-audit">
+    <!-- ─── TAB 3: USAGE STATISTICS ─── -->
+    <section class="tab-panel" id="panel-usage" role="tabpanel" aria-labelledby="tab-usage">
       <div class="admin-table-card">
-        <div class="admin-table-header" style="flex-direction:column;align-items:flex-start;gap:14px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;width:100%;flex-wrap:wrap;gap:10px;">
-            <div style="display:flex;align-items:center;gap:8px;">
-              <div class="admin-table-title">Audit Logs</div>
-              <span class="count-badge" id="auditCountBadge">0</span>
-            </div>
-            <div style="display:flex;gap:8px;">
-              <button class="btn-refresh" id="refreshLogsBtn">
-                <svg id="refreshIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.15"/>
-                </svg>
-                Refresh
-              </button>
-              <button class="btn-clear-logs" id="clearLogsBtn">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                  <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
-                </svg>
-                Clear Logs
-              </button>
-            </div>
+        <div class="admin-table-header">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="admin-table-title">Usage Statistics</div>
+            <span class="count-badge" id="usageCountBadge">0 users</span>
           </div>
-          <!-- Filters -->
-          <div class="audit-filter-bar" id="auditFilterBar">
-            <button class="filter-btn active" data-filter="all" id="filterAll">All</button>
-            <button class="filter-btn" data-filter="blocked" id="filterBlocked">Blocked Only</button>
-            <button class="filter-btn" data-filter="allowed" id="filterAllowed">Allowed Only</button>
+          <div class="admin-table-actions">
+            <button class="btn-refresh-stats" id="refreshStatsBtn">
+              <svg id="refreshStatsIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.15"/>
+              </svg>
+              Refresh
+            </button>
           </div>
         </div>
 
-        <!-- Table -->
-        <div style="overflow-x:auto;">
-          <table class="admin-table" id="auditTable">
+        <!-- Summary stat cards -->
+        <div class="usage-stats-grid" id="usageSummaryCards" style="margin-top:20px;">
+          <div class="usage-stat-card">
+            <div class="usage-stat-icon">📄</div>
+            <div class="usage-stat-label">Total Resume Uploads</div>
+            <div class="usage-stat-value" id="statTotalUploads">—</div>
+            <div class="usage-stat-sub">across all users</div>
+          </div>
+          <div class="usage-stat-card">
+            <div class="usage-stat-icon">👤</div>
+            <div class="usage-stat-label">Users With Resume</div>
+            <div class="usage-stat-value" id="statUsersWithResume">—</div>
+            <div class="usage-stat-sub">profiles with uploaded resume</div>
+          </div>
+          <div class="usage-stat-card">
+            <div class="usage-stat-icon">✅</div>
+            <div class="usage-stat-label">Profiles Completed</div>
+            <div class="usage-stat-value" id="statProfilesComplete">—</div>
+            <div class="usage-stat-sub">onboarding finished</div>
+          </div>
+          <div class="usage-stat-card">
+            <div class="usage-stat-icon">🕐</div>
+            <div class="usage-stat-label">Last Upload</div>
+            <div class="usage-stat-value" style="font-size:16px;padding-top:6px;" id="statLastUpload">—</div>
+            <div class="usage-stat-sub">most recent resume upload</div>
+          </div>
+        </div>
+
+        <!-- Per-user breakdown table -->
+        <div class="usage-user-table-wrap">
+          <table class="admin-table" id="usageTable">
             <thead>
               <tr>
-                <th>Time</th>
-                <th>Event Type</th>
+                <th>User</th>
                 <th>Email</th>
-                <th>Domain</th>
-                <th>Status</th>
-                <th>User Agent</th>
+                <th>Resume Uploaded</th>
+                <th>Upload Date</th>
+                <th>Profile Complete</th>
               </tr>
             </thead>
-            <tbody id="auditTableBody">
+            <tbody id="usageTableBody">
               <!-- rendered by JS -->
             </tbody>
           </table>
         </div>
-        <div class="empty-state" id="auditEmptyState" style="display:none;">
-          <div class="empty-icon">📋</div>
-          <div class="empty-title">No audit logs yet</div>
-          <div class="empty-desc">Authentication events will appear here as users sign in or are blocked.</div>
+        <div class="empty-state" id="usageEmptyState" style="display:none;">
+          <div class="empty-icon">📊</div>
+          <div class="empty-title">No usage data yet</div>
+          <div class="empty-desc">Statistics will appear as users upload their resumes and complete their profiles.</div>
         </div>
       </div>
     </section>
