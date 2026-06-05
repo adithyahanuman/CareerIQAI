@@ -118,7 +118,7 @@
         domain, org_name: orgName, org_logo: 'ðŸ¢',
         is_active: true, createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-      AuditLog.add('DOMAIN_ADDED', { domain, orgName }, null, true);
+      // (audit log disabled)
       return { data: { id: ref.id, domain, org_name: orgName, is_active: true } };
     } catch (e) { return { error: e.message }; }
   };
@@ -158,33 +158,9 @@
     return { name: res.domain.org_name, logo: res.domain.org_logo, domain: res.domain.domain };
   };
 
-  // ---- Audit Log ----
+  // ---- Audit Log (disabled — no longer stored in Firestore) ----
   const AuditLog = {
-    add: async (eventType, metadata = {}, email = null, allowed = false) => {
-      try {
-        await db.collection('audit_logs').add({
-          event_type: eventType, email,
-          domain: email ? email.split('@')[1] : null,
-          allowed, metadata,
-          user_agent: navigator.userAgent,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      } catch (e) { console.warn('AuditLog.add failed:', e.message); }
-    },
-    getLogs: async () => {
-      try {
-        const snap = await db.collection('audit_logs').orderBy('createdAt', 'desc').get();
-        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      } catch (e) { return []; }
-    },
-    getBlockedAttempts: async () => {
-      try {
-        const snap = await db.collection('audit_logs')
-          .where('allowed', '==', false)
-          .where('event_type', '==', 'LOGIN_BLOCKED').get();
-        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      } catch (e) { return []; }
-    }
+    add: async () => {}, // no-op
   };
 
   // ---- Session ----
@@ -312,7 +288,7 @@
         return;
       }
 
-      await AuditLog.add('LOGIN_SUCCESS', { context }, email, true);
+      // (audit log disabled)
       try {
         const snap = await db.collection('users').doc(uid).get();
         const existing = snap.exists ? snap.data() : null;
@@ -415,7 +391,7 @@
       }
     }
 
-    await AuditLog.add(isSignup ? 'SIGNUP_SUCCESS' : 'LOGIN_SUCCESS', {}, email, true);
+    // (audit log disabled)
     try {
       const userData = {
         email,
