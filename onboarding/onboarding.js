@@ -411,6 +411,10 @@ const OnboardingWizard = {
         fileZone.classList.add('hidden');
         fileInfo.classList.remove('hidden');
         fileZone.classList.remove('error');
+
+        // Prevent submission during extraction
+        const submitBtn = document.getElementById('finalSubmitBtn');
+        if (submitBtn) submitBtn.disabled = true;
         
         try {
           if (window.ResumeExtractor) {
@@ -425,6 +429,8 @@ const OnboardingWizard = {
           console.error('Extraction error:', err);
           CareerIQAuth.Toast.show('Failed to extract text, but file accepted.', 'error');
           fileNameDisplay.textContent = file.name;
+        } finally {
+          if (submitBtn) submitBtn.disabled = false;
         }
         
         // Store in data object
