@@ -18,7 +18,6 @@ class ChipInput {
   }
 
   init() {
-    // Render text input inside wrapper
     const input = document.createElement('input');
     input.type = 'text';
     input.className = 'chip-text-input';
@@ -36,7 +35,6 @@ class ChipInput {
       }
     });
 
-    // Handle suggestions click if they exist nearby
     const suggestionsContainer = this.wrapper.nextElementSibling;
     if (suggestionsContainer && suggestionsContainer.classList.contains('chip-suggestions')) {
       suggestionsContainer.addEventListener('click', (e) => {
@@ -73,10 +71,7 @@ class ChipInput {
   }
 
   render() {
-    // Remove existing chips
     this.wrapper.querySelectorAll('.chip').forEach(c => c.remove());
-    
-    // Create new chips
     const input = this.wrapper.querySelector('.chip-text-input');
     this.chips.forEach((chip, index) => {
       const el = document.createElement('div');
@@ -98,7 +93,7 @@ const OnboardingWizard = {
   data: {},
   chipInputs: {},
   saveTimeout: null,
-  userEmail: null,
+  user: null,
 
   async init() {
     // 1. Auth Check
@@ -108,17 +103,18 @@ const OnboardingWizard = {
       return;
     }
     this.user = session.user;
-    
+
     const urlParams = new URLSearchParams(window.location.search);
     const isEditing = urlParams.get('edit') === 'true';
 
     // 2. Load saved data from Firestore
     try {
       const { db } = window.CareerIQAuth;
-      const profileSnap = await db.collection("user_profiles").doc(this.user.uid).get();
-      
+      const profileSnap = await db.collection('user_profiles').doc(this.user.uid).get();
+
       if (profileSnap.exists) {
         this.data = profileSnap.data();
+        // If already completed and not in edit mode, go to dashboard
         if (!isEditing && this.data.onboarding_complete) {
           window.location.href = '../dashboard.html';
           return;
@@ -127,68 +123,73 @@ const OnboardingWizard = {
         this.data = {};
       }
 
-      // Auto-copy data gathered during signup if not already set
+      // Auto-copy signup data if profile not yet created
       if (!this.data.fullName) {
-        const userSnap = await db.collection("users").doc(this.user.uid).get();
+        const userSnap = await db.collection('users').doc(this.user.uid).get();
         if (userSnap.exists) {
           const udata = userSnap.data();
-          this.data.fullName = udata.name || this.user.name || '';
+          this.data.fullName    = udata.name        || this.user.name        || '';
           this.data.displayName = udata.displayName || this.user.displayName || '';
           if (udata.phone) this.data.phone = udata.phone;
         } else {
-          this.data.fullName = this.user.name || '';
+          this.data.fullName    = this.user.name        || '';
           this.data.displayName = this.user.displayName || '';
         }
       }
-    } catch(e) {
-      console.error("Failed to load profile", e);
+
+      // Strip any legacy "resumeFile" fake-path value that may have been saved
+      if (this.data.resumeFile) {
+        delete this.data.resumeFile;
+      }
+
+    } catch (e) {
+      console.error('Failed to load profile from Firestore:', e);
       this.data = {};
     }
 
-    // 3. Pre-fill form from saved data synchronously to avoid race conditions
+    // 3. Setup complex inputs (chips, file upload) FIRST so chipInputs map is ready
+    this.setupComplexInputs();
+
+    // 4. Pre-fill form with saved data (now chipInputs is ready)
     this.populateForm();
 
-    // 4. Setup UI bindings
+    // 5. Setup navigation buttons
     this.setupNavigation();
-    this.setupComplexInputs();
+
+    // 6. Update progress bar / dots
     this.updateProgressUI();
 
-    // 5. Setup Auto-save AFTER form is populated to prevent saving blank fields
+    // 7. Setup auto-save AFTER form is populated (prevents blanks triggering autosave)
     this.setupAutoSave();
-
-    // Initial check on industry max selections (safe check)
-    if (typeof this.updateIndustryCounter === 'function') {
-      try { this.updateIndustryCounter(); } catch(e) {}
-    }
   },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // NAVIGATION
+  // ─────────────────────────────────────────────────────────────────────────
 
   setupNavigation() {
     document.querySelectorAll('.btn-next').forEach(btn => {
       btn.addEventListener('click', () => {
-        console.log(`[Onboarding] btn-next clicked. currentStep = ${this.currentStep}`);
+        console.log('[Onboarding] Next clicked, currentStep =', this.currentStep);
         try {
-          const isValid = this.validateStep(this.currentStep);
-          console.log(`[Onboarding] validateStep result: ${isValid}`);
-          if (isValid) {
+          if (this.validateStep(this.currentStep)) {
             this.collectStepData(this.currentStep);
             this.goToStep(this.currentStep + 1);
           }
-        } catch (error) {
-          console.error('[Onboarding] Error in btn-next click handler:', error);
-          CareerIQAuth.Toast.show('Navigation error: ' + error.message, 'error');
+        } catch (err) {
+          console.error('[Onboarding] Error advancing step:', err);
+          CareerIQAuth.Toast.show('Error: ' + err.message, 'error');
         }
       });
     });
 
     document.querySelectorAll('.btn-back-step').forEach(btn => {
       btn.addEventListener('click', () => {
-        console.log(`[Onboarding] btn-back-step clicked. currentStep = ${this.currentStep}`);
         try {
           this.collectStepData(this.currentStep);
           this.goToStep(this.currentStep - 1);
-        } catch (error) {
-          console.error('[Onboarding] Error in btn-back-step click handler:', error);
-          CareerIQAuth.Toast.show('Navigation error: ' + error.message, 'error');
+        } catch (err) {
+          console.error('[Onboarding] Error going back:', err);
         }
       });
     });
@@ -198,193 +199,134 @@ const OnboardingWizard = {
       skipBtn.addEventListener('click', async (e) => {
         e.preventDefault();
         CareerIQAuth.Toast.show('Skipping setup. Redirecting to Dashboard...', 'info');
-        
         try {
           this.data.onboarding_complete = true;
           await this.saveData();
-        } catch (error) {
-          console.warn('[Onboarding] Failed to save skip state:', error);
+        } catch (err) {
+          console.warn('[Onboarding] Could not save skip state:', err);
         }
-
-        setTimeout(() => {
-          window.location.href = '../dashboard.html';
-        }, 800);
+        setTimeout(() => { window.location.href = '../dashboard.html'; }, 800);
       });
     }
   },
 
   goToStep(n) {
-    console.log(`[Onboarding] goToStep from ${this.currentStep} to ${n}`);
-    try {
-      if (n < 1) n = 1;
-      if (n > this.totalSteps) {
-        this.complete();
-        return;
-      }
-
-      const currentCard = document.getElementById(`step${this.currentStep}`);
-      const nextCard = document.getElementById(`step${n}`);
-
-      if (!currentCard || !nextCard) {
-        throw new Error(`Step card elements not found: step${this.currentStep} or step${n}`);
-      }
-
-      // Animate out current
-      currentCard.classList.add('leaving');
-      
-      setTimeout(() => {
-        currentCard.style.display = 'none';
-        currentCard.classList.remove('leaving');
-        
-        // Animate in next
-        nextCard.style.display = 'block';
-        this.currentStep = n;
-        this.updateProgressUI();
-
-        if (n === this.totalSteps) {
-          this.renderSummary();
-        }
-      }, 300);
-    } catch (error) {
-      console.error('[Onboarding] Error in goToStep:', error);
-      CareerIQAuth.Toast.show('Transition error: ' + error.message, 'error');
+    console.log('[Onboarding] goToStep:', n);
+    if (n < 1) n = 1;
+    if (n > this.totalSteps) {
+      this.complete();
+      return;
     }
+
+    const currentCard = document.getElementById(`step${this.currentStep}`);
+    const nextCard    = document.getElementById(`step${n}`);
+
+    if (!currentCard || !nextCard) {
+      console.error('[Onboarding] Missing step card elements for steps', this.currentStep, 'and', n);
+      CareerIQAuth.Toast.show('Navigation error: step cards not found.', 'error');
+      return;
+    }
+
+    currentCard.classList.add('leaving');
+    setTimeout(() => {
+      currentCard.style.display = 'none';
+      currentCard.classList.remove('leaving');
+      nextCard.style.display = 'block';
+      this.currentStep = n;
+      this.updateProgressUI();
+      if (n === this.totalSteps) this.renderSummary();
+    }, 300);
   },
 
   updateProgressUI() {
-    try {
-      // Text
-      const textEl = document.querySelector('.progress-current');
-      if (textEl) textEl.textContent = `Step ${this.currentStep} of ${this.totalSteps}`;
-      
-      // Bar
-      const barEl = document.querySelector('.progress-bar-fill');
-      if (barEl) {
-        const progress = (this.currentStep / this.totalSteps) * 100;
-        barEl.style.width = `${progress}%`;
-      }
+    const textEl = document.querySelector('.progress-current');
+    if (textEl) textEl.textContent = `Step ${this.currentStep} of ${this.totalSteps}`;
 
-      // Dots
-      document.querySelectorAll('.step-dot').forEach((dot, index) => {
-        dot.className = 'step-dot';
-        if (index + 1 === this.currentStep) {
-          dot.classList.add('active');
-        } else if (index + 1 < this.currentStep) {
-          dot.classList.add('completed');
-        }
-      });
-    } catch (e) {
-      console.warn('[Onboarding] Failed to update progress UI:', e);
-    }
+    const barEl = document.querySelector('.progress-bar-fill');
+    if (barEl) barEl.style.width = `${(this.currentStep / this.totalSteps) * 100}%`;
+
+    document.querySelectorAll('.step-dot').forEach((dot, i) => {
+      dot.className = 'step-dot';
+      if (i + 1 === this.currentStep)      dot.classList.add('active');
+      else if (i + 1 < this.currentStep)   dot.classList.add('completed');
+    });
   },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // VALIDATION
+  // ─────────────────────────────────────────────────────────────────────────
 
   validateStep(n) {
-    console.log(`[Onboarding] validating step ${n}`);
-    try {
-      if (n === 3) {
-        if (!this.data.resumeName) {
-          CareerIQAuth.Toast.show('Please upload your CV / Resume to complete onboarding.', 'error');
-          const fileZone = document.getElementById('resumeUploadZone');
-          if (fileZone) fileZone.classList.add('error');
-          return false;
-        }
-        return true;
+    // Step 3 (Resume): only check that a file was selected
+    if (n === 3) {
+      if (!this.data.resumeName) {
+        CareerIQAuth.Toast.show('Please upload your CV / Resume to continue.', 'error');
+        const zone = document.getElementById('resumeUploadZone');
+        if (zone) zone.classList.add('error');
+        return false;
       }
-      // Simple validation: check if required fields are filled
-      const card = document.getElementById(`step${n}`);
-      if (!card) return true;
-      const requiredInputs = card.querySelectorAll('[required]');
-      let isValid = true;
-
-      requiredInputs.forEach(input => {
-        if (!input.value || !input.value.trim()) {
-          isValid = false;
-          input.classList.add('error');
-          
-          // Remove error on input
-          const clearErr = () => { input.classList.remove('error'); input.removeEventListener('input', clearErr); };
-          input.addEventListener('input', clearErr);
-        }
-      });
-
-      if (!isValid) {
-        CareerIQAuth.Toast.show('Please fill in all required fields.', 'error');
-      }
-      return isValid;
-    } catch (e) {
-      console.error(`[Onboarding] Error in validateStep for step ${n}:`, e);
-      CareerIQAuth.Toast.show('Validation error: ' + e.message, 'error');
-      return false;
+      return true;
     }
+
+    // All other steps: check required fields
+    const card = document.getElementById(`step${n}`);
+    if (!card) return true;
+
+    let isValid = true;
+    card.querySelectorAll('[required]').forEach(input => {
+      // Skip file inputs — browsers don't expose their values for security
+      if (input.type === 'file') return;
+      const val = (input.value || '').trim();
+      if (!val) {
+        isValid = false;
+        input.classList.add('error');
+        const clear = () => { input.classList.remove('error'); input.removeEventListener('input', clear); };
+        input.addEventListener('input', clear);
+      }
+    });
+
+    if (!isValid) CareerIQAuth.Toast.show('Please fill in all required fields.', 'error');
+    return isValid;
   },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // DATA COLLECTION & SAVING
+  // ─────────────────────────────────────────────────────────────────────────
 
   collectStepData(n) {
-    console.log(`[Onboarding] collecting step data for step ${n}`);
-    try {
-      const card = document.getElementById(`step${n}`);
-      if (!card) return;
-      
-      // Inputs & Selects & Textareas (excluding file inputs to avoid storing dummy C:\fakepath paths)
-      card.querySelectorAll('input:not([type="radio"]):not([type="checkbox"]):not([type="file"]):not(.chip-text-input), select, textarea').forEach(el => {
-        if (el.id) this.data[el.id] = el.value;
-      });
+    const card = document.getElementById(`step${n}`);
+    if (!card) return;
 
-      // Radios
-      const radios = card.querySelectorAll('input[type="radio"]:checked');
-      radios.forEach(r => {
-        if (r.name) this.data[r.name] = r.value;
-      });
-
-      // Checkboxes (multi-select)
-      const checkboxGroups = {};
-      card.querySelectorAll('input[type="checkbox"]').forEach(c => {
-        if (c.name) {
-          if (!checkboxGroups[c.name]) checkboxGroups[c.name] = [];
-          if (c.checked) checkboxGroups[c.name].push(c.value);
-        }
-      });
-      Object.keys(checkboxGroups).forEach(k => this.data[k] = checkboxGroups[k]);
-
-      // Chip inputs
-      Object.keys(this.chipInputs).forEach(k => {
-        if (this.chipInputs[k] && typeof this.chipInputs[k].getValues === 'function') {
-          this.data[k] = this.chipInputs[k].getValues();
-        }
-      });
-
-      this.saveData();
-    } catch (e) {
-      console.error(`[Onboarding] Error in collectStepData for step ${n}:`, e);
-      CareerIQAuth.Toast.show('Data collection error: ' + e.message, 'error');
-    }
-  },
-
-  setupAutoSave() {
-    const inputs = document.querySelectorAll('input, select, textarea');
-    inputs.forEach(input => {
-      input.addEventListener('change', () => this.triggerAutoSave());
-      input.addEventListener('input', () => this.triggerAutoSave());
-    });
-  },
-
-  triggerAutoSave() {
-    const ind = document.querySelectorAll('.autosave-indicator');
-    ind.forEach(i => {
-      i.className = 'autosave-indicator saving';
-      i.innerHTML = '<div class="autosave-dot"></div> Saving...';
+    // Text inputs, selects, textareas — exclude radio, checkbox, file, and chip inputs
+    card.querySelectorAll(
+      'input:not([type="radio"]):not([type="checkbox"]):not([type="file"]):not(.chip-text-input), select, textarea'
+    ).forEach(el => {
+      if (el.id) this.data[el.id] = el.value;
     });
 
-    clearTimeout(this.saveTimeout);
-    this.saveTimeout = setTimeout(() => {
-      this.collectStepData(this.currentStep);
-      ind.forEach(i => {
-        i.className = 'autosave-indicator saved';
-        i.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Saved';
-      });
-      setTimeout(() => {
-        ind.forEach(i => { i.className = 'autosave-indicator'; i.innerHTML = ''; });
-      }, 2000);
-    }, 1000);
+    // Radio buttons
+    card.querySelectorAll('input[type="radio"]:checked').forEach(r => {
+      if (r.name) this.data[r.name] = r.value;
+    });
+
+    // Checkboxes (grouped by name)
+    const groups = {};
+    card.querySelectorAll('input[type="checkbox"]').forEach(c => {
+      if (!c.name) return;
+      if (!groups[c.name]) groups[c.name] = [];
+      if (c.checked) groups[c.name].push(c.value);
+    });
+    Object.assign(this.data, groups);
+
+    // Chip inputs
+    Object.keys(this.chipInputs).forEach(k => {
+      this.data[k] = this.chipInputs[k].getValues();
+    });
+
+    // Never store the fake file path
+    delete this.data.resumeFile;
+
+    this.saveData();
   },
 
   async saveData() {
@@ -392,129 +334,187 @@ const OnboardingWizard = {
     try {
       const { db } = window.CareerIQAuth;
 
-      // ── Store ALL collected data directly in Firebase ──
-      const allData = { ...this.data };
+      // Build a clean copy — never store the file input's fake path
+      const payload = { ...this.data };
+      delete payload.resumeFile;
 
-      await db.collection("user_profiles").doc(this.user.uid).set(allData, { merge: true });
+      await db.collection('user_profiles').doc(this.user.uid).set(payload, { merge: true });
 
-      // Keep users collection and Firebase Auth profile in sync with name/displayName
+      // Keep the users collection in sync for name / displayName / phone
       const userUpdates = {};
-      if (allData.fullName)    userUpdates.name        = allData.fullName;
-      if (allData.displayName) userUpdates.displayName = allData.displayName;
-      if (allData.phone)       userUpdates.phone       = allData.phone;
+      if (payload.fullName)    userUpdates.name        = payload.fullName;
+      if (payload.displayName) userUpdates.displayName = payload.displayName;
+      if (payload.phone)       userUpdates.phone       = payload.phone;
 
       if (Object.keys(userUpdates).length > 0) {
-        await db.collection("users").doc(this.user.uid).set(userUpdates, { merge: true });
-        const firebaseUser = firebase.auth().currentUser;
-        if (firebaseUser && allData.displayName && firebaseUser.displayName !== allData.displayName) {
-          try { await firebaseUser.updateProfile({ displayName: allData.displayName }); } catch (e) {}
+        await db.collection('users').doc(this.user.uid).set(userUpdates, { merge: true });
+        const fbUser = firebase.auth().currentUser;
+        if (fbUser && payload.displayName && fbUser.displayName !== payload.displayName) {
+          try { await fbUser.updateProfile({ displayName: payload.displayName }); } catch (_) {}
         }
       }
+
+      console.log('[Onboarding] Data saved to Firebase:', Object.keys(payload));
     } catch (e) {
-      console.error("Failed to save data to Firebase", e);
+      console.error('[Onboarding] Failed to save to Firebase:', e);
     }
   },
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // AUTO-SAVE
+  // ─────────────────────────────────────────────────────────────────────────
+
+  setupAutoSave() {
+    // Exclude file inputs — they cannot be read by JS for security reasons
+    document.querySelectorAll('input:not([type="file"]), select, textarea').forEach(input => {
+      input.addEventListener('change', () => this.triggerAutoSave());
+      input.addEventListener('input',  () => this.triggerAutoSave());
+    });
+  },
+
+  triggerAutoSave() {
+    const inds = document.querySelectorAll('.autosave-indicator');
+    inds.forEach(i => {
+      i.className = 'autosave-indicator saving';
+      i.innerHTML = '<div class="autosave-dot"></div> Saving...';
+    });
+
+    clearTimeout(this.saveTimeout);
+    this.saveTimeout = setTimeout(() => {
+      this.collectStepData(this.currentStep);
+      inds.forEach(i => {
+        i.className = 'autosave-indicator saved';
+        i.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Saved';
+      });
+      setTimeout(() => {
+        inds.forEach(i => { i.className = 'autosave-indicator'; i.innerHTML = ''; });
+      }, 2000);
+    }, 1000);
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // FORM PRE-FILL
+  // ─────────────────────────────────────────────────────────────────────────
+
+  populateForm() {
+    const SKIP_IDS = new Set(['resumeFile']); // never try to set value on file inputs
+
+    // Text inputs, selects, textareas
+    Object.keys(this.data).forEach(key => {
+      if (SKIP_IDS.has(key)) return;
+      try {
+        const el = document.getElementById(key);
+        if (!el) return;
+        if (el.type === 'file') return;           // safety: never touch file inputs
+        if (el.type === 'radio')    return;        // handled separately
+        if (el.type === 'checkbox') return;        // handled separately
+        el.value = this.data[key] != null ? this.data[key] : '';
+      } catch (e) {
+        console.warn('[Onboarding] populateForm field error for key:', key, e);
+      }
+    });
+
+    // Radio buttons
+    Object.keys(this.data).forEach(key => {
+      const val = this.data[key];
+      if (typeof val !== 'string' || val.length > 200) return;
+      try {
+        // Escape special CSS selector characters in the value
+        const escapedVal = CSS.escape ? CSS.escape(val) : val.replace(/['"\\]/g, '\\$&');
+        const radio = document.querySelector(`input[type="radio"][name="${key}"][value="${escapedVal}"]`);
+        if (radio) radio.checked = true;
+      } catch (e) {
+        console.warn('[Onboarding] populateForm radio error for key:', key, e);
+      }
+    });
+
+    // Checkboxes
+    Object.keys(this.data).forEach(key => {
+      const val = this.data[key];
+      if (!Array.isArray(val)) return;
+      val.forEach(v => {
+        if (typeof v !== 'string' || v.length > 200) return;
+        try {
+          const escapedV = CSS.escape ? CSS.escape(v) : v.replace(/['"\\]/g, '\\$&');
+          const cb = document.querySelector(`input[type="checkbox"][name="${key}"][value="${escapedV}"]`);
+          if (cb) cb.checked = true;
+        } catch (e) {
+          console.warn('[Onboarding] populateForm checkbox error for key:', key, e);
+        }
+      });
+    });
+
+    // Chip inputs (chipInputs must be set up before calling this)
+    Object.keys(this.chipInputs).forEach(key => {
+      if (Array.isArray(this.data[key])) {
+        try { this.chipInputs[key].loadValues(this.data[key]); } catch (e) {}
+      }
+    });
+
+    // Restore resume file display if one was previously uploaded
+    if (this.data.resumeName) {
+      const fileZone        = document.getElementById('resumeUploadZone');
+      const fileInfo        = document.getElementById('fileInfo');
+      const fileNameDisplay = document.getElementById('fileNameDisplay');
+      if (fileZone && fileInfo && fileNameDisplay) {
+        const label = this.data.resumeText
+          ? this.data.resumeName + ' (Text extracted ✓)'
+          : this.data.resumeName;
+        fileNameDisplay.textContent = label;
+        fileZone.classList.add('hidden');
+        fileInfo.classList.remove('hidden');
+      }
+    }
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // COMPLEX INPUTS (File Upload, Photo)
+  // ─────────────────────────────────────────────────────────────────────────
+
   setupComplexInputs() {
-    // Resume Upload Zone Click & Drag-Drop Listeners
-    const fileZone = document.getElementById('resumeUploadZone');
-    const fileInput = document.getElementById('resumeFile');
-    const fileInfo = document.getElementById('fileInfo');
+    const fileZone        = document.getElementById('resumeUploadZone');
+    const fileInput       = document.getElementById('resumeFile');
+    const fileInfo        = document.getElementById('fileInfo');
     const fileNameDisplay = document.getElementById('fileNameDisplay');
-    const removeBtn = document.getElementById('btnRemoveFile');
+    const removeBtn       = document.getElementById('btnRemoveFile');
 
     if (fileZone && fileInput) {
       fileZone.addEventListener('click', () => fileInput.click());
-      
-      // Drag over
+
       fileZone.addEventListener('dragover', (e) => {
         e.preventDefault();
         fileZone.classList.add('dragover');
       });
-      
-      // Drag leave
-      fileZone.addEventListener('dragleave', () => {
-        fileZone.classList.remove('dragover');
-      });
+      fileZone.addEventListener('dragleave', () => fileZone.classList.remove('dragover'));
 
-      // Drop file
       fileZone.addEventListener('drop', (e) => {
         e.preventDefault();
         fileZone.classList.remove('dragover');
         if (e.dataTransfer.files.length > 0) {
-          fileInput.files = e.dataTransfer.files;
-          handleFileSelection(e.dataTransfer.files[0]);
+          this.handleFileSelection(e.dataTransfer.files[0], fileInput, fileZone, fileInfo, fileNameDisplay);
         }
       });
 
       fileInput.addEventListener('change', () => {
         if (fileInput.files.length > 0) {
-          handleFileSelection(fileInput.files[0]);
+          this.handleFileSelection(fileInput.files[0], fileInput, fileZone, fileInfo, fileNameDisplay);
         }
       });
-      
-      const handleFileSelection = async (file) => {
-        const sizeLimit = 5 * 1024 * 1024; // 5MB
-        if (file.size > sizeLimit) {
-          CareerIQAuth.Toast.show('File is too large (max 5MB)', 'error');
-          fileInput.value = '';
-          return;
-        }
-        
-        // Show file details
-        fileNameDisplay.textContent = file.name + ' (Extracting text...)';
-        fileZone.classList.add('hidden');
-        fileInfo.classList.remove('hidden');
-        fileZone.classList.remove('error');
-
-        // Prevent submission during extraction
-        const submitBtn = document.getElementById('finalSubmitBtn');
-        if (submitBtn) submitBtn.disabled = true;
-        
-        try {
-          if (window.ResumeExtractor) {
-            const extracted = await window.ResumeExtractor.extractFromFile(file);
-            if (extracted && extracted.raw_text) {
-              this.data.resumeText = extracted.raw_text;
-              this.data.resumeExtractedAt = new Date().toISOString();
-              fileNameDisplay.textContent = file.name + ' (Extracted)';
-              CareerIQAuth.Toast.show('Resume text extracted successfully!', 'success');
-            } else {
-              throw new Error("No text content could be extracted from PDF.");
-            }
-          } else {
-            console.error('ResumeExtractor is not loaded on window.');
-            CareerIQAuth.Toast.show('Error: Resume text extractor script is not loaded.', 'error');
-            fileNameDisplay.textContent = file.name;
-          }
-        } catch (err) {
-          console.error('Extraction error:', err);
-          CareerIQAuth.Toast.show('Failed to extract text: ' + err.message, 'error');
-          fileNameDisplay.textContent = file.name;
-        } finally {
-          if (submitBtn) submitBtn.disabled = false;
-        }
-        
-        // Store in data object
-        this.data.resumeName = file.name;
-        this.saveData();
-      };
-
-      if (removeBtn) {
-        removeBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          fileInput.value = '';
-          fileZone.classList.remove('hidden');
-          fileInfo.classList.add('hidden');
-          delete this.data.resumeName;
-          delete this.data.resumeText;
-          delete this.data.resumeExtractedAt;
-          this.saveData();
-        });
-      }
     }
 
-    // Photo upload click handler
+    if (removeBtn) {
+      removeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (fileInput) fileInput.value = '';
+        if (fileZone)  fileZone.classList.remove('hidden');
+        if (fileInfo)  fileInfo.classList.add('hidden');
+        delete this.data.resumeName;
+        delete this.data.resumeText;
+        delete this.data.resumeExtractedAt;
+        this.saveData();
+      });
+    }
+
     const photoUpload = document.getElementById('photoUploadBtn');
     if (photoUpload) {
       photoUpload.addEventListener('click', () => {
@@ -523,121 +523,93 @@ const OnboardingWizard = {
     }
   },
 
-  updateIndustryCounter() {
-    const checked = document.querySelectorAll('input[name="industries"]:checked');
-    const counter = document.getElementById('industryCounter');
-    if (counter) counter.textContent = `${checked.length}/3 selected`;
-
-    const checkboxes = document.querySelectorAll('input[name="industries"]');
-    if (checked.length >= 3) {
-      checkboxes.forEach(cb => { if (!cb.checked) cb.disabled = true; });
-    } else {
-      checkboxes.forEach(cb => cb.disabled = false);
+  async handleFileSelection(file, fileInput, fileZone, fileInfo, fileNameDisplay) {
+    const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
+    if (file.size > MAX_SIZE) {
+      CareerIQAuth.Toast.show('File is too large (max 5 MB)', 'error');
+      if (fileInput) fileInput.value = '';
+      return;
     }
+
+    // Show "extracting" state immediately
+    fileNameDisplay.textContent = file.name + ' (Extracting text...)';
+    fileZone.classList.add('hidden');
+    fileInfo.classList.remove('hidden');
+    fileZone.classList.remove('error');
+
+    const submitBtn = document.getElementById('finalSubmitBtn');
+    if (submitBtn) submitBtn.disabled = true;
+
+    // Store the name right away (so validate step 3 passes even if extraction is slow)
+    this.data.resumeName = file.name;
+
+    try {
+      if (window.ResumeExtractor) {
+        console.log('[Onboarding] Starting PDF extraction...');
+        const result = await window.ResumeExtractor.extractFromFile(file);
+        if (result && result.raw_text && result.raw_text.trim().length > 0) {
+          this.data.resumeText        = result.raw_text;
+          this.data.resumeExtractedAt = new Date().toISOString();
+          fileNameDisplay.textContent = file.name + ' (Text extracted ✓)';
+          CareerIQAuth.Toast.show('Resume text extracted successfully!', 'success');
+          console.log('[Onboarding] Extraction done. Characters:', result.raw_text.length);
+        } else {
+          fileNameDisplay.textContent = file.name + ' (No text found)';
+          CareerIQAuth.Toast.show('Could not extract text — file may be image-based.', 'warning');
+          console.warn('[Onboarding] Extraction returned empty text.');
+        }
+      } else {
+        console.error('[Onboarding] window.ResumeExtractor is not defined!');
+        CareerIQAuth.Toast.show('Extractor not loaded — resume name saved only.', 'warning');
+        fileNameDisplay.textContent = file.name;
+      }
+    } catch (err) {
+      console.error('[Onboarding] Extraction error:', err);
+      CareerIQAuth.Toast.show('Extraction failed: ' + err.message, 'error');
+      fileNameDisplay.textContent = file.name;
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+    }
+
+    // Save everything (resumeName + resumeText if extracted)
+    await this.saveData();
+    console.log('[Onboarding] Resume data saved. resumeText length:', (this.data.resumeText || '').length);
   },
 
-  populateForm() {
-    // Fill text/select
-    Object.keys(this.data).forEach(key => {
-      try {
-        const el = document.getElementById(key);
-        if (el) {
-          if (el.tagName !== 'INPUT') { // For textareas, selects
-            el.value = this.data[key];
-          } else if (el.type !== 'radio' && el.type !== 'checkbox') {
-            el.value = this.data[key];
-          }
-        }
-      } catch (e) {
-        console.warn(`Failed to populate field ${key}:`, e);
-      }
-    });
-
-    // Fill radios
-    Object.keys(this.data).forEach(key => {
-      const val = this.data[key];
-      if (typeof val === 'string' && val.length < 128) {
-        try {
-          const radio = document.querySelector(`input[type="radio"][name="${key}"][value="${val}"]`);
-          if (radio) radio.checked = true;
-        } catch (e) {
-          console.warn(`Failed to populate radio ${key}:`, e);
-        }
-      }
-    });
-
-    // Fill checkboxes
-    Object.keys(this.data).forEach(key => {
-      const val = this.data[key];
-      if (Array.isArray(val)) {
-        val.forEach(v => {
-          try {
-            const cb = document.querySelector(`input[type="checkbox"][name="${key}"][value="${v}"]`);
-            if (cb) cb.checked = true;
-          } catch (e) {
-            console.warn(`Failed to populate checkbox ${key}:`, e);
-          }
-        });
-      }
-    });
-
-    // Fill chips
-    Object.keys(this.chipInputs).forEach(key => {
-      if (this.data[key]) {
-        try {
-          this.chipInputs[key].loadValues(this.data[key]);
-        } catch (e) {
-          console.warn(`Failed to populate chips for ${key}:`, e);
-        }
-      }
-    });
-
-    // Restore resume upload visual if present
-    if (this.data.resumeName) {
-      const fileZone = document.getElementById('resumeUploadZone');
-      const fileInfo = document.getElementById('fileInfo');
-      const fileNameDisplay = document.getElementById('fileNameDisplay');
-      if (fileZone && fileInfo && fileNameDisplay) {
-        fileNameDisplay.textContent = this.data.resumeName;
-        fileZone.classList.add('hidden');
-        fileInfo.classList.remove('hidden');
-      }
-    }
-  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // SUMMARY (Step 3 preview)
+  // ─────────────────────────────────────────────────────────────────────────
 
   renderSummary() {
-    const sName = document.getElementById('summaryName');
-    const sRole = document.getElementById('summaryRole');
-    const sSkills = document.getElementById('summarySkills');
-    const sLocation = document.getElementById('summaryLocation');
+    const sName  = document.getElementById('summaryName');
+    const sRole  = document.getElementById('summaryRole');
+    const sSkills= document.getElementById('summarySkills');
+    const sLoc   = document.getElementById('summaryLocation');
 
-    if (sName) sName.textContent = this.data.fullName || 'Awesome User';
-    if (sRole) sRole.textContent = this.data.jobTitle || this.data.degreeLevel || 'Career Explorer';
-    if (sSkills && this.data.techSkills) {
-      sSkills.innerHTML = this.data.techSkills.slice(0, 3).map(s => `<span class="chip">${s}</span>`).join('') + 
-                         (this.data.techSkills.length > 3 ? `<span class="chip">+${this.data.techSkills.length - 3}</span>` : '');
+    if (sName)  sName.textContent  = this.data.fullName    || 'Awesome User';
+    if (sRole)  sRole.textContent  = this.data.course      || this.data.jobTitle || 'Career Explorer';
+    if (sLoc)   sLoc.textContent   = this.data.currentLocation || 'Earth';
+    if (sSkills && Array.isArray(this.data.techSkills)) {
+      sSkills.innerHTML = this.data.techSkills.slice(0, 3)
+        .map(s => `<span class="chip">${s}</span>`).join('') +
+        (this.data.techSkills.length > 3 ? `<span class="chip">+${this.data.techSkills.length - 3}</span>` : '');
     }
-    if (sLocation) sLocation.textContent = this.data.currentLocation || 'Earth';
   },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // COMPLETION
+  // ─────────────────────────────────────────────────────────────────────────
 
   async complete() {
     const btn = document.getElementById('finalSubmitBtn');
-    if (btn) {
-      btn.classList.add('loading');
-      btn.disabled = true;
-    }
+    if (btn) { btn.classList.add('loading'); btn.disabled = true; }
 
     this.collectStepData(this.currentStep);
     this.data.onboarding_complete = true;
-    
-    // Mark as complete in Firestore
     await this.saveData();
 
     CareerIQAuth.Toast.show('Profile created successfully! Redirecting...', 'success');
-    
-    setTimeout(() => {
-      window.location.href = '../dashboard.html';
-    }, 1500);
+    setTimeout(() => { window.location.href = '../dashboard.html'; }, 1500);
   }
 };
 
