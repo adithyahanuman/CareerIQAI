@@ -10,8 +10,6 @@ CREATE TABLE IF NOT EXISTS resumes (
 
   -- File storage
   file_name       VARCHAR(255)  NOT NULL,
-  file_url        TEXT,                           -- S3 / GCS / local path
-  file_size_bytes INTEGER,
   mime_type       VARCHAR(100)  DEFAULT 'application/pdf',
 
   -- Parsed plain-text content
