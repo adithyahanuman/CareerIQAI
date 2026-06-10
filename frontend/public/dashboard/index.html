@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Dashboard — CareerIQ AI</title>
+        <meta name="description" content="CareerIQ AI Dashboard — Resume Analysis, Career Roadmap, and Benchmarking powered by AI." />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap"
+            rel="stylesheet"
+        />
+        <!-- Shared auth/theme variables -->
+        <link rel="stylesheet" href="../auth/auth.css" />
+        <!-- Dashboard layout & sidebar styles -->
+        <link rel="stylesheet" href="dashboard.css" />
+        <!-- Tab-specific styles -->
+        <link rel="stylesheet" href="tabs/resume-analysis/resume-analysis.css" />
+        <link rel="stylesheet" href="tabs/career-roadmap/career-roadmap.css" />
+        <!-- Chart.js for analytics -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+    </head>
+    <body>
+        <div class="app-layout">
+            <!-- Overlay for mobile navigation -->
+            <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+            <!-- ═══════════════════════════════════════════════════
+                 SIDEBAR NAVIGATION
+            ════════════════════════════════════════════════════ -->
+            <aside class="sidebar" id="sidebar">
+                <div class="sidebar-brand">
+                    <div class="logo-box">
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                            <polyline points="2 17 12 22 22 17"></polyline>
+                            <polyline points="2 12 12 17 22 12"></polyline>
+                        </svg>
+                    </div>
+                    <div class="brand-text">Career <span>IQ AI</span></div>
+                </div>
+
+                <nav class="sidebar-menu">
+                    <a href="#home" class="menu-item active" data-target="home">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2v-4z"
+                            />
+                        </svg>
+                        Dashboard
+                    </a>
+                    <a href="#resume-analysis" class="menu-item" data-target="resume-analysis">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            />
+                        </svg>
+                        Resume Analysis
+                    </a>
+                    <a href="#career-roadmap" class="menu-item" data-target="career-roadmap">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+                            />
+                        </svg>
+                        Career Roadmap
+                    </a>
+                    <a href="#benchmarking" class="menu-item" data-target="benchmarking">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M13 10V3L4 14h7v7l9-11h-7z"
+                            />
+                        </svg>
+                        Benchmarking
+                    </a>
+                    <a href="#settings" class="menu-item" data-target="settings">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                            />
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                            />
+                        </svg>
+                        Settings
+                    </a>
+                </nav>
+
+                <div class="sidebar-footer">
+                    <!-- Profile Dropdown -->
+                    <div class="profile-dropdown" id="profileDropdown">
+                        <div class="dropdown-header">
+                            <div class="dropdown-header-name" id="dropdownName">Loading...</div>
+                            <div class="dropdown-header-email" id="dropdownEmail"></div>
+                        </div>
+                        <a href="../onboarding/index.html?edit=true" class="dropdown-item">
+                            <svg
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path d="M12 20h9" />
+                                <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+                            </svg>
+                            Edit Profile
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <button id="logoutBtn" class="dropdown-item danger">
+                            <svg
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+                                <polyline points="16 17 21 12 16 7" />
+                                <line x1="21" y1="12" x2="9" y2="12" />
+                            </svg>
+                            Log Out
+                        </button>
+                    </div>
+
+                    <!-- Clickable User Row -->
+                    <div class="sidebar-user" id="userProfileToggle">
+                        <div class="user-avatar" id="userAvatar">?</div>
+                        <div class="user-meta">
+                            <div class="user-name" id="userNameDisplay">Loading...</div>
+                            <div class="user-email" id="userEmailDisplay"></div>
+                        </div>
+                        <svg
+                            class="user-chevron"
+                            width="14"
+                            height="14"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <path d="M18 15l-6-6-6 6" />
+                        </svg>
+                    </div>
+
+                    <div class="sidebar-actions">
+                        <button id="themeToggle" class="theme-toggle-btn" aria-label="Toggle theme">
+                            <svg
+                                class="sun-icon"
+                                width="16"
+                                height="16"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <circle cx="12" cy="12" r="5"></circle>
+                                <path
+                                    d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42m12.72-12.72l1.42-1.42"
+                                />
+                            </svg>
+                            <svg
+                                class="moon-icon"
+                                width="16"
+                                height="16"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+                            </svg>
+                            Toggle Theme
+                        </button>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- ═══════════════════════════════════════════════════
+                 CONTENT AREA
+            ════════════════════════════════════════════════════ -->
+            <div class="content-area">
+                <!-- Mobile Header -->
+                <header class="mobile-header">
+                    <div class="logo-box">
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                            <polyline points="2 17 12 22 22 17"></polyline>
+                            <polyline points="2 12 12 17 22 12"></polyline>
+                        </svg>
+                    </div>
+                    <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation Menu">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M4 6h16M4 12h16M4 18h16"
+                            />
+                        </svg>
+                    </button>
+                </header>
+
+                <main class="main-container">
+
+                    <!-- ═══════════════════════════════════
+                         TAB: HOME (Dashboard)
+                    ════════════════════════════════════ -->
+                    <div class="page-view active" id="page-home">
+                        <!-- Welcome Card -->
+                        <div class="welcome-card">
+                            <div class="welcome-eyebrow">Welcome Back</div>
+                            <h1 class="welcome-title">
+                                Hello, <span id="welcomeNameDisplay">User</span>! 👋
+                            </h1>
+                            <p class="welcome-subtitle">Ready to continue your career journey?</p>
+
+                            <div class="welcome-actions">
+                                <a
+                                    href="../admin/index.html"
+                                    class="btn-continue"
+                                    style="background: #f59e0b; display: none"
+                                    id="adminLink"
+                                >
+                                    Admin Panel
+                                </a>
+
+                                <!-- Upload button: saves PDF text to Firestore only -->
+                                <button
+                                    id="uploadResumeBtn"
+                                    class="btn-continue"
+                                    style="
+                                        background: transparent;
+                                        color: var(--text-primary);
+                                        border: 1px solid var(--border);
+                                        cursor: pointer;
+                                    "
+                                >
+                                    <svg
+                                        width="18"
+                                        height="18"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                    >
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="17 8 12 3 7 8"></polyline>
+                                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                                    </svg>
+                                    Upload Resume
+                                </button>
+                                <input type="file" id="resumeFileInput" accept=".pdf" style="display: none" />
+
+                                <!-- Analyze button: reads text from Firestore → calls Gemini -->
+                                <button
+                                    id="analyzeResumeBtn"
+                                    class="btn-continue"
+                                    style="
+                                        display: none;
+                                        background: linear-gradient(135deg, #6366f1, #0ea5e9);
+                                        color: #fff;
+                                        border: none;
+                                        cursor: pointer;
+                                    "
+                                >
+                                    <svg
+                                        width="18"
+                                        height="18"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                    >
+                                        <circle cx="12" cy="12" r="10" />
+                                        <path d="M12 8v4l3 3" />
+                                    </svg>
+                                    Analyze with AI
+                                </button>
+
+                                <!-- Saved resume name indicator -->
+                                <span
+                                    id="savedResumeName"
+                                    style="font-size: 12px; color: var(--text-secondary); align-self: center;"
+                                ></span>
+                            </div>
+                        </div>
+
+                        <!-- Stats Grid -->
+                        <div class="stats-grid">
+                            <!-- Profile Complete -->
+                            <div class="stat-card">
+                                <div class="stat-icon-wrapper">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                    </svg>
+                                </div>
+                                <div class="stat-value">0%</div>
+                                <div class="stat-label">Profile Complete</div>
+                            </div>
+
+                            <!-- GPA / CGPA -->
+                            <div class="stat-card">
+                                <div class="stat-icon-wrapper">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
+                                        <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"></path>
+                                    </svg>
+                                </div>
+                                <div class="stat-value" id="gpaDisplay">N/A</div>
+                                <div class="stat-label">GPA / CGPA</div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- END TAB: HOME -->
+
+                    <!-- ═══════════════════════════════════
+                         TAB: RESUME ANALYSIS
+                    ════════════════════════════════════ -->
+                    <div class="page-view" id="page-resume-analysis">
+                        <!-- Empty state -->
+                        <div class="ra-empty-state" id="raEmptyState">
+                            <div class="ra-empty-icon">📂</div>
+                            <div class="ra-empty-title">No Resume Found</div>
+                            <p class="ra-empty-desc">
+                                Upload your resume from the Dashboard to get a detailed AI-powered analysis
+                                including ATS scoring, skills breakdown, projects, action plan, and more.
+                            </p>
+                            <button
+                                class="ra-btn-upload"
+                                onclick="document.getElementById('resumeFileInput').click()"
+                            >
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="17 8 12 3 7 8" />
+                                    <line x1="12" y1="3" x2="12" y2="15" />
+                                </svg>
+                                Upload Resume
+                            </button>
+                        </div>
+
+                        <!-- Full analysis view -->
+                        <div class="ra-page" id="raAnalysisWrap" style="display: none">
+                            <!-- Header row -->
+                            <div class="ra-header-row">
+                                <div>
+                                    <h1 class="ra-title">📄 Resume Analysis</h1>
+                                    <p class="ra-subtitle" id="raSubtitle">Master AI-powered resume breakdown</p>
+                                </div>
+                                <button class="ra-reanalyze-btn" id="raReanalyzeBtn">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <polyline points="23 4 23 10 17 10" />
+                                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                                    </svg>
+                                    Refresh from DB
+                                </button>
+                            </div>
+
+                            <!-- 1. HERO -->
+                            <div class="ra-card ra-hero" id="raHero">
+                                <div class="ra-gauge-wrap">
+                                    <svg viewBox="0 0 180 180">
+                                        <circle class="ra-gauge-bg" cx="90" cy="90" r="80" />
+                                        <circle class="ra-gauge-track" cx="90" cy="90" r="68" />
+                                        <circle class="ra-gauge-fill" id="raGaugeFill" cx="90" cy="90" r="80" />
+                                    </svg>
+                                    <div class="ra-gauge-center">
+                                        <span class="ra-gauge-grade" id="raGaugeGrade"></span>
+                                        <span class="ra-gauge-label" id="raGaugeLabel"></span>
+                                    </div>
+                                </div>
+                                <div class="ra-hero-content">
+                                    <div class="ra-hero-eyebrow">Resume Analysis Report</div>
+                                    <div class="ra-hero-badges" id="raHeroBadges"></div>
+                                    <div class="ra-hero-name" id="raHeroName"></div>
+                                    <p class="ra-hero-verdict" id="raHeroVerdict"></p>
+                                    <div class="ra-hero-stats" id="raHeroStats"></div>
+                                </div>
+                                <div class="ra-hero-side" id="raHeroSide">
+                                    <div class="ra-chart-panel" style="padding: 0.5rem 0.75rem; margin-bottom: 0.4rem;">
+                                        <div class="ra-chart-title">Top Sections</div>
+                                        <div class="ra-chart-wrap ra-chart-h140"><canvas id="raChartHeroTop"></canvas></div>
+                                    </div>
+                                    <div class="ra-insights" id="raHeroInsights" style="display: flex; flex-direction: column; gap: 0.4rem;"></div>
+                                </div>
+                            </div>
+
+                            <!-- 2. ANALYTICS STRIP -->
+                            <div class="ra-card">
+                                <div class="ra-section-head">
+                                    <h2 class="ra-section-title">Analytics Overview</h2>
+                                    <span class="ra-section-sub" id="raAnalyticsSub"></span>
+                                </div>
+                                <div class="ra-metric-strip" id="raMetricStrip"></div>
+                                <div class="ra-grid-2">
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">Score Distribution (raw pts)</div>
+                                        <div class="ra-chart-wrap ra-chart-h180"><canvas id="raChartScorePie"></canvas></div>
+                                        <div class="ra-legend" id="raLegendScorePie"></div>
+                                    </div>
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">Section Performance (%)</div>
+                                        <div class="ra-chart-wrap ra-chart-h180"><canvas id="raChartSectionBars"></canvas></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 3. SCORE BREAKDOWN -->
+                            <div class="ra-card">
+                                <div class="ra-section-head">
+                                    <h2 class="ra-section-title">Score Breakdown</h2>
+                                    <span class="ra-section-sub" id="raBreakdownSub"></span>
+                                </div>
+                                <div class="ra-grid-9" id="raHeatmap"></div>
+                                <div class="ra-grid-2">
+                                    <div class="ra-chart-panel" style="padding: 0.75rem">
+                                        <div class="ra-chart-title">Radar — All 9 Sections</div>
+                                        <div class="ra-chart-wrap ra-chart-h280"><canvas id="raRadarChart"></canvas></div>
+                                    </div>
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">Points Earned vs Max</div>
+                                        <div class="ra-chart-wrap ra-chart-h280"><canvas id="raChartRadarBars"></canvas></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 4. SECTION SCORE CARDS -->
+                            <div class="ra-card">
+                                <div class="ra-section-head">
+                                    <h2 class="ra-section-title">Section Scores</h2>
+                                    <span class="ra-section-sub" id="raSectionScoreSub"></span>
+                                </div>
+                                <div class="ra-score-grid" id="raScoreGrid"></div>
+                            </div>
+
+                            <!-- 5. SKILLS -->
+                            <div class="ra-card">
+                                <div class="ra-section-head">
+                                    <h2 class="ra-section-title">Skills</h2>
+                                    <span class="ra-section-sub" id="raSkillsSub"></span>
+                                </div>
+                                <div class="ra-grid-2" style="margin-bottom: 1rem">
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">Skills by Category</div>
+                                        <div class="ra-chart-wrap ra-chart-h180"><canvas id="raChartSkillsCat"></canvas></div>
+                                        <div class="ra-legend" id="raLegendSkillsCat"></div>
+                                    </div>
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">Evidence &amp; Quality</div>
+                                        <div class="ra-chart-wrap ra-chart-h180"><canvas id="raChartSkillsEv"></canvas></div>
+                                    </div>
+                                </div>
+                                <div id="raSkillsRows"></div>
+                                <div class="ra-section-tip" id="raSkillsTip"></div>
+                            </div>
+
+                            <!-- 6. PROJECTS -->
+                            <div class="ra-card">
+                                <div class="ra-section-head">
+                                    <h2 class="ra-section-title">Projects</h2>
+                                    <span class="ra-section-sub" id="raProjSub"></span>
+                                </div>
+                                <div class="ra-grid-2" style="margin-bottom: 1rem">
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">Project Scores</div>
+                                        <div class="ra-chart-wrap ra-chart-h140"><canvas id="raChartProjBar"></canvas></div>
+                                    </div>
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">Project Health</div>
+                                        <div class="ra-chart-wrap ra-chart-h140"><canvas id="raChartProjHealth"></canvas></div>
+                                        <div class="ra-legend" id="raLegendProjHealth"></div>
+                                    </div>
+                                </div>
+                                <div class="ra-proj-grid" id="raProjGrid"></div>
+                                <div class="ra-section-tip" id="raProjTip" style="margin-top: 1rem"></div>
+                            </div>
+
+                            <!-- 7. EXPERIENCE -->
+                            <div class="ra-card">
+                                <div class="ra-section-head">
+                                    <h2 class="ra-section-title">Experience</h2>
+                                    <span class="ra-section-sub" id="raExpSub"></span>
+                                </div>
+                                <div class="ra-grid-2" style="margin-bottom: 1rem">
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">Role Scores</div>
+                                        <div class="ra-chart-wrap ra-chart-h140"><canvas id="raChartExpScores"></canvas></div>
+                                    </div>
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">Duration (months)</div>
+                                        <div class="ra-chart-wrap ra-chart-h140"><canvas id="raChartExpDuration"></canvas></div>
+                                    </div>
+                                </div>
+                                <div class="ra-timeline" id="raTimeline"></div>
+                                <div class="ra-section-tip" id="raExpTip" style="margin-top: 1rem"></div>
+                            </div>
+
+                            <!-- 8. EDUCATION -->
+                            <div class="ra-card">
+                                <div class="ra-section-head">
+                                    <h2 class="ra-section-title">Education</h2>
+                                    <span class="ra-section-sub" id="raEduSub"></span>
+                                </div>
+                                <div class="ra-grid-2">
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">Coursework &amp; Tools Coverage</div>
+                                        <div class="ra-chart-wrap ra-chart-h180"><canvas id="raChartEduCoverage"></canvas></div>
+                                    </div>
+                                    <div id="raEduEntries"></div>
+                                </div>
+                            </div>
+
+                            <!-- 9. CERTIFICATIONS & ACHIEVEMENTS -->
+                            <div class="ra-card">
+                                <div class="ra-section-head">
+                                    <h2 class="ra-section-title">Certifications &amp; Achievements</h2>
+                                    <span class="ra-section-sub" id="raCertSub"></span>
+                                </div>
+                                <div class="ra-grid-2" style="margin-bottom: 1rem">
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">Certification Relevance</div>
+                                        <div class="ra-chart-wrap ra-chart-h140"><canvas id="raChartCertRel"></canvas></div>
+                                        <div class="ra-legend" id="raLegendCertRel"></div>
+                                    </div>
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">Extracurricular Activity Scores</div>
+                                        <div class="ra-chart-wrap ra-chart-h140"><canvas id="raChartExtraBar"></canvas></div>
+                                    </div>
+                                </div>
+                                <div class="ra-grid-2" id="raCertAchieveGrid"></div>
+                            </div>
+
+                            <!-- 10. FORMATTING & ATS -->
+                            <div class="ra-card">
+                                <div class="ra-section-head">
+                                    <h2 class="ra-section-title">Formatting &amp; ATS Health</h2>
+                                    <span class="ra-section-sub" id="raFmtSub"></span>
+                                </div>
+                                <div class="ra-grid-2" style="margin-bottom: 1rem">
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">Verb &amp; Phrase Health</div>
+                                        <div class="ra-chart-wrap ra-chart-h140"><canvas id="raChartFmtVerbs"></canvas></div>
+                                        <div class="ra-legend" id="raLegendFmtVerbs"></div>
+                                    </div>
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">ATS Risk Gauge</div>
+                                        <div class="ra-chart-wrap ra-chart-h140"><canvas id="raChartAtsGauge"></canvas></div>
+                                    </div>
+                                </div>
+                                <div id="raFmtContent"></div>
+                            </div>
+
+                            <!-- 11. ACTION PLAN -->
+                            <div class="ra-card">
+                                <div class="ra-section-head">
+                                    <h2 class="ra-section-title">Action Plan</h2>
+                                    <span class="ra-section-sub" id="raActionSub"></span>
+                                </div>
+                                <div class="ra-grid-2" style="margin-bottom: 1rem">
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">Fixes by Severity</div>
+                                        <div class="ra-chart-wrap ra-chart-h140"><canvas id="raChartActionSev"></canvas></div>
+                                        <div class="ra-legend" id="raLegendActionSev"></div>
+                                    </div>
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">Expected Score Gains</div>
+                                        <div class="ra-chart-wrap ra-chart-h140"><canvas id="raChartQuickWins"></canvas></div>
+                                    </div>
+                                </div>
+                                <div class="ra-tab-bar" id="raTabBar"></div>
+                                <div id="raTabPanels"></div>
+                            </div>
+
+                            <!-- 12. COMPLETENESS -->
+                            <div class="ra-card">
+                                <div class="ra-section-head">
+                                    <h2 class="ra-section-title">Resume Completeness</h2>
+                                    <span class="ra-section-sub" id="raCompSub"></span>
+                                </div>
+                                <div class="ra-grid-2" style="margin-bottom: 1rem">
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">Section Status</div>
+                                        <div class="ra-chart-wrap ra-chart-h140"><canvas id="raChartCompStatus"></canvas></div>
+                                        <div class="ra-legend" id="raLegendCompStatus"></div>
+                                    </div>
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">Density &amp; Impact</div>
+                                        <div class="ra-chart-wrap ra-chart-h140"><canvas id="raChartDensity"></canvas></div>
+                                    </div>
+                                </div>
+                                <div id="raCompContent"></div>
+                            </div>
+
+                            <!-- 13. STRENGTHS & GAPS -->
+                            <div class="ra-card">
+                                <div class="ra-section-head">
+                                    <h2 class="ra-section-title">Strengths &amp; Gaps</h2>
+                                </div>
+                                <div class="ra-strengths-grid" id="raStrengthsGrid"></div>
+                            </div>
+
+                            <!-- 14. RECOMMENDATIONS -->
+                            <div class="ra-card">
+                                <div class="ra-section-head">
+                                    <h2 class="ra-section-title">Recommended Roles &amp; Certifications</h2>
+                                    <span class="ra-section-sub">Career guidance</span>
+                                </div>
+                                <div id="raRecsContent"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- END TAB: RESUME ANALYSIS -->
+
+                    <!-- ═══════════════════════════════════
+                         TAB: CAREER ROADMAP
+                    ════════════════════════════════════ -->
+                    <div class="page-view" id="page-career-roadmap">
+                        <div class="crm-header">
+                            <h1 class="crm-title">🗺️ Career Roadmap</h1>
+                            <p class="crm-subtitle">
+                                Get a personalized, AI-generated step-by-step career transition plan.
+                            </p>
+                        </div>
+
+                        <div class="crm-form-card">
+                            <h3 class="crm-form-title">Generate Your Personalized Roadmap</h3>
+                            <div class="crm-form-grid">
+                                <div class="crm-field">
+                                    <label for="crmCurrentRole">Current Role / Field</label>
+                                    <input type="text" id="crmCurrentRole" placeholder="e.g. Computer Science Student" />
+                                </div>
+                                <div class="crm-field">
+                                    <label for="crmTargetRole">Target Role</label>
+                                    <input type="text" id="crmTargetRole" placeholder="e.g. Machine Learning Engineer" />
+                                </div>
+                                <div class="crm-field" style="grid-column: 1 / -1">
+                                    <label for="crmSkills">Your Current Skills (comma-separated)</label>
+                                    <textarea id="crmSkills" placeholder="e.g. Python, SQL, Data Analysis, JavaScript"></textarea>
+                                </div>
+                            </div>
+                            <button class="crm-generate-btn" id="crmGenerateBtn">
+                                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                                </svg>
+                                Generate Roadmap with AI
+                            </button>
+                        </div>
+
+                        <div class="crm-output" id="crmOutput">
+                            <div class="crm-roadmap-card">
+                                <div class="crm-roadmap-header">
+                                    <h2 class="crm-roadmap-title" id="crmRoadmapTitle">Your Career Roadmap</h2>
+                                    <p class="crm-roadmap-meta" id="crmRoadmapMeta"></p>
+                                </div>
+                                <div class="crm-steps" id="crmSteps"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- END TAB: CAREER ROADMAP -->
+
+                    <!-- ═══════════════════════════════════
+                         TAB: BENCHMARKING
+                    ════════════════════════════════════ -->
+                    <div class="page-view" id="page-benchmarking">
+                        <div class="coming-soon-card">
+                            <div class="cs-header">
+                                <h2 class="cs-title">Benchmarking</h2>
+                                <span class="cs-badge">Coming Soon</span>
+                            </div>
+                            <p class="cs-desc">
+                                Compare your resume and skill profile against industry peers and top candidates
+                                in your target role. Benchmarking insights powered by AI will be available soon.
+                            </p>
+                        </div>
+                    </div>
+                    <!-- END TAB: BENCHMARKING -->
+
+                    <!-- ═══════════════════════════════════
+                         TAB: SETTINGS
+                    ════════════════════════════════════ -->
+                    <div class="page-view" id="page-settings">
+                        <div class="coming-soon-card">
+                            <div class="cs-header">
+                                <h2 class="cs-title">Account Settings</h2>
+                                <span class="cs-badge">Configure</span>
+                            </div>
+                            <p class="cs-desc">
+                                Manage security credentials, adjust display names, synchronize notification rules,
+                                and update profile settings.
+                            </p>
+                        </div>
+                    </div>
+                    <!-- END TAB: SETTINGS -->
+
+                </main>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════
+             SCRIPTS
+        ════════════════════════════════════════════════ -->
+        <!-- Firebase SDK -->
+        <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+        <!-- PDF Extractor Dependencies -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+        <script src="browser-resume-extractor.js?v=5"></script>
+        <script src="gemini-client.js?v=1"></script>
+
+        <!-- Auth module (sets up window.CareerIQAuth) -->
+        <script src="../auth/auth.js?v=2.0.1"></script>
+
+        <!-- Main dashboard logic -->
+        <script src="dashboard.js?v=1.0"></script>
+    </body>
+</html>

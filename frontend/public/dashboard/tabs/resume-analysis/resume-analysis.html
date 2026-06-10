@@ -1,0 +1,632 @@
+﻿
+                        <!-- Empty state -->
+                        <div class="ra-empty-state" id="raEmptyState">
+                            <div class="ra-empty-icon">📂</div>
+                            <div class="ra-empty-title">No Resume Found</div>
+                            <p class="ra-empty-desc">
+                                Upload your resume from the Dashboard to get a
+                                detailed AI-powered analysis including ATS
+                                scoring, skills breakdown, projects, action
+                                plan, and more.
+                            </p>
+                            <button
+                                class="ra-btn-upload"
+                                onclick="
+                                    document
+                                        .getElementById('resumeFileInput')
+                                        .click()
+                                "
+                            >
+                                <svg
+                                    width="16"
+                                    height="16"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                                    />
+                                    <polyline points="17 8 12 3 7 8" />
+                                    <line x1="12" y1="3" x2="12" y2="15" />
+                                </svg>
+                                Upload Resume
+                            </button>
+                        </div>
+
+                        <!-- Full analysis view -->
+                        <div
+                            class="ra-page"
+                            id="raAnalysisWrap"
+                            style="display: none"
+                        >
+                            <!-- Header row -->
+                            <div class="ra-header-row">
+                                <div>
+                                    <h1 class="ra-title">📄 Resume Analysis</h1>
+                                    <p class="ra-subtitle" id="raSubtitle">
+                                        Master AI-powered resume breakdown
+                                    </p>
+                                </div>
+                                <button
+                                    class="ra-reanalyze-btn"
+                                    id="raReanalyzeBtn"
+                                >
+                                    <svg
+                                        width="14"
+                                        height="14"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <polyline points="23 4 23 10 17 10" />
+                                        <path
+                                            d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"
+                                        />
+                                    </svg>
+                                    Refresh from DB
+                                </button>
+                            </div>
+
+                            <!-- 1. HERO -->
+                            <div class="ra-card ra-hero" id="raHero">
+                                <div class="ra-gauge-wrap">
+                                    <svg viewBox="0 0 180 180">
+                                        <circle
+                                            class="ra-gauge-bg"
+                                            cx="90"
+                                            cy="90"
+                                            r="80"
+                                        />
+                                        <circle
+                                            class="ra-gauge-track"
+                                            cx="90"
+                                            cy="90"
+                                            r="68"
+                                        />
+                                        <circle
+                                            class="ra-gauge-fill"
+                                            id="raGaugeFill"
+                                            cx="90"
+                                            cy="90"
+                                            r="80"
+                                        />
+                                    </svg>
+                                    <div class="ra-gauge-center">
+                                        <span
+                                            class="ra-gauge-grade"
+                                            id="raGaugeGrade"
+                                        ></span>
+                                        <span
+                                            class="ra-gauge-label"
+                                            id="raGaugeLabel"
+                                        ></span>
+                                    </div>
+                                </div>
+                                <div class="ra-hero-content">
+                                    <div class="ra-hero-eyebrow">
+                                        Resume Analysis Report
+                                    </div>
+                                    <div
+                                        class="ra-hero-badges"
+                                        id="raHeroBadges"
+                                    ></div>
+                                    <div
+                                        class="ra-hero-name"
+                                        id="raHeroName"
+                                    ></div>
+                                    <p
+                                        class="ra-hero-verdict"
+                                        id="raHeroVerdict"
+                                    ></p>
+                                    <div
+                                        class="ra-hero-stats"
+                                        id="raHeroStats"
+                                    ></div>
+                                </div>
+                                <div class="ra-hero-side" id="raHeroSide">
+                                    <div class="ra-chart-panel" style="padding: 0.5rem 0.75rem; margin-bottom: 0.4rem;">
+                                        <div class="ra-chart-title">Top Sections</div>
+                                        <div class="ra-chart-wrap ra-chart-h140"><canvas id="raChartHeroTop"></canvas></div>
+                                    </div>
+                                    <div class="ra-insights" id="raHeroInsights" style="display: flex; flex-direction: column; gap: 0.4rem;"></div>
+                                </div>
+                            </div>
+
+                            <!-- 2. ANALYTICS STRIP -->
+                            <div class="ra-card">
+                                <div class="ra-section-head">
+                                    <h2 class="ra-section-title">
+                                        Analytics Overview
+                                    </h2>
+                                    <span
+                                        class="ra-section-sub"
+                                        id="raAnalyticsSub"
+                                    ></span>
+                                </div>
+                                <div
+                                    class="ra-metric-strip"
+                                    id="raMetricStrip"
+                                ></div>
+                                <div class="ra-grid-2">
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">
+                                            Score Distribution (raw pts)
+                                        </div>
+                                        <div
+                                            class="ra-chart-wrap ra-chart-h180"
+                                        >
+                                            <canvas
+                                                id="raChartScorePie"
+                                              ></canvas>
+                                        </div>
+                                        <div
+                                            class="ra-legend"
+                                            id="raLegendScorePie"
+                                        ></div>
+                                    </div>
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">
+                                            Section Performance (%)
+                                        </div>
+                                        <div
+                                            class="ra-chart-wrap ra-chart-h180"
+                                        >
+                                            <canvas
+                                                id="raChartSectionBars"
+                                            ></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 3. SCORE BREAKDOWN -->
+                            <div class="ra-card">
+                                <div class="ra-section-head">
+                                    <h2 class="ra-section-title">
+                                        Score Breakdown
+                                    </h2>
+                                    <span
+                                        class="ra-section-sub"
+                                        id="raBreakdownSub"
+                                    ></span>
+                                </div>
+                                <div class="ra-grid-9" id="raHeatmap"></div>
+                                <div class="ra-grid-2">
+                                    <div
+                                        class="ra-chart-panel"
+                                        style="padding: 0.75rem"
+                                    >
+                                        <div class="ra-chart-title">
+                                            Radar — All 9 Sections
+                                        </div>
+                                        <div
+                                            class="ra-chart-wrap ra-chart-h280"
+                                        >
+                                            <canvas id="raRadarChart"></canvas>
+                                        </div>
+                                    </div>
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">
+                                            Points Earned vs Max
+                                        </div>
+                                        <div
+                                            class="ra-chart-wrap ra-chart-h280"
+                                        >
+                                            <canvas
+                                                id="raChartRadarBars"
+                                            ></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 4. SECTION SCORE CARDS -->
+                            <div class="ra-card">
+                                <div class="ra-section-head">
+                                    <h2 class="ra-section-title">
+                                        Section Scores
+                                    </h2>
+                                    <span
+                                        class="ra-section-sub"
+                                        id="raSectionScoreSub"
+                                    ></span>
+                                </div>
+                                <div
+                                    class="ra-score-grid"
+                                    id="raScoreGrid"
+                                ></div>
+                            </div>
+
+                            <!-- 5. SKILLS -->
+                            <div class="ra-card">
+                                <div class="ra-section-head">
+                                    <h2 class="ra-section-title">Skills</h2>
+                                    <span
+                                        class="ra-section-sub"
+                                        id="raSkillsSub"
+                                    ></span>
+                                </div>
+                                <div
+                                    class="ra-grid-2"
+                                    style="margin-bottom: 1rem"
+                                >
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">
+                                            Skills by Category
+                                        </div>
+                                        <div
+                                            class="ra-chart-wrap ra-chart-h180"
+                                        >
+                                            <canvas
+                                                id="raChartSkillsCat"
+                                            ></canvas>
+                                        </div>
+                                        <div
+                                            class="ra-legend"
+                                            id="raLegendSkillsCat"
+                                        ></div>
+                                    </div>
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">
+                                            Evidence & Quality
+                                        </div>
+                                        <div
+                                            class="ra-chart-wrap ra-chart-h180"
+                                        >
+                                            <canvas
+                                                id="raChartSkillsEv"
+                                            ></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="raSkillsRows"></div>
+                                <div
+                                    class="ra-section-tip"
+                                    id="raSkillsTip"
+                                ></div>
+                            </div>
+
+                            <!-- 6. PROJECTS -->
+                            <div class="ra-card">
+                                <div class="ra-section-head">
+                                    <h2 class="ra-section-title">Projects</h2>
+                                    <span
+                                        class="ra-section-sub"
+                                        id="raProjSub"
+                                    ></span>
+                                </div>
+                                <div
+                                    class="ra-grid-2"
+                                    style="margin-bottom: 1rem"
+                                >
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">
+                                            Project Scores
+                                        </div>
+                                        <div
+                                            class="ra-chart-wrap ra-chart-h140"
+                                        >
+                                            <canvas
+                                                id="raChartProjBar"
+                                            ></canvas>
+                                        </div>
+                                    </div>
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">
+                                            Project Health
+                                        </div>
+                                        <div
+                                            class="ra-chart-wrap ra-chart-h140"
+                                        >
+                                            <canvas
+                                                id="raChartProjHealth"
+                                            ></canvas>
+                                        </div>
+                                        <div
+                                            class="ra-legend"
+                                            id="raLegendProjHealth"
+                                        ></div>
+                                    </div>
+                                </div>
+                                <div class="ra-proj-grid" id="raProjGrid"></div>
+                                <div
+                                    class="ra-section-tip"
+                                    id="raProjTip"
+                                    style="margin-top: 1rem"
+                                ></div>
+                            </div>
+
+                            <!-- 7. EXPERIENCE -->
+                            <div class="ra-card">
+                                <div class="ra-section-head">
+                                    <h2 class="ra-section-title">Experience</h2>
+                                    <span
+                                        class="ra-section-sub"
+                                        id="raExpSub"
+                                    ></span>
+                                </div>
+                                <div
+                                    class="ra-grid-2"
+                                    style="margin-bottom: 1rem"
+                                >
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">
+                                            Role Scores
+                                        </div>
+                                        <div
+                                            class="ra-chart-wrap ra-chart-h140"
+                                        >
+                                            <canvas
+                                                id="raChartExpScores"
+                                            ></canvas>
+                                        </div>
+                                    </div>
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">
+                                            Duration (months)
+                                        </div>
+                                        <div
+                                            class="ra-chart-wrap ra-chart-h140"
+                                        >
+                                            <canvas
+                                                id="raChartExpDuration"
+                                            ></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="ra-timeline" id="raTimeline"></div>
+                                <div
+                                    class="ra-section-tip"
+                                    id="raExpTip"
+                                    style="margin-top: 1rem"
+                                ></div>
+                            </div>
+
+                            <!-- 8. EDUCATION -->
+                            <div class="ra-card">
+                                <div class="ra-section-head">
+                                    <h2 class="ra-section-title">Education</h2>
+                                    <span
+                                        class="ra-section-sub"
+                                        id="raEduSub"
+                                    ></span>
+                                </div>
+                                <div class="ra-grid-2">
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">
+                                            Coursework & Tools Coverage
+                                        </div>
+                                        <div
+                                            class="ra-chart-wrap ra-chart-h180"
+                                        >
+                                            <canvas
+                                                id="raChartEduCoverage"
+                                            ></canvas>
+                                        </div>
+                                    </div>
+                                    <div id="raEduEntries"></div>
+                                </div>
+                            </div>
+
+                            <!-- 9. CERTIFICATIONS & ACHIEVEMENTS -->
+                            <div class="ra-card">
+                                <div class="ra-section-head">
+                                    <h2 class="ra-section-title">
+                                        Certifications & Achievements
+                                    </h2>
+                                    <span
+                                        class="ra-section-sub"
+                                        id="raCertSub"
+                                    ></span>
+                                </div>
+                                <div
+                                    class="ra-grid-2"
+                                    style="margin-bottom: 1rem"
+                                >
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">
+                                            Certification Relevance
+                                        </div>
+                                        <div
+                                            class="ra-chart-wrap ra-chart-h140"
+                                        >
+                                            <canvas
+                                                id="raChartCertRel"
+                                            ></canvas>
+                                        </div>
+                                        <div
+                                            class="ra-legend"
+                                            id="raLegendCertRel"
+                                        ></div>
+                                    </div>
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">
+                                            Extracurricular Activity Scores
+                                        </div>
+                                        <div
+                                            class="ra-chart-wrap ra-chart-h140"
+                                        >
+                                            <canvas
+                                                id="raChartExtraBar"
+                                            ></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div
+                                    class="ra-grid-2"
+                                    id="raCertAchieveGrid"
+                                ></div>
+                            </div>
+
+                            <!-- 10. FORMATTING & ATS -->
+                            <div class="ra-card">
+                                <div class="ra-section-head">
+                                    <h2 class="ra-section-title">
+                                        Formatting & ATS Health
+                                    </h2>
+                                    <span
+                                        class="ra-section-sub"
+                                        id="raFmtSub"
+                                    ></span>
+                                </div>
+                                <div
+                                    class="ra-grid-2"
+                                    style="margin-bottom: 1rem"
+                                >
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">
+                                            Verb & Phrase Health
+                                        </div>
+                                        <div
+                                            class="ra-chart-wrap ra-chart-h140"
+                                        >
+                                            <canvas
+                                                id="raChartFmtVerbs"
+                                            ></canvas>
+                                        </div>
+                                        <div
+                                            class="ra-legend"
+                                            id="raLegendFmtVerbs"
+                                        ></div>
+                                    </div>
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">
+                                            ATS Risk Gauge
+                                        </div>
+                                        <div
+                                            class="ra-chart-wrap ra-chart-h140"
+                                        >
+                                            <canvas
+                                                id="raChartAtsGauge"
+                                            ></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="raFmtContent"></div>
+                            </div>
+
+                            <!-- 11. ACTION PLAN -->
+                            <div class="ra-card">
+                                <div class="ra-section-head">
+                                    <h2 class="ra-section-title">
+                                        Action Plan
+                                    </h2>
+                                    <span
+                                        class="ra-section-sub"
+                                        id="raActionSub"
+                                    ></span>
+                                </div>
+                                <div
+                                    class="ra-grid-2"
+                                    style="margin-bottom: 1rem"
+                                >
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">
+                                            Fixes by Severity
+                                        </div>
+                                        <div
+                                            class="ra-chart-wrap ra-chart-h140"
+                                        >
+                                            <canvas
+                                                id="raChartActionSev"
+                                            ></canvas>
+                                        </div>
+                                        <div
+                                            class="ra-legend"
+                                            id="raLegendActionSev"
+                                        ></div>
+                                    </div>
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">
+                                            Expected Score Gains
+                                        </div>
+                                        <div
+                                            class="ra-chart-wrap ra-chart-h140"
+                                        >
+                                            <canvas
+                                                id="raChartQuickWins"
+                                            ></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="ra-tab-bar" id="raTabBar"></div>
+                                <div id="raTabPanels"></div>
+                            </div>
+
+                            <!-- 12. COMPLETENESS -->
+                            <div class="ra-card">
+                                <div class="ra-section-head">
+                                    <h2 class="ra-section-title">
+                                        Resume Completeness
+                                    </h2>
+                                    <span
+                                        class="ra-section-sub"
+                                        id="raCompSub"
+                                    ></span>
+                                </div>
+                                <div
+                                    class="ra-grid-2"
+                                    style="margin-bottom: 1rem"
+                                >
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">
+                                            Section Status
+                                        </div>
+                                        <div
+                                            class="ra-chart-wrap ra-chart-h140"
+                                        >
+                                            <canvas
+                                                id="raChartCompStatus"
+                                            ></canvas>
+                                        </div>
+                                        <div
+                                            class="ra-legend"
+                                            id="raLegendCompStatus"
+                                        ></div>
+                                    </div>
+                                    <div class="ra-chart-panel">
+                                        <div class="ra-chart-title">
+                                            Density & Impact
+                                        </div>
+                                        <div
+                                            class="ra-chart-wrap ra-chart-h140"
+                                        >
+                                            <canvas
+                                                id="raChartDensity"
+                                            ></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="raCompContent"></div>
+                            </div>
+
+                            <!-- 13. STRENGTHS & GAPS -->
+                            <div class="ra-card">
+                                <div class="ra-section-head">
+                                    <h2 class="ra-section-title">
+                                        Strengths & Gaps
+                                    </h2>
+                                </div>
+                                <div
+                                    class="ra-strengths-grid"
+                                    id="raStrengthsGrid"
+                                ></div>
+                            </div>
+
+                            <!-- 14. RECOMMENDATIONS -->
+                            <div class="ra-card">
+                                <div class="ra-section-head">
+                                    <h2 class="ra-section-title">
+                                        Recommended Roles & Certifications
+                                    </h2>
+                                    <span class="ra-section-sub"
+                                        >Career guidance</span
+                                    >
+                                </div>
+                                <div id="raRecsContent"></div>
+                            </div>
+                        </div>
+                    </div>

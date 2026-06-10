@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — CareerIQ AI</title>
+  <meta name="description" content="CareerIQ AI admin panel for managing allowed email domains, usage statistics, and platform users." />
+
+  <!-- Google Fonts: Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <!-- Shared Auth Styles -->
+  <link rel="stylesheet" href="../../auth/auth.css" />
+
+  <style>
+    /* ─── Admin-panel extras not in auth.css ─── */
+    .admin-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 18px; font-weight: 800; letter-spacing: -0.02em;
+      color: var(--text-primary); text-decoration: none;
+    }
+    .admin-logo-icon {
+      width: 32px; height: 32px;
+      background: var(--gradient-brand); border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .admin-logo-ai {
+      background: var(--gradient-brand);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Header right controls */
+    .admin-header-right { display: flex; align-items: center; gap: 10px; }
+    .user-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--gradient-brand);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 800; color: #0e1a05;
+      cursor: pointer; flex-shrink: 0;
+      border: 2px solid rgba(212,245,0,0.3);
+      transition: box-shadow var(--transition);
+    }
+    .user-avatar:hover { box-shadow: 0 0 0 3px rgba(212,245,0,0.2); }
+    .btn-logout {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 14px;
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.2);
+      border-radius: var(--radius-md);
+      font-size: 12px; font-weight: 600; color: var(--red);
+      cursor: pointer; transition: all var(--transition);
+    }
+    .btn-logout:hover { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.35); }
+
+    /* Tab panels */
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Dashboard */
+    .admin-section-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 32px; }
+    .admin-activity-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-xl); padding: 24px;
+    }
+    .admin-activity-title {
+      font-size: 15px; font-weight: 700; margin-bottom: 16px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .activity-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--brand-light);
+      box-shadow: 0 0 8px rgba(212,245,0,0.5);
+      animation: blink 2s infinite;
+    }
+    .activity-list { display: flex; flex-direction: column; gap: 10px; }
+    .activity-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 12px;
+      background: var(--bg-glass); border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      font-size: 12px; transition: background var(--transition);
+    }
+    .activity-item:hover { background: var(--bg-glass-hover); }
+    .activity-badge {
+      flex-shrink: 0; padding: 2px 8px;
+      border-radius: var(--radius-full);
+      font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
+    }
+    .badge-success { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.2); }
+    .badge-danger  { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
+    .badge-info    { background: rgba(212,245,0,0.12); color: var(--brand-light); border: 1px solid rgba(212,245,0,0.2); }
+    .activity-meta { flex: 1; }
+    .activity-event { font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
+    .activity-time  { color: var(--text-muted); font-size: 11px; }
+
+    /* Quick actions */
+    .quick-actions-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-xl); padding: 24px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .quick-action-btn {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 16px;
+      border: 1px solid var(--border); border-radius: var(--radius-lg);
+      background: var(--bg-glass); color: var(--text-secondary);
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      transition: all var(--transition-md);
+    }
+    .quick-action-btn:hover {
+      color: var(--brand-light); border-color: var(--brand);
+      background: rgba(212,245,0,0.06);
+      transform: translateX(4px);
+    }
+    .quick-action-icon {
+      width: 34px; height: 34px; flex-shrink: 0;
+      background: rgba(212,245,0,0.1); border: 1px solid rgba(212,245,0,0.2);
+      border-radius: var(--radius-md);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+
+    /* Count badge on tab header */
+    .count-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 22px; height: 20px; padding: 0 6px;
+      background: rgba(212,245,0,0.12); border: 1px solid rgba(212,245,0,0.25);
+      border-radius: var(--radius-full);
+      font-size: 11px; font-weight: 700; color: var(--brand-light);
+      margin-left: 6px;
+    }
+
+    /* Stat card accent */
+    .admin-stat-card { position: relative; overflow: hidden; }
+    .admin-stat-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: var(--gradient-brand);
+      opacity: 0;
+      transition: opacity var(--transition-md);
+    }
+    .admin-stat-card:hover::before { opacity: 1; }
+    .admin-stat-icon {
+      width: 40px; height: 40px;
+      background: rgba(212,245,0,0.08); border: 1px solid rgba(212,245,0,0.15);
+      border-radius: var(--radius-md);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; margin-bottom: 12px;
+    }
+
+    /* Usage Statistics */
+    .usage-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .usage-stat-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-xl); padding: 22px 24px;
+      position: relative; overflow: hidden;
+      transition: border-color var(--transition-md), box-shadow var(--transition-md);
+    }
+    .usage-stat-card:hover {
+      border-color: rgba(212,245,0,0.3);
+      box-shadow: 0 4px 24px rgba(212,245,0,0.08);
+    }
+    .usage-stat-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: var(--gradient-brand); opacity: 0;
+      transition: opacity var(--transition-md);
+    }
+    .usage-stat-card:hover::before { opacity: 1; }
+    .usage-stat-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px;
+    }
+    .usage-stat-value {
+      font-size: 32px; font-weight: 800; color: var(--text-primary);
+      letter-spacing: -0.03em; margin-bottom: 4px;
+    }
+    .usage-stat-sub {
+      font-size: 12px; color: var(--text-muted);
+    }
+    .usage-stat-icon {
+      position: absolute; top: 20px; right: 20px;
+      font-size: 28px; opacity: 0.15;
+    }
+    .usage-user-table-wrap { overflow-x: auto; }
+    .usage-bar-cell { min-width: 120px; }
+    .usage-bar-track {
+      height: 6px; background: var(--bg-glass);
+      border-radius: var(--radius-full); overflow: hidden;
+      margin-top: 4px;
+    }
+    .usage-bar-fill {
+      height: 100%;
+      background: var(--gradient-brand);
+      border-radius: var(--radius-full);
+      transition: width 0.6s ease;
+    }
+    .btn-refresh-stats {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 13px; border-radius: var(--radius-md);
+      font-size: 12px; font-weight: 600; cursor: pointer;
+      background: var(--bg-glass); border: 1px solid var(--border);
+      color: var(--text-secondary); transition: all var(--transition);
+    }
+    .btn-refresh-stats:hover { color: var(--text-primary); border-color: var(--border-strong); }
+
+    /* Empty states */
+    .empty-state {
+      text-align: center; padding: 56px 24px;
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+    }
+    .empty-icon {
+      width: 56px; height: 56px;
+      background: var(--bg-glass); border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; margin-bottom: 4px;
+    }
+    .empty-title { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+    .empty-desc  { font-size: 13px; color: var(--text-muted); max-width: 280px; }
+
+    /* Resume Uploads Chart */
+    .chart-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-xl); padding: 24px;
+      display: flex; flex-direction: column; gap: 0;
+    }
+    .chart-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .chart-title {
+      font-size: 15px; font-weight: 700;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .chart-period-btns {
+      display: flex; gap: 4px;
+    }
+    .chart-period-btn {
+      padding: 4px 10px; border-radius: var(--radius-full);
+      font-size: 11px; font-weight: 700; cursor: pointer;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text-muted); transition: all var(--transition);
+    }
+    .chart-period-btn.active {
+      background: rgba(212,245,0,0.1); border-color: var(--brand);
+      color: var(--brand-light);
+    }
+    .chart-period-btn:hover:not(.active) {
+      color: var(--text-primary); border-color: var(--border-strong);
+    }
+    .chart-wrap { position: relative; width: 100%; height: 220px; }
+    .chart-empty {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; height: 220px; gap: 8px;
+      color: var(--text-muted); font-size: 13px;
+    }
+    .coming-soon-wrap {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 400px;
+    }
+    .coming-soon-card {
+      text-align: center; max-width: 420px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-xl); padding: 48px 40px;
+    }
+    .coming-soon-glyph {
+      font-size: 48px; margin-bottom: 20px;
+      animation: pulse 3s ease-in-out infinite;
+    }
+    .coming-soon-title {
+      font-size: 22px; font-weight: 800; letter-spacing: -0.02em;
+      margin-bottom: 10px;
+    }
+    .coming-soon-desc { font-size: 14px; color: var(--text-secondary); line-height: 1.7; }
+    .coming-soon-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      margin-top: 20px; padding: 6px 16px;
+      background: rgba(212,245,0,0.08); border: 1px solid rgba(212,245,0,0.2);
+      border-radius: var(--radius-full);
+      font-size: 12px; font-weight: 600; color: var(--brand-light);
+    }
+
+    /* Modal domain note */
+    .modal-domain-note {
+      display: flex; align-items: flex-start; gap: 8px;
+      padding: 10px 12px; margin-top: 16px;
+      background: rgba(212,245,0,0.05); border: 1px solid rgba(212,245,0,0.15);
+      border-radius: var(--radius-md); font-size: 12px; color: var(--text-secondary);
+    }
+    .modal-domain-note svg { flex-shrink: 0; color: var(--brand-light); margin-top: 1px; }
+
+    /* delete-modal specific */
+    .delete-domain-display {
+      display: inline-block; margin: 12px 0;
+      padding: 6px 14px; border-radius: var(--radius-md);
+      background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
+      font-family: monospace; font-size: 14px; font-weight: 700; color: var(--red);
+    }
+
+    /* Access-denied inline */
+    .access-denied-inline {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; padding: 24px; text-align: center;
+    }
+    .access-denied-inline .denied-card {
+      max-width: 400px; background: var(--bg-card);
+      border: 1px solid rgba(239,68,68,0.25); border-radius: var(--radius-xl);
+      padding: 40px; animation: scaleIn .3s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    .access-denied-inline .denied-emoji { font-size: 48px; margin-bottom: 16px; }
+    .access-denied-inline h2 {
+      font-size: 22px; font-weight: 800; color: var(--red); margin-bottom: 10px;
+    }
+    .access-denied-inline p { font-size: 14px; color: var(--text-secondary); }
+
+    /* UA truncation */
+    .ua-truncated {
+      max-width: 180px; overflow: hidden; text-overflow: ellipsis;
+      white-space: nowrap; font-size: 12px; color: var(--text-muted);
+    }
+
+    /* Spinning refresh icon */
+    @keyframes spin-once { to { transform: rotate(360deg); } }
+    .refreshing { animation: spin-once 0.5s linear; }
+
+    /* Nav badge for "coming soon" */
+    .nav-badge {
+      display: inline-flex; font-size: 9px; font-weight: 700;
+      letter-spacing: 0.04em; text-transform: uppercase;
+      padding: 2px 6px; border-radius: var(--radius-full);
+      background: rgba(250,204,21,0.15); color: var(--orange);
+      border: 1px solid rgba(250,204,21,0.25); margin-left: 5px;
+      vertical-align: middle;
+    }
+
+    @media (max-width: 900px) {
+      .admin-section-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      .admin-header { height: auto; padding: 12px 16px; flex-wrap: wrap; gap: 10px; }
+      .admin-nav { order: 3; width: 100%; overflow-x: auto; }
+      .ua-truncated { max-width: 100px; }
+    }
+  </style>
+</head>
+
+<body class="admin-page">
+
+  <!-- ╔══════════════════════════════════════╗ -->
+  <!-- ║              HEADER                  ║ -->
+  <!-- ╚══════════════════════════════════════╝ -->
+  <header class="admin-header" id="adminHeader">
+    <!-- Logo -->
+    <a href="/" class="admin-logo">
+      <div class="admin-logo-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#0e1a05" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      CareerIQ <span class="admin-logo-ai">AI</span>
+    </a>
+
+    <!-- Center Nav -->
+    <nav class="admin-nav" id="adminNav" role="tablist">
+      <button class="admin-nav-link active" data-tab="dashboard" role="tab" aria-selected="true" id="tab-dashboard">Dashboard</button>
+      <button class="admin-nav-link" data-tab="domains" role="tab" aria-selected="false" id="tab-domains">Domains</button>
+      <button class="admin-nav-link" data-tab="usage" role="tab" aria-selected="false" id="tab-usage">Usage Stats</button>
+      <button class="admin-nav-link" data-tab="users" role="tab" aria-selected="false" id="tab-users">
+        Users
+      </button>
+    </nav>
+
+    <!-- Right controls -->
+    <div class="admin-header-right">
+      <div class="user-avatar" id="userAvatar" title="Signed in user">AD</div>
+      <button class="theme-toggle-btn" id="themeToggle" aria-label="Toggle theme" title="Toggle theme">
+        <!-- Sun (shown in dark mode) -->
+        <svg class="sun-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <!-- Moon (shown in light mode) -->
+        <svg class="moon-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+      <button class="btn-logout" id="logoutBtn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Logout
+      </button>
+    </div>
+  </header>
+
+  <!-- ╔══════════════════════════════════════╗ -->
+  <!-- ║              BODY                    ║ -->
+  <!-- ╚══════════════════════════════════════╝ -->
+  <main class="admin-body" id="adminBody">
+
+    <!-- ─── TAB 1: DASHBOARD ─── -->
+    <section class="tab-panel active" id="panel-dashboard" role="tabpanel" aria-labelledby="tab-dashboard">
+      <div class="admin-section-title">Admin Dashboard</div>
+      <div class="admin-section-desc">Platform overview and quick statistics</div>
+
+      <!-- Stats row -->
+      <div class="admin-section-grid" style="grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 24px;" id="statsRow">
+        <div class="admin-activity-card admin-stat-card">
+          <div class="admin-stat-icon">👥</div>
+          <div style="font-size: 24px; font-weight: 800; color: var(--text-primary);" id="statTotalUsers">0</div>
+          <div style="font-size: 13px; color: var(--text-muted); font-weight: 600;">Total Active Users</div>
+        </div>
+        <div class="admin-activity-card admin-stat-card">
+          <div class="admin-stat-icon">🌐</div>
+          <div style="font-size: 24px; font-weight: 800; color: var(--text-primary);" id="statTotalDomains">0</div>
+          <div style="font-size: 13px; color: var(--text-muted); font-weight: 600;">Total Domains</div>
+        </div>
+        <div class="admin-activity-card admin-stat-card">
+          <div class="admin-stat-icon">📄</div>
+          <div style="font-size: 24px; font-weight: 800; color: var(--text-primary);" id="statBlocked">0</div>
+          <div style="font-size: 13px; color: var(--text-muted); font-weight: 600;">Resume Uploads</div>
+        </div>
+      </div>
+
+      <!-- Activity + Quick Actions -->
+      <div class="admin-section-grid">
+        <!-- Resume Uploads Chart -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">
+              <div class="activity-dot"></div>
+              Resume Uploads
+            </div>
+            <div class="chart-period-btns">
+              <button class="chart-period-btn active" data-days="7" id="chartPeriod7">7d</button>
+              <button class="chart-period-btn" data-days="14" id="chartPeriod14">14d</button>
+              <button class="chart-period-btn" data-days="30" id="chartPeriod30">30d</button>
+            </div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="uploadsChart"></canvas>
+            <div class="chart-empty" id="chartEmpty" style="display:none;">
+              <span style="font-size:32px;">📊</span>
+              <span>No uploads yet</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions-card">
+          <div class="admin-activity-title">⚡ Quick Actions</div>
+          <button class="quick-action-btn" id="qaAddDomain">
+            <div class="quick-action-icon">➕</div>
+            Add Allowed Domain
+          </button>
+          <button class="quick-action-btn" id="qaViewUsage">
+            <div class="quick-action-icon">📊</div>
+            View Usage Stats
+          </button>
+          <button class="quick-action-btn" id="qaManageDomains">
+            <div class="quick-action-icon">🌐</div>
+            Manage Domains
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── TAB 2: DOMAINS ─── -->
+    <section class="tab-panel" id="panel-domains" role="tabpanel" aria-labelledby="tab-domains">
+      <div class="admin-table-card">
+        <div class="admin-table-header">
+          <!-- Title + count -->
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="admin-table-title">Allowed Domains</div>
+            <span class="count-badge" id="domainCountBadge">0</span>
+          </div>
+          <!-- Search + Add -->
+          <div class="admin-table-actions">
+            <div class="admin-search">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+              </svg>
+              <input type="text" id="domainSearch" placeholder="Search domains…" aria-label="Search domains" autocomplete="off" />
+            </div>
+            <button class="btn-add" id="openAddDomainModal">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Add Domain
+            </button>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div style="overflow-x:auto;">
+          <table class="admin-table" id="domainTable">
+            <thead>
+              <tr>
+                <th>Domain</th>
+                <th>Organization</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="domainTableBody">
+              <!-- rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+        <!-- Empty state (hidden when rows exist) -->
+        <div class="empty-state" id="domainEmptyState" style="display:none;">
+          <div class="empty-icon">🌐</div>
+          <div class="empty-title">No domains found</div>
+          <div class="empty-desc">Add an allowed email domain to let users from that organization sign up.</div>
+          <button class="btn-add" style="margin-top:8px;" onclick="AdminPanel.openAddModal()">
+            + Add First Domain
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── TAB 3: USAGE STATISTICS ─── -->
+    <section class="tab-panel" id="panel-usage" role="tabpanel" aria-labelledby="tab-usage">
+      <div class="admin-table-card">
+        <div class="admin-table-header">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="admin-table-title">Usage Statistics</div>
+            <span class="count-badge" id="usageCountBadge">0 users</span>
+          </div>
+          <div class="admin-table-actions">
+            <button class="btn-refresh-stats" id="refreshStatsBtn">
+              <svg id="refreshStatsIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.15"/>
+              </svg>
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        <!-- Summary stat cards -->
+        <div class="usage-stats-grid" id="usageSummaryCards" style="margin-top:20px;">
+          <div class="usage-stat-card">
+            <div class="usage-stat-icon">📄</div>
+            <div class="usage-stat-label">Total Resume Uploads</div>
+            <div class="usage-stat-value" id="statTotalUploads">—</div>
+            <div class="usage-stat-sub">across all users</div>
+          </div>
+          <div class="usage-stat-card">
+            <div class="usage-stat-icon">👤</div>
+            <div class="usage-stat-label">Users With Resume</div>
+            <div class="usage-stat-value" id="statUsersWithResume">—</div>
+            <div class="usage-stat-sub">profiles with uploaded resume</div>
+          </div>
+          <div class="usage-stat-card">
+            <div class="usage-stat-icon">✅</div>
+            <div class="usage-stat-label">Profiles Completed</div>
+            <div class="usage-stat-value" id="statProfilesComplete">—</div>
+            <div class="usage-stat-sub">onboarding finished</div>
+          </div>
+          <div class="usage-stat-card">
+            <div class="usage-stat-icon">🕐</div>
+            <div class="usage-stat-label">Last Upload</div>
+            <div class="usage-stat-value" style="font-size:16px;padding-top:6px;" id="statLastUpload">—</div>
+            <div class="usage-stat-sub">most recent resume upload</div>
+          </div>
+        </div>
+
+        <!-- Per-user breakdown table -->
+        <div class="usage-user-table-wrap">
+          <table class="admin-table" id="usageTable">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Email</th>
+                <th>Resume Uploaded</th>
+                <th>Upload Date</th>
+                <th>Profile Complete</th>
+              </tr>
+            </thead>
+            <tbody id="usageTableBody">
+              <!-- rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="usageEmptyState" style="display:none;">
+          <div class="empty-icon">📊</div>
+          <div class="empty-title">No usage data yet</div>
+          <div class="empty-desc">Statistics will appear as users upload their resumes and complete their profiles.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── TAB 4: USERS ─── -->
+    <section class="tab-panel" id="panel-users" role="tabpanel" aria-labelledby="tab-users">
+      <div class="admin-table-card">
+        <div class="admin-table-header">
+          <!-- Title + count -->
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="admin-table-title">Users</div>
+            <span class="count-badge" id="userCountBadge">0</span>
+          </div>
+          <!-- Search -->
+          <div class="admin-table-actions">
+            <div class="admin-search">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+              </svg>
+              <input type="text" id="userSearch" placeholder="Search users by name or email…" aria-label="Search users" autocomplete="off" style="width: 200px;" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div style="overflow-x:auto;">
+          <table class="admin-table" id="userTable">
+            <thead>
+              <tr>
+                <th>User Info</th>
+                <th>Role</th>
+                <th>Domain</th>
+                <th>Last Login</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="userTableBody">
+              <!-- rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="userEmptyState" style="display:none;">
+          <div class="empty-icon">👥</div>
+          <div class="empty-title">No users found</div>
+          <div class="empty-desc">Users who sign up for CareerIQ AI will appear here.</div>
+        </div>
+      </div>
+    </section>
+
+  </main><!-- /admin-body -->
+
+  <!-- ╔══════════════════════════════════════╗ -->
+  <!-- ║          ADD DOMAIN MODAL            ║ -->
+  <!-- ╚══════════════════════════════════════╝ -->
+  <div class="modal-overlay hidden" id="addDomainModal" role="dialog" aria-modal="true" aria-labelledby="addModalTitle">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title" id="addModalTitle">Add Allowed Domain</div>
+        <div class="modal-desc">Users with matching email addresses will be able to sign up.</div>
+      </div>
+
+      <form id="addDomainForm" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="newDomainInput">
+            Email Domain <span class="required">*</span>
+          </label>
+          <div class="input-wrapper">
+            <span class="input-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+              </svg>
+            </span>
+            <input
+              class="form-input"
+              type="text"
+              id="newDomainInput"
+              placeholder="e.g. neworg.edu"
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </div>
+          <div class="form-hint">Do not include the @ symbol</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="newOrgInput">Organization Name</label>
+          <div class="input-wrapper">
+            <span class="input-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+              </svg>
+            </span>
+            <input
+              class="form-input"
+              type="text"
+              id="newOrgInput"
+              placeholder="e.g. New University"
+              autocomplete="off"
+            />
+          </div>
+        </div>
+
+        <div class="modal-domain-note">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          Users with <strong style="color:var(--brand-light);margin:0 3px;">@domain.com</strong> emails will be able to sign up and access the platform.
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-sm btn-sm-ghost" id="cancelAddDomain">Cancel</button>
+          <button type="submit" class="btn-sm btn-sm-primary" id="submitAddDomain">
+            <span class="btn-text">Add Domain</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ╔══════════════════════════════════════╗ -->
+  <!-- ║        DELETE CONFIRM MODAL          ║ -->
+  <!-- ╚══════════════════════════════════════╝ -->
+  <div class="modal-overlay hidden" id="deleteModal" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+    <div class="modal" style="max-width:400px;">
+      <div class="modal-header">
+        <div class="modal-title" id="deleteModalTitle">Delete Domain?</div>
+        <div class="modal-desc">This action cannot be undone. Users from this domain will lose access.</div>
+      </div>
+
+      <div style="text-align:center;padding:8px 0 4px;">
+        <div class="delete-domain-display" id="deleteDomainDisplay">domain.com</div>
+        <p style="font-size:13px;color:var(--text-muted);margin-top:8px;">
+          Existing sessions will remain valid until they expire.
+        </p>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-sm btn-sm-ghost" id="cancelDeleteDomain">Cancel</button>
+        <button type="button" class="btn-sm btn-sm-danger" id="confirmDeleteDomain">Delete Domain</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast container (auto-created by CareerIQAuth.Toast.init) -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <!-- Auth + Admin scripts -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="../auth/auth.js?v=2.0.0"></script>
+  <script src="admin.js"></script>
+</body>
+</html>
+

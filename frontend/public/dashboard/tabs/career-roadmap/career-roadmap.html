@@ -1,0 +1,84 @@
+﻿
+                        <div class="crm-header">
+                            <h1 class="crm-title">🗺️ Career Roadmap</h1>
+                            <p class="crm-subtitle">
+                                Get a personalized, AI-generated step-by-step
+                                career transition plan.
+                            </p>
+                        </div>
+
+                        <div class="crm-form-card">
+                            <h3 class="crm-form-title">
+                                Generate Your Personalized Roadmap
+                            </h3>
+                            <div class="crm-form-grid">
+                                <div class="crm-field">
+                                    <label for="crmCurrentRole"
+                                        >Current Role / Field</label
+                                    >
+                                    <input
+                                        type="text"
+                                        id="crmCurrentRole"
+                                        placeholder="e.g. Computer Science Student"
+                                    />
+                                </div>
+                                <div class="crm-field">
+                                    <label for="crmTargetRole"
+                                        >Target Role</label
+                                    >
+                                    <input
+                                        type="text"
+                                        id="crmTargetRole"
+                                        placeholder="e.g. Machine Learning Engineer"
+                                    />
+                                </div>
+                                <div
+                                    class="crm-field"
+                                    style="grid-column: 1 / -1"
+                                >
+                                    <label for="crmSkills"
+                                        >Your Current Skills
+                                        (comma-separated)</label
+                                    >
+                                    <textarea
+                                        id="crmSkills"
+                                        placeholder="e.g. Python, SQL, Data Analysis, JavaScript"
+                                    ></textarea>
+                                </div>
+                            </div>
+                            <button
+                                class="crm-generate-btn"
+                                id="crmGenerateBtn"
+                            >
+                                <svg
+                                    width="18"
+                                    height="18"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                                </svg>
+                                Generate Roadmap with AI
+                            </button>
+                        </div>
+
+                        <div class="crm-output" id="crmOutput">
+                            <div class="crm-roadmap-card">
+                                <div class="crm-roadmap-header">
+                                    <h2
+                                        class="crm-roadmap-title"
+                                        id="crmRoadmapTitle"
+                                    >
+                                        Your Career Roadmap
+                                    </h2>
+                                    <p
+                                        class="crm-roadmap-meta"
+                                        id="crmRoadmapMeta"
+                                    ></p>
+                                </div>
+                                <div class="crm-steps" id="crmSteps"></div>
+                            </div>
+                        </div>
+                    </div>

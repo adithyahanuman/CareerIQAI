@@ -1,0 +1,16 @@
+{
+  "name": "careeriqai-frontend",
+  "version": "1.0.0",
+  "description": "CareerIQ AI - Frontend application",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "live-server --port=5500 --host=localhost --open=/public/index.html",
+    "dev": "live-server --port=5500"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "live-server": "^1.2.2"
+  }
+}

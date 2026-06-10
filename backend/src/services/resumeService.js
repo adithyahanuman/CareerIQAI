@@ -1,0 +1,235 @@
+/**
+ * services/resumeService.js
+ *
+ * Resume business logic – PostgreSQL queries for upload and retrieval.
+ * Uses the Master Prompt (13 sections). Each section is stored in its
+ * own dedicated JSONB column. The legacy `analysis` column is also
+ * populated for backward compatibility.
+ */
+
+'use strict';
+
+const { query }   = require('../config/db');
+const aiService   = require('../ai/aiService');
+const prompts     = require('../ai/prompts');
+
+// ---------------------------------------------------------------------------
+// CREATE / UPLOAD
+// ---------------------------------------------------------------------------
+
+/**
+ * Store a new resume text record in PostgreSQL and run master analysis.
+ *
+ * @param {{ student_id: string, resume_text: string, file_name?: string }} data
+ * @returns {Promise<object>} Created/updated resume row
+ */
+const uploadResume = async ({ student_id, resume_text, file_name = 'resume.txt' }) => {
+  // Validate student exists
+  const studentCheck = await query(
+    'SELECT id FROM students WHERE id = $1 LIMIT 1',
+    [student_id],
+  );
+  if (studentCheck.rows.length === 0) {
+    const err = new Error(`Student with id "${student_id}" not found.`);
+    err.statusCode = 404;
+    throw err;
+  }
+
+  // ── Smart cache: only return stored analysis if it has the master analysis columns ──
+  // If overall_analysis exists with a score, the resume was already fully analyzed.
+  const cached = await query(
+    `SELECT * FROM resumes
+     WHERE  student_id = $1
+       AND  file_name  = $2
+       AND  status     = 'done'
+       AND  overall_analysis IS NOT NULL
+     ORDER  BY created_at DESC
+     LIMIT  1`,
+    [student_id, file_name],
+  );
+
+  if (cached.rows.length > 0) {
+    await query(
+      'UPDATE resumes SET is_primary = FALSE WHERE student_id = $1 AND is_primary = TRUE',
+      [student_id],
+    );
+    const { rows: promoted } = await query(
+      `UPDATE resumes SET is_primary = TRUE WHERE id = $1 RETURNING *`,
+      [cached.rows[0].id],
+    );
+    console.log('[resumeService] Cache hit (master analysis) – returning for:', file_name);
+    return promoted[0];
+  }
+
+  // ── No cache hit — unset old primary and insert a fresh record ─────────────
+  await query(
+    'UPDATE resumes SET is_primary = FALSE WHERE student_id = $1 AND is_primary = TRUE',
+    [student_id],
+  );
+
+  const { rows } = await query(
+    `INSERT INTO resumes
+       (student_id, file_name, status, is_primary)
+     VALUES ($1, $2, 'parsed', TRUE)
+     RETURNING *`,
+    [student_id, file_name],
+  );
+
+  // ONE AI call — master prompt returns 13 sections
+  try {
+    const aiResponse = await aiService.analyzeResume(prompts.fullResumeAnalysis(resume_text));
+    const analysis = aiResponse.data;
+
+    // Extract overall score for ats_score column
+    const overallScore = analysis.overall?.overall_score ?? null;
+
+    // Build the UPDATE query with all 13 section columns + legacy analysis column
+    const updated = await query(
+      `UPDATE resumes
+       SET    contact_analysis          = $1,
+              summary_analysis          = $2,
+              experience_analysis       = $3,
+              education_analysis        = $4,
+              skills_analysis           = $5,
+              projects_analysis         = $6,
+              formatting_analysis       = $7,
+              certifications_analysis   = $8,
+              extracurriculars_analysis = $9,
+              overall_analysis          = $10,
+              action_plan_analysis      = $11,
+              completeness_analysis     = $12,
+              confidence_analysis       = $13,
+              analysis                  = $14,
+              ats_score                 = $15,
+              status                    = 'done'
+       WHERE  id = $16
+       RETURNING *`,
+      [
+        JSON.stringify(analysis.contact          ?? null),
+        JSON.stringify(analysis.summary          ?? null),
+        JSON.stringify(analysis.experience       ?? null),
+        JSON.stringify(analysis.education        ?? null),
+        JSON.stringify(analysis.skills           ?? null),
+        JSON.stringify(analysis.projects         ?? null),
+        JSON.stringify(analysis.formatting       ?? null),
+        JSON.stringify(analysis.certifications   ?? null),
+        JSON.stringify(analysis.extracurriculars ?? null),
+        JSON.stringify(analysis.overall          ?? null),
+        JSON.stringify(analysis.action_plan      ?? null),
+        JSON.stringify(analysis.resume_completeness  ?? null),
+        JSON.stringify(analysis.analysis_confidence  ?? null),
+        JSON.stringify(analysis),          // legacy full blob
+        overallScore,
+        rows[0].id,
+      ],
+    );
+
+    return updated.rows[0];
+  } catch (aiErr) {
+    console.error('[resumeService] AI analysis failed:', aiErr.message);
+    await query(
+      `UPDATE resumes SET status = 'error', error_message = $1 WHERE id = $2`,
+      [aiErr.message, rows[0].id],
+    );
+    return rows[0];
+  }
+};
+
+// ---------------------------------------------------------------------------
+// READ
+// ---------------------------------------------------------------------------
+
+/**
+ * Get all resumes belonging to a student (newest first).
+ */
+const getResumesByStudentId = async (studentId) => {
+  const { rows } = await query(
+    `SELECT
+       id, student_id, file_name,
+       ats_score, status, is_primary, error_message,
+       created_at, updated_at
+     FROM   resumes
+     WHERE  student_id = $1
+     ORDER  BY created_at DESC`,
+    [studentId],
+  );
+  return rows;
+};
+
+/**
+ * Get a single resume by its UUID (includes all analysis columns).
+ */
+const getResumeById = async (id) => {
+  const { rows } = await query(
+    `SELECT * FROM resumes WHERE id = $1 LIMIT 1`,
+    [id],
+  );
+  return rows[0] ?? null;
+};
+
+/**
+ * Get the primary (active) resume for a student — returns all columns
+ * so the frontend can read each of the 13 section columns directly.
+ */
+const getPrimaryResume = async (studentId) => {
+  const { rows } = await query(
+    `SELECT * FROM resumes
+     WHERE  student_id = $1 AND is_primary = TRUE
+     LIMIT  1`,
+    [studentId],
+  );
+  return rows[0] ?? null;
+};
+
+/**
+ * Persist analysis scores back to an existing resume row.
+ */
+const updateAnalysis = async (resumeId, analysis) => {
+  const overallScore = analysis.overall?.overall_score ?? analysis.overall_resume_score ?? null;
+  await query(
+    `UPDATE resumes
+     SET    contact_analysis          = $1,
+            summary_analysis          = $2,
+            experience_analysis       = $3,
+            education_analysis        = $4,
+            skills_analysis           = $5,
+            projects_analysis         = $6,
+            formatting_analysis       = $7,
+            certifications_analysis   = $8,
+            extracurriculars_analysis = $9,
+            overall_analysis          = $10,
+            action_plan_analysis      = $11,
+            completeness_analysis     = $12,
+            confidence_analysis       = $13,
+            analysis                  = $14,
+            ats_score                 = $15,
+            status                    = 'done'
+     WHERE  id = $16`,
+    [
+      JSON.stringify(analysis.contact          ?? null),
+      JSON.stringify(analysis.summary          ?? null),
+      JSON.stringify(analysis.experience       ?? null),
+      JSON.stringify(analysis.education        ?? null),
+      JSON.stringify(analysis.skills           ?? null),
+      JSON.stringify(analysis.projects         ?? null),
+      JSON.stringify(analysis.formatting       ?? null),
+      JSON.stringify(analysis.certifications   ?? null),
+      JSON.stringify(analysis.extracurriculars ?? null),
+      JSON.stringify(analysis.overall          ?? null),
+      JSON.stringify(analysis.action_plan      ?? null),
+      JSON.stringify(analysis.resume_completeness  ?? null),
+      JSON.stringify(analysis.analysis_confidence  ?? null),
+      JSON.stringify(analysis),
+      overallScore,
+      resumeId,
+    ],
+  );
+};
+
+module.exports = {
+  uploadResume,
+  getResumesByStudentId,
+  getResumeById,
+  getPrimaryResume,
+  updateAnalysis,
+};

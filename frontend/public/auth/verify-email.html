@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CareerIQ AI — Verify Email</title>
+  <meta name="description" content="Verify your email address for CareerIQ AI." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../auth.css" />
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="auth.js?v=2.0.0"></script>
+</head>
+<body class="auth-page" style="display: flex; align-items: center; justify-content: center; padding: 24px;">
+  <button id="themeToggle" class="theme-toggle-btn auth-top-bar" aria-label="Toggle Theme">
+    <svg class="sun-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+    <svg class="moon-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  </button>
+
+  <div class="verify-card" style="width: 100%; max-width: 440px; text-align: center;">
+    <div class="auth-logo" style="justify-content: center; margin-bottom: 40px;">
+      <div class="auth-logo-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L2 7l10 5 10-5-10-5z" fill="#09100a"/>
+          <path d="M2 17l10 5 10-5" stroke="#09100a" stroke-width="2" stroke-linecap="round"/>
+          <path d="M2 12l10 5 10-5" stroke="#09100a" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span>CareerIQ <span class="logo-ai-text">AI</span></span>
+    </div>
+
+    <div class="verify-icon" style="margin-bottom: 24px;">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--brand-light)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+    </div>
+
+    <h1 style="font-size: 28px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 12px;">Verify your email</h1>
+    <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 24px;">
+      We sent a verification link to <strong id="userEmailDisplay" style="color: var(--text-primary);">your email</strong>. Please check your inbox and click the link to verify your account.
+    </p>
+
+    <div class="alert alert-warning" style="margin-top: 16px; margin-bottom: 24px; text-align: left; font-size: 13px; line-height: 1.5; border-radius: var(--radius-md); padding: 12px 14px; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2); color: var(--orange); display: flex; align-items: flex-start; gap: 10px;">
+      <span style="font-size: 16px; flex-shrink: 0; margin-top: 1px;">⚠️</span>
+      <div>
+        <strong>Check your Spam folder!</strong> Due to VIT email security guidelines, the verification mail may be redirected to your <strong>Spam / Junk</strong> folder.
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <button type="button" id="verifyBtn" class="btn-primary" style="width: 100%;">
+        <div class="spinner"></div>
+        <span class="btn-text">I've Verified My Email</span>
+      </button>
+    </div>
+
+    <div style="margin-top: 32px; font-size: 14px; color: var(--text-muted);">
+      Didn't receive the email? 
+      <button id="resendBtn" onclick="resendEmail()" style="color: var(--brand-light); font-weight: 600; cursor: pointer; background: none; border: none; padding: 0; font-family: inherit; font-size: 14px;">Click to resend</button>
+      <span id="countdownText" style="display: none; color: var(--text-muted); font-weight: 500;">Resend in <span id="countdown">60</span>s</span>
+    </div>
+
+    <div style="margin-top: 40px; border-top: 1px solid var(--border); padding-top: 24px;">
+      <a href="signup.html" class="back-link" style="display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--text-muted); text-decoration: none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Back to sign up
+      </a>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script>
+    const initApp = async () => {
+      await CareerIQAuth.authReady;
+      const user = firebase.auth().currentUser;
+
+      if (!user) {
+        window.location.href = 'login.html';
+        return;
+      }
+
+      // If already verified, redirect immediately
+      if (user.emailVerified) {
+        window.location.href = '../dashboard.html';
+        return;
+      }
+
+      const emailDisplay = document.getElementById('userEmailDisplay');
+      if (emailDisplay) emailDisplay.textContent = user.email;
+
+      // Handle "I've Verified" check
+      const verifyBtn = document.getElementById('verifyBtn');
+      if (verifyBtn) {
+        verifyBtn.addEventListener('click', async () => {
+          verifyBtn.classList.add('loading');
+          verifyBtn.disabled = true;
+          try {
+            await user.reload();
+            const freshUser = firebase.auth().currentUser;
+            if (freshUser && freshUser.emailVerified) {
+              CareerIQAuth.Toast.show('Email verified successfully!', 'success');
+              
+              // Update local session cache
+              const session = CareerIQAuth.Session.get();
+              if (session && session.user) {
+                session.user.verified = true;
+                CareerIQAuth.Storage.set('session', session);
+              }
+              
+              setTimeout(() => {
+                window.location.href = '../onboarding/index.html';
+              }, 1000);
+            } else {
+              CareerIQAuth.Toast.show('Email is not verified yet. Please click the link in the verification email.', 'warning');
+              verifyBtn.classList.remove('loading');
+              verifyBtn.disabled = false;
+            }
+          } catch (err) {
+            console.error(err);
+            CareerIQAuth.Toast.show('Error checking status: ' + err.message, 'error');
+            verifyBtn.classList.remove('loading');
+            verifyBtn.disabled = false;
+          }
+        });
+      }
+
+      // Handle Resend
+      window.resendEmail = async () => {
+        const currentUser = firebase.auth().currentUser;
+        if (!currentUser) {
+          CareerIQAuth.Toast.show('User session not found. Please log in again.', 'error');
+          return;
+        }
+
+        const resendBtn = document.getElementById('resendBtn');
+        const countdownText = document.getElementById('countdownText');
+        const countdownSpan = document.getElementById('countdown');
+        
+        try {
+          const baseUrl = CareerIQAuth.getBaseUrl();
+          if (baseUrl.startsWith('http')) {
+            const actionCodeSettings = {
+              url: baseUrl + '/auth/verify-email.html',
+              handleCodeInApp: false
+            };
+            await currentUser.sendEmailVerification(actionCodeSettings);
+          } else {
+            await currentUser.sendEmailVerification();
+          }
+          
+          CareerIQAuth.Toast.show('Verification email resent!', 'success');
+          
+          resendBtn.style.display = 'none';
+          countdownText.style.display = 'inline';
+          
+          let timeLeft = 60;
+          countdownSpan.textContent = timeLeft;
+          
+          const timer = setInterval(() => {
+            timeLeft--;
+            countdownSpan.textContent = timeLeft;
+            if (timeLeft <= 0) {
+              clearInterval(timer);
+              resendBtn.style.display = 'inline';
+              countdownText.style.display = 'none';
+            }
+          }, 1000);
+        } catch (err) {
+          CareerIQAuth.Toast.show('Failed to resend: ' + err.message, 'error');
+        }
+      };
+    };
+
+    if (window.CareerIQAuth) {
+      initApp();
+    } else {
+      document.addEventListener('CareerIQAuthReady', initApp);
+    }
+  </script>
+</body>
+</html>
