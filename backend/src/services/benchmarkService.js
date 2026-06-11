@@ -109,8 +109,7 @@ function _extractDegreeText(row) {
  * Follows this order every time (load or refresh):
  *   1. Fetch current Firestore raw text → compute hash
  *   2. Done session with SAME hash → return it (resume unchanged, no AI)
- *   3. Done session with ANY hash  → return it (old resume, still useful)
- *   4. Nothing in DB              → run AI, store hash, return fresh data
+ *   3. Nothing in DB with this hash → run AI, store hash, return fresh data
  *
  * @param {string}  studentId
  */
@@ -155,13 +154,6 @@ const getMyRoleFit = async (studentId) => {
     return { ...exactMatch, status: 'done', cache: 'hash_match' };
   }
 
-  // ── Step 4: done session with ANY hash → return it (different resume) ──────
-  const anyDone = await _getLatestDoneSession(studentId, null);
-  if (anyDone) {
-    console.log('[benchmark] Cache HIT (old resume) — returning existing DB data');
-    return { ...anyDone, status: 'done', cache: 'old_resume' };
-  }
-
   // ── Step 5: in-progress session? tell caller to poll ──────────────────────
   const { rows: [running] } = await query(
     `SELECT id FROM benchmark_sessions
@@ -178,52 +170,10 @@ const getMyRoleFit = async (studentId) => {
 };
 
 /**
- * Refresh (button press) — User explicitly requested a refresh.
- * Bypass the cache and force a fresh AI run so the user can get new data.
+ * Refresh endpoint — follows EXACTLY the same smart order as getMyRoleFit.
+ * AI is only triggered when there is NO done session in the DB at all.
  */
-const refreshMyRoleFit = async (studentId) => {
-  // ── Fetch student row ──────────────────────────────────────────────────────
-  const { rows: [studentRow] } = await query(
-    `SELECT s.id, s.full_name, s.course, s.branch, s.firebase_uid,
-            r.id          AS resume_id,
-            r.skills_analysis,
-            r.projects_analysis,
-            r.experience_analysis,
-            r.education_analysis,
-            r.certifications_analysis,
-            r.extracurriculars_analysis,
-            r.overall_analysis,
-            r.confidence_analysis,
-            r.action_plan_analysis
-     FROM   students s
-     JOIN   resumes  r ON r.student_id = s.id
-                      AND r.is_primary  = TRUE
-                      AND r.status      = 'done'
-     WHERE  s.id = $1
-     LIMIT  1`,
-    [studentId],
-  );
-
-  if (!studentRow) {
-    const err = new Error('No analysed resume found. Please upload and analyse your resume first.');
-    err.statusCode = 422;
-    throw err;
-  }
-
-  // ── Compute current resume hash ────────────────────────────────────────────
-  const rawText     = await _fetchRawText(studentRow.firebase_uid);
-  const currentHash = sha256(rawText);
-  console.log(`[benchmark:refresh] Force refresh requested for hash=${currentHash.slice(0, 12)}…`);
-
-  // Cancel any in-progress session first
-  await query(
-    `UPDATE benchmark_sessions SET status='cancelled', updated_at=NOW()
-     WHERE  created_by=$1 AND status='running'`,
-    [studentId],
-  );
-
-  return _runAI(studentId, studentRow, rawText, currentHash);
-};
+const refreshMyRoleFit = (studentId) => getMyRoleFit(studentId);
 
 /**
  * Lightweight status check — never triggers AI.

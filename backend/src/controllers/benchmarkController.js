@@ -7,8 +7,7 @@
 const benchmarkService = require('../services/benchmarkService');
 
 // ── GET /api/benchmark/my-role-fit  ──────────────────────────────────────────
-// Smart order: hash match → any done session → run AI.
-// Never triggers AI if any done session exists in the DB.
+// Order: hash match → DB | hash mismatch → run AI
 const getMyRoleFit = async (req, res, next) => {
   try {
     const data = await benchmarkService.getMyRoleFit(req.user.id);
@@ -32,7 +31,8 @@ const getMyStatus = async (req, res, next) => {
 };
 
 // ── POST /api/benchmark/my-role-fit/refresh  ─────────────────────────────────
-// User explicitly requested a refresh. Bypass the cache and force a fresh AI run.
+// Follows the SAME logic as GET: if resume hash matches, returns DB data.
+// If resume hash doesn't match, forces AI run.
 const refreshMyRoleFit = async (req, res, next) => {
   try {
     const data = await benchmarkService.refreshMyRoleFit(req.user.id);
