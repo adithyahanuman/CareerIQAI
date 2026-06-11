@@ -55,14 +55,9 @@ const uploadResume = async ({ student_id, resume_text, file_name = 'resume.txt' 
       'UPDATE resumes SET is_primary = FALSE WHERE student_id = $1 AND is_primary = TRUE',
       [student_id],
     );
-    // Backfill raw_text if the cached row never had it saved (older uploads)
-    const cachedId = cached.rows[0].id;
-    if (!cached.rows[0].raw_text && resume_text) {
-      await query(`UPDATE resumes SET raw_text = $1 WHERE id = $2`, [resume_text, cachedId]);
-    }
     const { rows: promoted } = await query(
       `UPDATE resumes SET is_primary = TRUE WHERE id = $1 RETURNING *`,
-      [cachedId],
+      [cached.rows[0].id],
     );
     console.log('[resumeService] Cache hit (master analysis) – returning for:', file_name);
     return promoted[0];
@@ -76,10 +71,10 @@ const uploadResume = async ({ student_id, resume_text, file_name = 'resume.txt' 
 
   const { rows } = await query(
     `INSERT INTO resumes
-       (student_id, file_name, raw_text, status, is_primary)
-     VALUES ($1, $2, $3, 'parsed', TRUE)
+       (student_id, file_name, status, is_primary)
+     VALUES ($1, $2, 'parsed', TRUE)
      RETURNING *`,
-    [student_id, file_name, resume_text || ''],
+    [student_id, file_name],
   );
 
   // ONE AI call — master prompt returns 13 sections

@@ -13,10 +13,11 @@
 
 'use strict';
 
-const { query }                      = require('../config/db');
-const aiService                      = require('../ai/aiService');
-const { benchmarkCandidates }        = require('../ai/benchmarkPrompt');
+const { query }                           = require('../config/db');
+const aiService                           = require('../ai/aiService');
+const { benchmarkCandidates }             = require('../ai/benchmarkPrompt');
 const { getRolesForCourse, detectCourseTier } = require('../ai/rolesList');
+const { admin }                           = require('../config/firebase');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PERSONAL ROLE-FIT  (the main feature)
@@ -38,9 +39,8 @@ const getMyRoleFit = async (studentId, force = false) => {
 
   // ── 2. Fetch student + primary resume ──────────────────────────────────────
   const { rows: [studentRow] } = await query(
-    `SELECT s.id, s.full_name, s.course, s.branch,
+    `SELECT s.id, s.full_name, s.course, s.branch, s.firebase_uid,
             r.id          AS resume_id,
-            r.raw_text,
             r.skills_analysis,
             r.projects_analysis,
             r.experience_analysis,
@@ -65,18 +65,36 @@ const getMyRoleFit = async (studentId, force = false) => {
     throw err;
   }
 
-  // ── 3. Detect course from education_analysis or student.course column ──────
-  const eduText = _extractDegreeText(studentRow);
-  const tier    = detectCourseTier(eduText);
+  // ── 3. Detect course ─────────────────────────────────────────────────────────────
+  const eduText  = _extractDegreeText(studentRow);
+  const tier     = detectCourseTier(eduText);
   const jobRoles = getRolesForCourse(eduText);
 
+  // ── 3b. Fetch raw resume text from Firestore ───────────────────────────────────────
+  // Firestore stores the PDF-extracted text at: user_profiles/{firebase_uid}.resumeText
+  let rawText = '';
+  try {
+    const uid = studentRow.firebase_uid;
+    if (uid) {
+      const snap = await admin.firestore()
+        .collection('user_profiles')
+        .doc(uid)
+        .get();
+      rawText = snap.exists ? (snap.data().resumeText || '') : '';
+      if (rawText) console.log(`[benchmark] Loaded raw_text from Firestore for uid=${uid} (${rawText.length} chars)`);
+      else         console.warn(`[benchmark] No resumeText in Firestore for uid=${uid}`);
+    }
+  } catch (fsErr) {
+    console.warn('[benchmark] Firestore raw_text fetch failed:', fsErr.message);
+  }
+
   // ── 4. Build the resume payload for the AI ─────────────────────────────────
-  // raw_text = original resume text (primary source)
-  // analysis = structured 13-section JSON (supporting signal)
+  // raw_text = from Firestore (primary source)
+  // analysis = structured 13-section JSON from PostgreSQL (supporting signal)
   const resumePayload = [{
     id:       studentRow.id,
     name:     studentRow.full_name,
-    raw_text: studentRow.raw_text || '',
+    raw_text: rawText,
     analysis: {
       skills:              studentRow.skills_analysis           ?? {},
       projects:            studentRow.projects_analysis         ?? {},
@@ -222,7 +240,7 @@ const createSession = async ({ createdBy, candidateIds, jobRoles }) => {
     const resumeRows = await Promise.all(
       candidateIds.map(sid =>
         query(
-          `SELECT r.id, s.full_name AS name, r.raw_text,
+          `SELECT r.id, s.full_name AS name,
                   r.skills_analysis, r.projects_analysis, r.experience_analysis,
                   r.education_analysis, r.certifications_analysis, r.overall_analysis,
                   r.confidence_analysis, r.action_plan_analysis
@@ -235,7 +253,7 @@ const createSession = async ({ createdBy, candidateIds, jobRoles }) => {
 
     const validResumes = resumeRows.filter(Boolean).map(r => ({
       id: r.id, name: r.name,
-      raw_text: r.raw_text || '',
+      raw_text: '', // raw text not fetched for legacy multi-candidate admin endpoint
       analysis: {
         skills: r.skills_analysis ?? {}, projects: r.projects_analysis ?? {},
         experience: r.experience_analysis ?? {}, education: r.education_analysis ?? {},
