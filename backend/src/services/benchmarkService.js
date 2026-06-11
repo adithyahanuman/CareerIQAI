@@ -181,9 +181,12 @@ const getMyRoleFit = async (studentId) => {
   }
 
   // ── Step 5: in-progress session? tell caller to poll ──────────────────────
+  // Ignore sessions older than 5 minutes (they are stuck/crashed)
   const { rows: [running] } = await query(
     `SELECT id FROM benchmark_sessions
-     WHERE  created_by = $1 AND status = 'running'
+     WHERE  created_by = $1 
+       AND status = 'running'
+       AND created_at > NOW() - INTERVAL '5 minutes'
      ORDER  BY created_at DESC LIMIT 1`,
     [studentId],
   );
@@ -196,10 +199,20 @@ const getMyRoleFit = async (studentId) => {
 };
 
 /**
- * Refresh endpoint — follows EXACTLY the same smart order as getMyRoleFit.
- * AI is only triggered when there is NO done session in the DB at all.
+ * Refresh endpoint — User explicitly clicked the Refresh button.
+ * This MUST separate from getMyRoleFit because if there's a stuck session,
+ * we need to actively cancel it so they aren't permanently locked out.
  */
-const refreshMyRoleFit = (studentId) => getMyRoleFit(studentId);
+const refreshMyRoleFit = async (studentId) => {
+  // Cancel any running sessions for this student so they can force a fresh run
+  await query(
+    `UPDATE benchmark_sessions SET status='cancelled', updated_at=NOW()
+     WHERE  created_by=$1 AND status='running'`,
+    [studentId],
+  );
+
+  return getMyRoleFit(studentId);
+};
 
 /**
  * Lightweight status check — never triggers AI.
@@ -210,7 +223,9 @@ const getMyStatus = async (studentId) => {
 
   const { rows: [running] } = await query(
     `SELECT id FROM benchmark_sessions
-     WHERE  created_by = $1 AND status = 'running'
+     WHERE  created_by = $1 
+       AND status = 'running'
+       AND created_at > NOW() - INTERVAL '5 minutes'
      ORDER  BY created_at DESC LIMIT 1`,
     [studentId],
   );
