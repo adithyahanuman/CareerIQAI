@@ -120,6 +120,16 @@ class AIService {
   async scoreProject(prompt) {
     return this._execute('scoreProject', prompt);
   }
+
+  /**
+   * Score multiple candidates against multiple job roles (benchmarking).
+   *
+   * @param {string} prompt
+   * @returns {Promise<NormalizedResponse>}
+   */
+  async benchmarkResumes(prompt) {
+    return this._execute('analyzeResume', prompt);
+  }
 }
 
 module.exports = new AIService();

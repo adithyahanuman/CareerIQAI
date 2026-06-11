@@ -16,6 +16,8 @@
         <link rel="stylesheet" href="tabs/career-roadmap/career-roadmap.css" />
         <!-- PlacementIQ Dashboard Styles -->
         <link rel="stylesheet" href="placementiq.css" />
+        <!-- Benchmarking Tab Styles -->
+        <link rel="stylesheet" href="tabs/benchmarking/benchmarking.css" />
         <!-- pdf.js for PDF text extraction (required by browser-resume-extractor.js) -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
         <!-- Chart.js for analytics -->
@@ -811,15 +813,74 @@
                          TAB: BENCHMARKING
                     ════════════════════════════════════ -->
                     <div class="page-view" id="page-benchmarking">
-                        <div class="coming-soon-card">
-                            <div class="cs-header">
-                                <h2 class="cs-title">Benchmarking</h2>
-                                <span class="cs-badge">Coming Soon</span>
+                        <div class="bench-tab">
+
+                            <!-- Header -->
+                            <div class="bench-header">
+                                <div class="bench-header-left">
+                                    <h2>Candidate Benchmarking</h2>
+                                    <p>Score every candidate against every job role using AI — side-by-side comparison in one click.</p>
+                                </div>
+                                <span class="bench-badge">⚡ AI Powered</span>
                             </div>
-                            <p class="cs-desc">
-                                Compare your resume and skill profile against industry peers and top candidates
-                                in your target role. Benchmarking insights powered by AI will be available soon.
-                            </p>
+
+                            <!-- Setup Card -->
+                            <div class="bench-setup-card">
+                                <!-- Left: Candidate Picker -->
+                                <div class="bench-setup-section">
+                                    <h3>
+                                        <div class="bench-sec-icon" style="background:rgba(99,102,241,0.12);color:#818cf8;">👥</div>
+                                        Select Candidates
+                                    </h3>
+                                    <div class="bench-candidate-list" id="benchCandidateList">
+                                        <div style="padding:12px;color:var(--text-secondary);font-size:13px;">Loading…</div>
+                                    </div>
+                                </div>
+
+                                <!-- Right: Job Roles -->
+                                <div class="bench-setup-section">
+                                    <h3>
+                                        <div class="bench-sec-icon" style="background:rgba(16,185,129,0.12);color:#34d399;">🎯</div>
+                                        Job Roles to Score Against
+                                    </h3>
+                                    <div class="bench-roles-area">
+                                        <div class="bench-role-tags" id="benchRoleTags"></div>
+                                        <div class="bench-role-input-row">
+                                            <input class="bench-role-input" id="benchRoleInput"
+                                                   placeholder="Type a role and press Enter…" maxlength="80" />
+                                            <button class="bench-role-add-btn" id="benchRoleAddBtn">+ Add</button>
+                                        </div>
+                                        <div class="bench-preset-roles" id="benchPresets"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Run Row -->
+                            <div class="bench-run-row">
+                                <div class="bench-summary-text" id="benchSummaryText">Select candidates and roles to begin</div>
+                                <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;">
+                                    <button class="bench-run-btn" id="benchRunBtn" disabled>
+                                        <div class="bench-spinner"></div>
+                                        <span class="bench-run-icon">⚡</span>
+                                        Run Benchmark
+                                    </button>
+                                    <div class="bench-error-msg" id="benchError" style="display:none;"></div>
+                                </div>
+                            </div>
+
+                            <!-- Results (hidden until run) -->
+                            <div id="benchResultsSection" style="display:none;"></div>
+
+                            <!-- Session History -->
+                            <div>
+                                <h3 style="font-size:13px;font-weight:700;color:var(--text-primary);margin:0 0 12px;">
+                                    📋 Previous Runs
+                                </h3>
+                                <div class="bench-history-list" id="benchHistoryList">
+                                    <div style="color:var(--text-secondary);font-size:12px;padding:8px;">No runs yet.</div>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
                     <!-- END TAB: BENCHMARKING -->
@@ -862,5 +923,10 @@
         <script src="dashboard.js"></script>
         <!-- PlacementIQ Dashboard JS -->
         <script src="placementiq.js"></script>
+        <!-- Benchmarking Tab JS -->
+        <script src="tabs/benchmarking/benchmarking.js"></script>
     </body>
+    <!-- Benchmark tooltip (shared, outside scroll container) -->
+    <div class="bench-tooltip" id="benchTooltip"></div>
+
 </html>

@@ -19,7 +19,8 @@ const healthRoutes   = require('./routes/healthRoutes');
 const authRoutes     = require('./routes/authRoutes');
 const studentRoutes  = require('./routes/studentRoutes');
 const resumeRoutes   = require('./routes/resumeRoutes');
-const careerRoutes   = require('./routes/careerRoutes');
+const careerRoutes      = require('./routes/careerRoutes');
+const benchmarkRoutes   = require('./routes/benchmarkRoutes');
 
 const app = express();
 
@@ -37,7 +38,8 @@ app.use('/api/health',    healthRoutes);
 app.use('/api/auth',      authRoutes);
 app.use('/api/students',  studentRoutes);
 app.use('/api/resumes',   resumeRoutes);
-app.use('/api/career',    careerRoutes);
+app.use('/api/career',      careerRoutes);
+app.use('/api/benchmark',   benchmarkRoutes);
 
 // ── 404 & Error handlers ───────────────────────────────────────────────────────
 app.use(notFound);
