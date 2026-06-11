@@ -1,18 +1,18 @@
 :root {
-    --bg: #050810;
-    --surface: #0D1425;
-    --glass: rgba(255,255,255,0.04);
-    --border: rgba(255,255,255,0.08);
-    --text: #F1F5F9;
-    --text-dim: #94A3B8;
-    --violet: #7C3AED;
-    --cyan: #06B6D4;
-    --amber: #F59E0B;
-    --green: #10B981;
-    --muted: #64748B;
-    --radius: 14px;
-    --font-display: 'Space Grotesk', sans-serif;
-    --font-body: 'Inter', sans-serif;
+    --bg: #0f1417;
+    --surface: #1b2023;
+    --glass: rgba(175, 198, 255, 0.04);
+    --border: #44474a;
+    --text: #dfe3e7;
+    --text-dim: #c5c6ca;
+    --violet: #afc6ff;
+    --cyan: #d9e2ff;
+    --amber: #f59e0b;
+    --green: #4ade80;
+    --muted: #838486;
+    --radius: 8px;
+    --font-display: 'Hanken Grotesk', sans-serif;
+    --font-body: 'Hanken Grotesk', sans-serif;
 }
 
 * {

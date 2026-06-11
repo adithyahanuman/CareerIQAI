@@ -1,29 +1,36 @@
-﻿                            /* ── Master Analytics UI ─────────────────────────────────────── */
+                            /* ── Master Analytics UI ─────────────────────────────────────── */
                             :root {
-                                --ra-bg: var(--bg-primary, #0d0f14);
-                                --ra-card: var(--bg-card, #161b25);
-                                --ra-elevated: var(--bg-glass, #1e2535);
-                                --ra-blue: #4f8ef7;
-                                --ra-emerald: #22d3a5;
-                                --ra-amber: #fbbf24;
-                                --ra-rose: #f87171;
-                                --ra-purple: #a78bfa;
-                                --ra-text: var(--text-primary, #e2e8f0);
-                                --ra-muted: var(--text-secondary, #94a3b8);
-                                --ra-dim: #64748b;
-                                --ra-border: rgba(255, 255, 255, 0.07);
-                                --ra-border-h: rgba(255, 255, 255, 0.14);
-                                --ra-radius: 16px;
+                                --ra-bg: var(--bg-primary, #0f1417);
+                                --ra-card: var(--bg-card, #1b2023);
+                                --ra-elevated: var(--bg-secondary, #171c1f);
+                                --ra-blue: #afc6ff;
+                                --ra-emerald: #4ade80;
+                                --ra-amber: #f59e0b;
+                                --ra-rose: #ffb4ab;
+                                --ra-purple: #d9e2ff;
+                                --ra-text: var(--text-primary, #dfe3e7);
+                                --ra-muted: var(--text-secondary, #c5c6ca);
+                                --ra-dim: var(--text-muted, #838486);
+                                --ra-border: #44474a;
+                                --ra-border-h: #8f9194;
+                                --ra-radius: 8px;
                                 --ra-ease: cubic-bezier(0.4, 0, 0.2, 1);
                             }
                             /* ── Light mode ra-* overrides ── */
                             [data-theme="light"] {
-                                --ra-bg: #f0f4f9;
+                                --ra-bg: #f8fafc;
                                 --ra-card: #ffffff;
-                                --ra-elevated: rgba(14, 165, 233, 0.05);
-                                --ra-border: rgba(14, 100, 180, 0.12);
-                                --ra-border-h: rgba(14, 100, 180, 0.22);
-                                --ra-dim: #7a95b0;
+                                --ra-elevated: #f1f5f9;
+                                --ra-border: #e2e2e5;
+                                --ra-border-h: #c6c6c9;
+                                --ra-dim: #5d5e61;
+                                --ra-blue: #005ed0;
+                                --ra-emerald: #10b981;
+                                --ra-amber: #d97706;
+                                --ra-rose: #93000a;
+                                --ra-purple: #004398;
+                                --ra-text: #1a1c1e;
+                                --ra-muted: #454749;
                             }
                             [data-theme="light"] .ra-reanalyze-btn:hover {
                                 background: rgba(14, 165, 233, 0.08);

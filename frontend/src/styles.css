@@ -5,60 +5,51 @@
 
 /* ---- CSS Variables / Design Tokens ---- */
 :root {
-  /* Dark Mode (default) */
-  --bg-primary: #0a0a0f;
-  --bg-secondary: #0f1117;
-  --bg-card: #141620;
-  --bg-card-hover: #1a1d2a;
-  --bg-glass: rgba(255, 255, 255, 0.04);
-  --bg-glass-hover: rgba(255, 255, 255, 0.08);
-  --bg-nav: rgba(10, 10, 15, 0.8);
-  --bg-nav-scrolled: rgba(10, 10, 15, 0.95);
-  --border: rgba(255, 255, 255, 0.1);
-  --border-strong: rgba(255, 255, 255, 0.18);
+  /* Midnight Slate & Neon Cobalt (Dark Mode) */
+  --bg-primary: #0f1417; /* surface */
+  --bg-secondary: #171c1f; /* surface-container-low */
+  --bg-card: #1b2023; /* surface-container */
+  --bg-card-hover: #262b2e; /* surface-container-high */
+  --bg-glass: rgba(175, 198, 255, 0.04);
+  --bg-glass-hover: rgba(175, 198, 255, 0.08);
+  --bg-nav: rgba(15, 20, 23, 0.8);
+  --bg-nav-scrolled: rgba(15, 20, 23, 0.95);
+  --border: #44474a; /* outline-variant */
+  --border-strong: #8f9194; /* outline */
 
-  --text-primary: #f0f4f8;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  --text-primary: #dfe3e7; /* on-surface */
+  --text-secondary: #c5c6ca; /* on-surface-variant */
+  --text-muted: #838486; /* on-primary-container */
 
-  /* Brand: Ocean Blue & Cyan */
-  --brand: #0ea5e9;
-  /* Sky Blue */
-  --brand-light: #38bdf8;
-  /* Light Sky */
-  --brand-dark: #0284c7;
-  /* Dark Sky */
-  --lime: #06b6d4;
-  /* Cyan */
-  --acid: #22d3ee;
-  /* Electric Cyan */
-  --cyan: #06b6d4;
-  /* Cyan */
-  --green: #10b981;
-  /* success green */
+  /* Brand: Neon Cobalt */
+  --brand: #afc6ff; /* secondary */
+  --brand-light: #d9e2ff; /* secondary-fixed */
+  --brand-dark: #002d6c; /* on-secondary */
+  
+  --lime: #4ade80;
+  --cyan: #afc6ff;
+  --green: #4ade80;
   --orange: #f59e0b;
-  /* orange */
-  --pink: #ec4899;
-  /* pink highlight */
-  --red: #ef4444;
-  /* error red */
+  --pink: #ffb3b0; /* tertiary */
+  --red: #ffb4ab; /* error */
 
-  --gradient-brand: linear-gradient(135deg, #0ea5e9, #06b6d4);
-  --gradient-text: linear-gradient(135deg, #38bdf8, #22d3ee, #67e8f9);
-  --gradient-hero: radial-gradient(ellipse at top, rgba(14, 165, 233, 0.15) 0%, transparent 60%);
+  --gradient-brand: linear-gradient(135deg, #afc6ff, #005ed0);
+  --gradient-text: linear-gradient(135deg, #d9e2ff, #afc6ff, #005ed0);
+  --gradient-hero: radial-gradient(ellipse at top, rgba(175, 198, 255, 0.15) 0%, transparent 60%);
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.6);
-  --shadow-lg: 0 12px 48px rgba(0, 0, 0, 0.7);
-  --shadow-xl: 0 24px 72px rgba(0, 0, 0, 0.8);
-  --shadow-glow: 0 0 40px rgba(14, 165, 233, 0.25);
-  --shadow-glow-sm: 0 0 20px rgba(14, 165, 233, 0.18);
+  /* Flat Tonal Layers instead of shadow */
+  --shadow-sm: 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --shadow-md: 0 0 0 1px rgba(255, 255, 255, 0.1);
+  --shadow-lg: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 10px 30px rgba(0,0,0,0.5);
+  --shadow-xl: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 20px 40px rgba(0,0,0,0.6);
+  --shadow-glow: 0 0 30px rgba(175, 198, 255, 0.15);
+  --shadow-glow-sm: 0 0 16px rgba(175, 198, 255, 0.1);
 
   --nav-height: 70px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
   --radius-full: 9999px;
 
   --transition: 0.2s ease;
@@ -66,30 +57,43 @@
   --transition-lg: 0.5s ease;
   --transition-bounce: 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 
-  --font-sans: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'Geist', monospace;
 }
 
 [data-theme="light"] {
   --bg-primary: #f8fafc;
   --bg-secondary: #f1f5f9;
   --bg-card: #ffffff;
-  --bg-card-hover: #f1f5f9;
+  --bg-card-hover: #e2e8f0;
   --bg-glass: rgba(0, 0, 0, 0.03);
   --bg-glass-hover: rgba(0, 0, 0, 0.06);
   --bg-nav: rgba(255, 255, 255, 0.8);
   --bg-nav-scrolled: rgba(255, 255, 255, 0.95);
-  --border: rgba(0, 0, 0, 0.08);
-  --border-strong: rgba(0, 0, 0, 0.15);
+  --border: #e2e2e5; /* primary-fixed */
+  --border-strong: #c6c6c9; /* primary-fixed-dim */
 
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #94a3b8;
+  --text-primary: #1a1c1e; /* on-primary-fixed */
+  --text-secondary: #454749; /* on-primary-fixed-variant */
+  --text-muted: #5d5e61; /* inverse-primary */
+
+  --brand: #005ed0; /* secondary-container */
+  --brand-light: #afc6ff; /* secondary-fixed-dim */
+  --brand-dark: #004398; /* on-secondary-fixed-variant */
+
+  --red: #93000a; /* error-container */
+  --pink: #68000f; /* on-tertiary */
+
+  --gradient-brand: linear-gradient(135deg, #005ed0, #004398);
+  --gradient-text: linear-gradient(135deg, #005ed0, #002d6c);
+  --gradient-hero: radial-gradient(ellipse at top, rgba(0, 94, 208, 0.1) 0%, transparent 60%);
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 12px 48px rgba(0, 0, 0, 0.08);
   --shadow-xl: 0 24px 72px rgba(0, 0, 0, 0.1);
-  --shadow-glow: 0 0 30px rgba(14, 165, 233, 0.12);
+  --shadow-glow: 0 0 30px rgba(0, 94, 208, 0.12);
+  --shadow-glow-sm: 0 0 16px rgba(0, 94, 208, 0.1);
 }
 
 /* ---- Reset ---- */
@@ -164,14 +168,14 @@ textarea {
   align-items: center;
   gap: 8px;
   padding: 12px 24px;
-  background: var(--gradient-brand);
-  color: #ffffff;
-  border-radius: var(--radius-full);
+  background: var(--brand);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
   font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.01em;
   transition: all var(--transition-md);
-  box-shadow: 0 4px 16px rgba(14, 165, 233, 0.3), 0 0 0 0 rgba(14, 165, 233, 0);
+  box-shadow: none;
   position: relative;
   overflow: hidden;
   white-space: nowrap;
@@ -187,8 +191,8 @@ textarea {
 }
 
 .btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 28px rgba(14, 165, 233, 0.45), 0 0 0 4px rgba(14, 165, 233, 0.15);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-glow-sm);
 }
 
 .btn-primary:hover::before {
@@ -226,9 +230,9 @@ textarea {
   align-items: center;
   gap: 8px;
   padding: 12px 24px;
-  background: var(--bg-glass);
+  background: transparent;
   color: var(--text-primary);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-sm);
   font-size: 14px;
   font-weight: 600;
   border: 1px solid var(--border-strong);
@@ -249,7 +253,7 @@ textarea {
   gap: 8px;
   padding: 10px 20px;
   color: var(--text-secondary);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-sm);
   font-size: 14px;
   font-weight: 500;
   transition: all var(--transition);
