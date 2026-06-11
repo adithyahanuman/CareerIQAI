@@ -7,10 +7,11 @@
 const benchmarkService = require('../services/benchmarkService');
 
 // ── GET /api/benchmark/my-role-fit  ──────────────────────────────────────────
-// Returns cached result if exists, or {status:'running'} if in progress, else triggers fresh AI run.
+// Smart order: hash match → any done session → run AI.
+// Never triggers AI if any done session exists in the DB.
 const getMyRoleFit = async (req, res, next) => {
   try {
-    const data = await benchmarkService.getMyRoleFit(req.user.id, false);
+    const data = await benchmarkService.getMyRoleFit(req.user.id);
     res.status(200).json({ success: true, data });
   } catch (err) {
     if (err.statusCode) res.status(err.statusCode);
@@ -31,7 +32,8 @@ const getMyStatus = async (req, res, next) => {
 };
 
 // ── POST /api/benchmark/my-role-fit/refresh  ─────────────────────────────────
-// Returns DB data if a done session exists. Only triggers AI if nothing is cached.
+// Follows the SAME smart order as GET: hash match → any done session → AI.
+// AI is only called when there is NO done session in the DB at all.
 const refreshMyRoleFit = async (req, res, next) => {
   try {
     const data = await benchmarkService.refreshMyRoleFit(req.user.id);

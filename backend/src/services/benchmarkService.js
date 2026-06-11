@@ -1,62 +1,121 @@
 /**
- * services/benchmarkService.js  (v2)
+ * services/benchmarkService.js  (v3)
  *
- * Personal Role-Fit Benchmarking:
- *   getMyRoleFit(studentId)   – auto-detects course, scores all matching roles,
- *                               caches result in DB, returns sorted by fit_score.
- *   refreshMyRoleFit(sid)     – force a fresh run (deletes cached session first).
- *   getLatestSession(sid)     – load most recent done session for a student.
+ * Smart cache flow — runs in this exact order every time (both on load and on refresh):
  *
- * Multi-candidate session API (kept for admin use):
- *   createSession / getSession / listSessions / getAvailableCandidates
+ *   1. Fetch current resume raw text from Firestore → compute SHA-256 hash
+ *   2. Look for a 'done' session whose resume_text_hash = current hash
+ *        → MATCH: resume unchanged → return DB data immediately (no AI)
+ *   3. Look for any 'done' session (different hash = old resume)
+ *        → Found: show existing DB data (still informative)
+ *        → Not found: no data at all → run AI, save hash, return fresh data
+ *
+ * Refresh button follows the SAME order — AI is only called when there is
+ * truly no done session in the database.
+ *
+ * Multi-candidate session API (kept for admin use) is unchanged at the bottom.
  */
 
 'use strict';
 
-const { query }                           = require('../config/db');
-const aiService                           = require('../ai/aiService');
-const { benchmarkCandidates }             = require('../ai/benchmarkPrompt');
+const crypto                               = require('crypto');
+const { query }                            = require('../config/db');
+const aiService                            = require('../ai/aiService');
+const { benchmarkCandidates }              = require('../ai/benchmarkPrompt');
 const { getRolesForCourse, detectCourseTier } = require('../ai/rolesList');
-const { admin }                           = require('../config/firebase');
+const { admin }                            = require('../config/firebase');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** SHA-256 hex of a string (empty string → all-zeros hash). */
+function sha256(text) {
+  return crypto.createHash('sha256').update(text || '').digest('hex');
+}
+
+/**
+ * Fetch raw resume text from Firestore for the given firebase_uid.
+ * Returns '' on any error.
+ */
+async function _fetchRawText(firebaseUid) {
+  if (!firebaseUid) return '';
+  try {
+    const snap = await admin.firestore()
+      .collection('user_profiles')
+      .doc(firebaseUid)
+      .get();
+    return snap.exists ? (snap.data().resumeText || '') : '';
+  } catch (e) {
+    console.warn('[benchmark] Firestore fetch failed:', e.message);
+    return '';
+  }
+}
+
+/**
+ * Load the most-recent done session for a student.
+ * Optionally filter by resume_text_hash.
+ *
+ * @param {string}      studentId
+ * @param {string|null} [hash]   – if provided, only return sessions with this hash
+ * @returns {object|null}
+ */
+async function _getLatestDoneSession(studentId, hash = null) {
+  let sql = `SELECT * FROM benchmark_sessions
+             WHERE  created_by = $1 AND status = 'done'`;
+  const params = [studentId];
+
+  if (hash !== null) {
+    sql += ` AND resume_text_hash = $2`;
+    params.push(hash);
+  }
+
+  sql += ` ORDER BY created_at DESC LIMIT 1`;
+
+  const { rows: [session] } = await query(sql, params);
+  if (!session) return null;
+
+  const { rows: results } = await query(
+    `SELECT * FROM benchmark_results WHERE session_id = $1 ORDER BY fit_score DESC`,
+    [session.id],
+  );
+
+  return { ...session, results };
+}
+
+/**
+ * Extract a plain degree/course string from the student row.
+ */
+function _extractDegreeText(row) {
+  if (row.course) return row.course;
+  if (row.branch) return row.branch;
+  try {
+    const edu = row.education_analysis;
+    if (edu) {
+      const d = edu.degree || edu.degrees?.[0]?.degree || edu.institution?.degree || '';
+      if (d) return d;
+    }
+  } catch (_) {}
+  return 'B.Tech';
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PERSONAL ROLE-FIT  (the main feature)
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Get (or generate) the role-fit benchmark for the current user.
- * Returns cached results if a 'done' session exists for this student.
+ * Smart benchmark retrieval.
  *
- * @param {string} studentId
- * @param {boolean} [force=false]  – skip cache, always re-run AI
+ * Follows this order every time (load or refresh):
+ *   1. Fetch current Firestore raw text → compute hash
+ *   2. Done session with SAME hash → return it (resume unchanged, no AI)
+ *   3. Done session with ANY hash  → return it (old resume, still useful)
+ *   4. Nothing in DB              → run AI, store hash, return fresh data
+ *
+ * @param {string}  studentId
  */
-const getMyRoleFit = async (studentId, force = false) => {
-  // ── 1. Check for a completed (cached) session ─────────────────────────────────
-  if (!force) {
-    const cached = await _getLatestDoneSession(studentId);
-    if (cached) return { ...cached, status: 'done' };
-
-    // ── 1b. Check for an in-progress session (auto-triggered by resume upload) ───
-    // If one is already running, tell the caller to poll rather than start another.
-    const { rows: [running] } = await query(
-      `SELECT id FROM benchmark_sessions
-       WHERE  created_by = $1 AND status = 'running'
-       ORDER  BY created_at DESC LIMIT 1`,
-      [studentId],
-    );
-    if (running) return { status: 'running', session_id: running.id, results: [] };
-  }
-
-  // If force=true and there's a running session, cancel it first to avoid duplicates
-  if (force) {
-    await query(
-      `UPDATE benchmark_sessions SET status='cancelled', updated_at=NOW()
-       WHERE  created_by=$1 AND status='running'`,
-      [studentId],
-    );
-  }
-
-  // ── 2. Fetch student + primary resume ──────────────────────────────────────
+const getMyRoleFit = async (studentId) => {
+  // ── Step 1: fetch student + primary resume from DB ─────────────────────────
   const { rows: [studentRow] } = await query(
     `SELECT s.id, s.full_name, s.course, s.branch, s.firebase_uid,
             r.id          AS resume_id,
@@ -84,32 +143,76 @@ const getMyRoleFit = async (studentId, force = false) => {
     throw err;
   }
 
-  // ── 3. Detect course ─────────────────────────────────────────────────────────────
+  // ── Step 2: get current resume text + hash ─────────────────────────────────
+  const rawText    = await _fetchRawText(studentRow.firebase_uid);
+  const currentHash = sha256(rawText);
+  console.log(`[benchmark] resume hash for uid=${studentRow.firebase_uid}: ${currentHash.slice(0, 12)}…`);
+
+  // ── Step 3: done session with SAME hash → return immediately (no AI) ───────
+  const exactMatch = await _getLatestDoneSession(studentId, currentHash);
+  if (exactMatch) {
+    console.log('[benchmark] Cache HIT (hash match) — returning DB data');
+    return { ...exactMatch, status: 'done', cache: 'hash_match' };
+  }
+
+  // ── Step 4: done session with ANY hash → return it (different resume) ──────
+  const anyDone = await _getLatestDoneSession(studentId, null);
+  if (anyDone) {
+    console.log('[benchmark] Cache HIT (old resume) — returning existing DB data');
+    return { ...anyDone, status: 'done', cache: 'old_resume' };
+  }
+
+  // ── Step 5: in-progress session? tell caller to poll ──────────────────────
+  const { rows: [running] } = await query(
+    `SELECT id FROM benchmark_sessions
+     WHERE  created_by = $1 AND status = 'running'
+     ORDER  BY created_at DESC LIMIT 1`,
+    [studentId],
+  );
+  if (running) {
+    return { status: 'running', session_id: running.id, results: [] };
+  }
+
+  // ── Step 6: nothing at all → run AI ───────────────────────────────────────
+  return _runAI(studentId, studentRow, rawText, currentHash);
+};
+
+/**
+ * Refresh endpoint — follows EXACTLY the same smart order as getMyRoleFit.
+ * AI is only triggered when there is NO done session in the DB at all.
+ */
+const refreshMyRoleFit = (studentId) => getMyRoleFit(studentId);
+
+/**
+ * Lightweight status check — never triggers AI.
+ */
+const getMyStatus = async (studentId) => {
+  const done = await _getLatestDoneSession(studentId, null);
+  if (done) return { status: 'done', ...done };
+
+  const { rows: [running] } = await query(
+    `SELECT id FROM benchmark_sessions
+     WHERE  created_by = $1 AND status = 'running'
+     ORDER  BY created_at DESC LIMIT 1`,
+    [studentId],
+  );
+  if (running) return { status: 'running', session_id: running.id, results: [] };
+
+  return { status: 'none', results: [] };
+};
+
+/** Load most-recent completed session (public helper). */
+const getLatestSession = (studentId) => _getLatestDoneSession(studentId, null);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AI EXECUTION  (private — only called when DB has no done session)
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function _runAI(studentId, studentRow, rawText, resumeHash) {
   const eduText  = _extractDegreeText(studentRow);
   const tier     = detectCourseTier(eduText);
   const jobRoles = getRolesForCourse(eduText);
 
-  // ── 3b. Fetch raw resume text from Firestore ───────────────────────────────────────
-  // Firestore stores the PDF-extracted text at: user_profiles/{firebase_uid}.resumeText
-  let rawText = '';
-  try {
-    const uid = studentRow.firebase_uid;
-    if (uid) {
-      const snap = await admin.firestore()
-        .collection('user_profiles')
-        .doc(uid)
-        .get();
-      rawText = snap.exists ? (snap.data().resumeText || '') : '';
-      if (rawText) console.log(`[benchmark] Loaded raw_text from Firestore for uid=${uid} (${rawText.length} chars)`);
-      else         console.warn(`[benchmark] No resumeText in Firestore for uid=${uid}`);
-    }
-  } catch (fsErr) {
-    console.warn('[benchmark] Firestore raw_text fetch failed:', fsErr.message);
-  }
-
-  // ── 4. Build the resume payload for the AI ─────────────────────────────────
-  // raw_text = from Firestore (primary source)
-  // analysis = structured 13-section JSON from PostgreSQL (supporting signal)
   const resumePayload = [{
     id:       studentRow.id,
     name:     studentRow.full_name,
@@ -127,28 +230,27 @@ const getMyRoleFit = async (studentId, force = false) => {
     },
   }];
 
-  // ── 5. Create session row ──────────────────────────────────────────────────
-  // Delete any old 'error' sessions for cleanliness
+  // Delete stale error sessions
   await query(
     `DELETE FROM benchmark_sessions WHERE created_by = $1 AND status = 'error'`,
     [studentId],
   );
 
+  // Create running session — store hash for future comparisons
   const { rows: [session] } = await query(
-    `INSERT INTO benchmark_sessions (created_by, job_roles, candidate_ids, status)
-     VALUES ($1, $2, $3, 'running') RETURNING *`,
-    [studentId, JSON.stringify(jobRoles), JSON.stringify([studentId])],
+    `INSERT INTO benchmark_sessions (created_by, job_roles, candidate_ids, status, resume_text_hash)
+     VALUES ($1, $2, $3, 'running', $4) RETURNING *`,
+    [studentId, JSON.stringify(jobRoles), JSON.stringify([studentId]), resumeHash],
   );
 
   try {
-    // ── 6. Call AI ────────────────────────────────────────────────────────────
+    console.log(`[benchmark] Running AI for studentId=${studentId}`);
     const prompt  = benchmarkCandidates(resumePayload, jobRoles);
     const aiResp  = await aiService.benchmarkResumes(prompt);
     const results = Array.isArray(aiResp.data) ? aiResp.data : [];
 
     if (!results.length) throw new Error('AI returned an empty response.');
 
-    // ── 7. Persist results ────────────────────────────────────────────────────
     for (const r of results) {
       await query(
         `INSERT INTO benchmark_results
@@ -161,21 +263,19 @@ const getMyRoleFit = async (studentId, force = false) => {
           r.role_name    || '',
           Math.min(100, Math.max(0, Math.round(Number(r.fit_score) || 0))),
           r.grade        || 'F',
-          r.major_strength             || null,
-          r.improvement_suggestion     || null,
+          r.major_strength         || null,
+          r.improvement_suggestion || null,
         ],
       );
     }
 
-    // ── 8. Mark done ──────────────────────────────────────────────────────────
     const { rows: [done] } = await query(
       `UPDATE benchmark_sessions SET status='done', updated_at=NOW() WHERE id=$1 RETURNING *`,
       [session.id],
     );
 
-    // Sort by fit_score DESC
     results.sort((a, b) => b.fit_score - a.fit_score);
-    return { ...done, course_tier: tier, results };
+    return { ...done, course_tier: tier, results, cache: 'fresh' };
 
   } catch (err) {
     await query(
@@ -184,97 +284,15 @@ const getMyRoleFit = async (studentId, force = false) => {
     );
     throw err;
   }
-};
-
-/**
- * Lightweight status check — does NOT trigger AI if nothing is running.
- * Returns { status: 'done'|'running'|'none', results?, course_tier? }
- */
-const getMyStatus = async (studentId) => {
-  const done = await _getLatestDoneSession(studentId);
-  if (done) return { status: 'done', ...done };
-
-  const { rows: [running] } = await query(
-    `SELECT id FROM benchmark_sessions
-     WHERE  created_by = $1 AND status = 'running'
-     ORDER  BY created_at DESC LIMIT 1`,
-    [studentId],
-  );
-  if (running) return { status: 'running', session_id: running.id, results: [] };
-
-  return { status: 'none', results: [] };
-};
-
-/**
- * Force-refresh endpoint — but only runs AI if NO done session exists.
- * If the student already has results in the DB, those are returned immediately.
- */
-const refreshMyRoleFit = async (studentId) => {
-  // Always honour existing DB data — never re-run AI if results are already there.
-  const cached = await _getLatestDoneSession(studentId);
-  if (cached) return { ...cached, status: 'done' };
-
-  // Nothing in DB yet — run the AI for the first time.
-  return getMyRoleFit(studentId, false);
-};
-
-/**
- * Retrieve the most recent completed session for a student.
- * @returns {object|null}
- */
-const getLatestSession = async (studentId) => _getLatestDoneSession(studentId);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// HELPERS
-// ─────────────────────────────────────────────────────────────────────────────
-
-async function _getLatestDoneSession(studentId) {
-  const { rows: [session] } = await query(
-    `SELECT * FROM benchmark_sessions
-     WHERE  created_by = $1 AND status = 'done'
-     ORDER  BY created_at DESC
-     LIMIT  1`,
-    [studentId],
-  );
-  if (!session) return null;
-
-  const { rows: results } = await query(
-    `SELECT * FROM benchmark_results WHERE session_id = $1 ORDER BY fit_score DESC`,
-    [session.id],
-  );
-
-  // Detect tier from stored job_roles (first role as heuristic)
-  const roles = Array.isArray(session.job_roles) ? session.job_roles : JSON.parse(session.job_roles || '[]');
-  return { ...session, results };
-}
-
-/**
- * Extract a plain degree/course string from the student row.
- * Priority: student.course → student.branch → education_analysis JSON fields
- */
-function _extractDegreeText(row) {
-  if (row.course) return row.course;
-  if (row.branch) return row.branch;
-
-  // Try education_analysis JSONB
-  try {
-    const edu = row.education_analysis;
-    if (edu) {
-      const d = edu.degree || edu.degrees?.[0]?.degree || edu.institution?.degree || '';
-      if (d) return d;
-    }
-  } catch (_) {}
-
-  return 'B.Tech'; // safe default
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// LEGACY multi-candidate (kept for admin future use)
+// LEGACY multi-candidate (kept for admin use)
 // ─────────────────────────────────────────────────────────────────────────────
 
 const createSession = async ({ createdBy, candidateIds, jobRoles }) => {
-  if (!candidateIds?.length)    throw Object.assign(new Error('candidateIds required.'), { statusCode: 422 });
-  if (!jobRoles?.length)        throw Object.assign(new Error('jobRoles required.'), { statusCode: 422 });
+  if (!candidateIds?.length)  throw Object.assign(new Error('candidateIds required.'), { statusCode: 422 });
+  if (!jobRoles?.length)      throw Object.assign(new Error('jobRoles required.'),     { statusCode: 422 });
 
   const { rows: [session] } = await query(
     `INSERT INTO benchmark_sessions (created_by, job_roles, candidate_ids, status)
@@ -299,7 +317,7 @@ const createSession = async ({ createdBy, candidateIds, jobRoles }) => {
 
     const validResumes = resumeRows.filter(Boolean).map(r => ({
       id: r.id, name: r.name,
-      raw_text: '', // raw text not fetched for legacy multi-candidate admin endpoint
+      raw_text: '',
       analysis: {
         skills: r.skills_analysis ?? {}, projects: r.projects_analysis ?? {},
         experience: r.experience_analysis ?? {}, education: r.education_analysis ?? {},
