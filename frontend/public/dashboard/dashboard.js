@@ -1777,22 +1777,12 @@
                         <div class="crm-orb amber"></div>
                         <div class="crm-orb cyan"></div>
                         <div class="crm-hero-inner">
-                            <div class="crm-hero-pill">⏱ ${parsedData.estimatedTimeline || 'See phases below'}</div>
-                            <h1 class="crm-hero-title">${currentRole} → ${targetRole}</h1>
-                            <p class="crm-hero-subtitle">AI-generated career transition plan · ${new Date().toLocaleDateString()}</p>
+                            <div class="crm-hero-pill">&#x23F1; ${parsedData.estimatedTimeline || 'See phases below'}</div>
+                            <h1 class="crm-hero-title">${currentRole} &rarr; ${targetRole}</h1>
+                            <p class="crm-hero-subtitle">AI-generated career transition plan &middot; ${new Date().toLocaleDateString()}</p>
                             <div class="crm-tags-row">${tagsHtml || '<span class="crm-chip-tag">AI Generated</span>'}</div>
-                            <div class="crm-progress-wrap">
-                                <div class="crm-progress-header"><span>Overall Progress</span><span>5%</span></div>
-                                <div class="crm-progress-track">
-                                    <div class="crm-progress-fill" id="crmOverallFill"></div>
-                                </div>
-                            </div>
                         </div>
                     `;
-                    setTimeout(() => {
-                        const f = document.getElementById('crmOverallFill');
-                        if (f) f.style.width = '5%';
-                    }, 120);
 
                     // ── Phase Cards ───────────────────────────────────────────
                     crmPhasesCont.innerHTML = '';
@@ -1815,19 +1805,15 @@
                             <div class="crm-card-eyebrow"><span>${icon}</span> Phase ${step.step || i + 1}</div>
                             <h3 class="crm-card-title">${step.title}</h3>
                             <div class="crm-card-meta">
-                                <span class="crm-duration-chip">⏱ ${step.duration || 'TBD'}</span>
+                                <span class="crm-duration-chip">&#x23F1; ${step.duration || 'TBD'}</span>
                                 <span class="crm-status-badge ${i === 0 ? 'in-progress' : 'upcoming'}">
                                     <span class="crm-status-dot"></span>${i === 0 ? 'In Progress' : 'Upcoming'}
                                 </span>
                             </div>
                             <p class="crm-card-desc">${step.description || ''}</p>
-                            <div class="crm-card-phase-progress">
-                                <div class="crm-progress-header"><span>Progress</span><span>${i === 0 ? '5' : '0'}%</span></div>
-                                <div class="crm-progress-track"><div class="crm-progress-fill" data-w="${i === 0 ? 5 : 0}"></div></div>
-                            </div>
                             <div class="crm-milestones-label">Milestones:</div>
                             <ul class="crm-milestones-list">${msHtml}</ul>
-                            ${step.deliverable ? `<div style="background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px 14px;font-size:0.83rem;color:#94A3B8;">📦 ${step.deliverable}</div>` : ''}
+                            ${step.deliverable ? `<div style="background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px 14px;font-size:0.83rem;color:#94A3B8;">&#x1F4E6; ${step.deliverable}</div>` : ''}
                         `;
                         crmPhasesCont.appendChild(card);
                     });
@@ -1856,12 +1842,6 @@
                         }
                     });
 
-                    // Animate progress bars
-                    setTimeout(() => {
-                        crmPhasesCont.querySelectorAll('.crm-progress-fill').forEach(f => {
-                            f.style.width = (f.getAttribute('data-w') || 0) + '%';
-                        });
-                    }, 350);
 
                     // Draw SVG road
                     if (window.innerWidth > 768) {
