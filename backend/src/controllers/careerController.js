@@ -8,6 +8,7 @@
  */
 
 const careerService = require('../services/careerService');
+const { query }     = require('../config/db');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/career/advice
@@ -35,7 +36,55 @@ const getRoadmap = async (req, res, next) => {
       return next(new Error('currentRole and targetRole are required.'));
     }
     const roadmap = await careerService.buildRoadmap({ currentRole, targetRole, skills });
+
+    // ── Persist: one roadmap per student (upsert — replaces previous) ──────
+    try {
+      const roadmapText = typeof roadmap === 'string' ? roadmap : JSON.stringify(roadmap);
+      let parsedData = null;
+      try {
+        const clean = roadmapText.replace(/```json/gi, '').replace(/```/g, '').trim();
+        parsedData = JSON.parse(clean);
+      } catch (_) { parsedData = { steps: [], raw: roadmapText }; }
+
+      await query(
+        `INSERT INTO roadmaps (student_id, from_role, to_role, roadmap_data, raw_text)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (student_id)
+         DO UPDATE SET from_role   = EXCLUDED.from_role,
+                       to_role     = EXCLUDED.to_role,
+                       roadmap_data= EXCLUDED.roadmap_data,
+                       raw_text    = EXCLUDED.raw_text,
+                       updated_at  = NOW()`,
+        [req.user.id, currentRole, targetRole, JSON.stringify(parsedData), roadmapText],
+      );
+    } catch (dbErr) {
+      console.warn('[careerController] Roadmap DB save failed:', dbErr.message);
+    }
+
     res.status(200).json({ success: true, data: roadmap });
+  } catch (err) {
+    if (err.statusCode) res.status(err.statusCode);
+    next(err);
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/career/roadmap/saved
+// Returns the previously generated roadmap stored in the DB for this student.
+// ─────────────────────────────────────────────────────────────────────────────
+const getSavedRoadmap = async (req, res, next) => {
+  try {
+    const { rows } = await query(
+      `SELECT from_role, to_role, roadmap_data, updated_at
+       FROM   roadmaps
+       WHERE  student_id = $1
+       LIMIT  1`,
+      [req.user.id],
+    );
+    if (rows.length === 0) {
+      return res.status(200).json({ success: true, data: null });
+    }
+    res.status(200).json({ success: true, data: rows[0] });
   } catch (err) {
     if (err.statusCode) res.status(err.statusCode);
     next(err);
@@ -70,4 +119,4 @@ const getInterviewQuestions = async (req, res, next) => {
   }
 };
 
-module.exports = { getAdvice, getRoadmap, getRoles, getInterviewQuestions };
+module.exports = { getAdvice, getRoadmap, getSavedRoadmap, getRoles, getInterviewQuestions };

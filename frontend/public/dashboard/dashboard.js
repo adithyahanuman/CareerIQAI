@@ -1765,6 +1765,32 @@
                 const RM_COLORS = ['#7C3AED','#06B6D4','#F59E0B','#10B981','#ef4444','#3b82f6'];
                 const RM_ICONS  = ['🚀','⚡','🛠️','🔥','🎯','🏆'];
 
+                // ── Auto-load saved roadmap from DB on tab init ────────────────────
+                (async () => {
+                    try {
+                        const tok = await firebase.auth().currentUser?.getIdToken();
+                        if (!tok) return;
+                        const res = await fetch('http://localhost:5000/api/career/roadmap/saved', {
+                            headers: { Authorization: `Bearer ${tok}` }
+                        });
+                        if (!res.ok) return;
+                        const js2 = await res.json();
+                        if (js2.data && js2.data.roadmap_data) {
+                            const rd = js2.data;
+                            const pd = typeof rd.roadmap_data === 'string'
+                                ? JSON.parse(rd.roadmap_data)
+                                : rd.roadmap_data;
+                            if (pd && Array.isArray(pd.steps) && pd.steps.length > 0) {
+                                renderVisualRoadmap(pd, rd.from_role, rd.to_role);
+                                const inp = document.getElementById('crmTargetRole');
+                                if (inp) inp.value = rd.to_role;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('[roadmap] Could not load saved roadmap:', e.message);
+                    }
+                })();
+
                 function renderVisualRoadmap(parsedData, currentRole, targetRole) {
                     const steps = parsedData.steps || [];
 
@@ -1806,9 +1832,6 @@
                             <h3 class="crm-card-title">${step.title}</h3>
                             <div class="crm-card-meta">
                                 <span class="crm-duration-chip">&#x23F1; ${step.duration || 'TBD'}</span>
-                                <span class="crm-status-badge ${i === 0 ? 'in-progress' : 'upcoming'}">
-                                    <span class="crm-status-dot"></span>${i === 0 ? 'In Progress' : 'Upcoming'}
-                                </span>
                             </div>
                             <p class="crm-card-desc">${step.description || ''}</p>
                             <div class="crm-milestones-label">Milestones:</div>

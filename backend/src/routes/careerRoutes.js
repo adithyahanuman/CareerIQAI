@@ -19,6 +19,7 @@ const express = require('express');
 const {
   getAdvice,
   getRoadmap,
+  getSavedRoadmap,
   getRoles,
   getInterviewQuestions,
 } = require('../controllers/careerController');
@@ -29,9 +30,10 @@ const router = express.Router();
 // All career routes require authentication
 router.use(protect);
 
-router.get('/advice',    getAdvice);           // DB read — no AI call
-router.post('/roadmap',  getRoadmap);          // AI call — needs targetRole from body
-router.get('/roles',     getRoles);            // DB read — no AI call
-router.get('/interview', getInterviewQuestions); // DB read — no AI call
+router.get('/advice',          getAdvice);
+router.get('/roadmap/saved',   getSavedRoadmap);   // GET saved roadmap from DB
+router.post('/roadmap',        getRoadmap);        // AI call — generates + saves
+router.get('/roles',           getRoles);
+router.get('/interview',       getInterviewQuestions);
 
 module.exports = router;
