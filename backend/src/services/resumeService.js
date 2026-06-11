@@ -9,9 +9,11 @@
 
 'use strict';
 
-const { query }   = require('../config/db');
-const aiService   = require('../ai/aiService');
-const prompts     = require('../ai/prompts');
+const { query }           = require('../config/db');
+const aiService           = require('../ai/aiService');
+const prompts             = require('../ai/prompts');
+// Lazy-required to avoid a circular dependency at module load time
+const getBenchmarkService = () => require('./benchmarkService');
 
 // ---------------------------------------------------------------------------
 // CREATE / UPLOAD
@@ -124,7 +126,19 @@ const uploadResume = async ({ student_id, resume_text, file_name = 'resume.txt' 
       ],
     );
 
-    return updated.rows[0];
+    const saved = updated.rows[0];
+
+    // ── Background: refresh role-fit benchmark scores ──────────────────────
+    // Fire-and-forget: does NOT block or affect the resume upload response.
+    const studentId = saved.student_id;
+    setImmediate(() => {
+      getBenchmarkService()
+        .refreshMyRoleFit(studentId)
+        .then(() => console.log(`[benchmark] Auto-refreshed role-fit for student ${studentId}`))
+        .catch(err  => console.warn(`[benchmark] Auto-refresh skipped: ${err.message}`));
+    });
+
+    return saved;
   } catch (aiErr) {
     console.error('[resumeService] AI analysis failed:', aiErr.message);
     await query(
