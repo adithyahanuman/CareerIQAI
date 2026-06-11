@@ -20,6 +20,7 @@ router.use(protect);
 
 // Personal role-fit (primary feature)
 router.get('/my-role-fit',           ctrl.getMyRoleFit);
+router.get('/my-role-fit/status',    ctrl.getMyStatus);
 router.post('/my-role-fit/refresh',  ctrl.refreshMyRoleFit);
 
 // Legacy / admin

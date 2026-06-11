@@ -7,10 +7,22 @@
 const benchmarkService = require('../services/benchmarkService');
 
 // ── GET /api/benchmark/my-role-fit  ──────────────────────────────────────────
-// Returns cached result if exists, otherwise triggers fresh AI run.
+// Returns cached result if exists, or {status:'running'} if in progress, else triggers fresh AI run.
 const getMyRoleFit = async (req, res, next) => {
   try {
     const data = await benchmarkService.getMyRoleFit(req.user.id, false);
+    res.status(200).json({ success: true, data });
+  } catch (err) {
+    if (err.statusCode) res.status(err.statusCode);
+    next(err);
+  }
+};
+
+// ── GET /api/benchmark/my-role-fit/status  ───────────────────────────────────
+// Lightweight poll — never triggers AI. Returns {status:'done'|'running'|'none'}.
+const getMyStatus = async (req, res, next) => {
+  try {
+    const data = await benchmarkService.getMyStatus(req.user.id);
     res.status(200).json({ success: true, data });
   } catch (err) {
     if (err.statusCode) res.status(err.statusCode);
@@ -75,4 +87,4 @@ const getCandidates = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-module.exports = { getMyRoleFit, refreshMyRoleFit, runBenchmark, listSessions, getSession, getCandidates };
+module.exports = { getMyRoleFit, getMyStatus, refreshMyRoleFit, runBenchmark, listSessions, getSession, getCandidates };

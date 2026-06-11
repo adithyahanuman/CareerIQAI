@@ -31,10 +31,29 @@ const { admin }                           = require('../config/firebase');
  * @param {boolean} [force=false]  – skip cache, always re-run AI
  */
 const getMyRoleFit = async (studentId, force = false) => {
-  // ── 1. Check cache ─────────────────────────────────────────────────────────
+  // ── 1. Check for a completed (cached) session ─────────────────────────────────
   if (!force) {
     const cached = await _getLatestDoneSession(studentId);
-    if (cached) return cached;
+    if (cached) return { ...cached, status: 'done' };
+
+    // ── 1b. Check for an in-progress session (auto-triggered by resume upload) ───
+    // If one is already running, tell the caller to poll rather than start another.
+    const { rows: [running] } = await query(
+      `SELECT id FROM benchmark_sessions
+       WHERE  created_by = $1 AND status = 'running'
+       ORDER  BY created_at DESC LIMIT 1`,
+      [studentId],
+    );
+    if (running) return { status: 'running', session_id: running.id, results: [] };
+  }
+
+  // If force=true and there's a running session, cancel it first to avoid duplicates
+  if (force) {
+    await query(
+      `UPDATE benchmark_sessions SET status='cancelled', updated_at=NOW()
+       WHERE  created_by=$1 AND status='running'`,
+      [studentId],
+    );
   }
 
   // ── 2. Fetch student + primary resume ──────────────────────────────────────
@@ -165,6 +184,25 @@ const getMyRoleFit = async (studentId, force = false) => {
     );
     throw err;
   }
+};
+
+/**
+ * Lightweight status check — does NOT trigger AI if nothing is running.
+ * Returns { status: 'done'|'running'|'none', results?, course_tier? }
+ */
+const getMyStatus = async (studentId) => {
+  const done = await _getLatestDoneSession(studentId);
+  if (done) return { status: 'done', ...done };
+
+  const { rows: [running] } = await query(
+    `SELECT id FROM benchmark_sessions
+     WHERE  created_by = $1 AND status = 'running'
+     ORDER  BY created_at DESC LIMIT 1`,
+    [studentId],
+  );
+  if (running) return { status: 'running', session_id: running.id, results: [] };
+
+  return { status: 'none', results: [] };
 };
 
 /**
@@ -319,6 +357,6 @@ const getAvailableCandidates = async () => {
 };
 
 module.exports = {
-  getMyRoleFit, refreshMyRoleFit, getLatestSession,
+  getMyRoleFit, getMyStatus, refreshMyRoleFit, getLatestSession,
   createSession, getSession, listSessions, getAvailableCandidates,
 };

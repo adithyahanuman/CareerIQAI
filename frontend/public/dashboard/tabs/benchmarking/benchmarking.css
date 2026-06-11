@@ -112,6 +112,15 @@
 .bench-state-icon { font-size: 48px; line-height: 1; }
 .bench-state-title { font-size: 17px; font-weight: 800; color: var(--text-primary); margin: 0; }
 .bench-state-sub   { font-size: 13px; color: var(--text-secondary); margin: 0; line-height: 1.6; max-width: 380px; }
+.bench-state-hint  { font-size: 11px; color: var(--text-secondary); opacity: 0.6; margin: 0; }
+
+/* Pulsing animation for the "generating" state icon */
+@keyframes generatingPulse {
+    0%, 100% { transform: scale(1);   opacity: 1;   }
+    50%       { transform: scale(1.18); opacity: 0.7; }
+}
+.generating-pulse { animation: generatingPulse 1.6s ease-in-out infinite; display: inline-block; }
+
 
 .bench-state-btn {
     display: inline-flex;
