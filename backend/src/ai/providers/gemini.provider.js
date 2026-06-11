@@ -72,34 +72,52 @@ class GeminiProvider extends BaseAIProvider {
   }
 
   /**
-   * Try every model in the failover list (each with all API keys) before giving up.
+   * Failover strategy (as requested by user):
+   * Outer loop: API Keys
+   * Inner loop: Models
+   * It tries all models for Key 1. If all models fail, it rotates to Key 2 and tries all models again.
    */
   async _callWithModelFailover(prompt) {
     const models = GEMINI_MODEL_FAILOVER && GEMINI_MODEL_FAILOVER.length
       ? GEMINI_MODEL_FAILOVER
       : [MODELS.GEMINI];
 
+    const totalKeys = Math.max(1, this.apiKeys.length);
     let lastError;
 
-    for (const modelId of models) {
-      this.currentModel = modelId;
-      this.model = modelId; // update for logging
-      try {
-        // withRetry handles key rotation for this model
-        const data = await this.withRetry(() => this._callModel(modelId, prompt));
-        console.log(`[Gemini Provider] ✅ Success with model: ${modelId}`);
-        return data;
-      } catch (err) {
-        lastError = err;
-        if (this.isModelUnavailable(err)) {
-          console.warn(`[Gemini Provider] ⚠️ Model ${modelId} unavailable — trying next model.`);
-          // Reset key index for the next model attempt
-          this.currentKeyIndex = 0;
-          this._initClient();
-        } else {
-          // Non-availability error (e.g. bad prompt) — don't try more models
-          throw err;
+    // Outer loop: API Keys
+    for (let keyAttempt = 1; keyAttempt <= totalKeys; keyAttempt++) {
+      
+      // Initialize client with the current key
+      this._initClient();
+
+      // Inner loop: Models
+      for (const modelId of models) {
+        this.currentModel = modelId;
+        this.model = modelId; // update for logging
+        
+        try {
+          const data = await this._callModel(modelId, prompt);
+          console.log(`[Gemini Provider] ✅ Success with model: ${modelId} using key ${keyAttempt}/${totalKeys}`);
+          return data;
+        } catch (err) {
+          lastError = err;
+          // If the model hit a rate limit (quota) OR is overloaded (unavailable), try the next model
+          if (this.isQuotaError(err) || this.isModelUnavailable(err)) {
+            console.warn(`[Gemini Provider] ⚠️ Model ${modelId} failed on key ${keyAttempt}/${totalKeys} — trying next model.`);
+            continue; // try next model
+          } else {
+            // Non-recoverable error (e.g. bad prompt syntax) — throw immediately
+            throw err;
+          }
         }
+      }
+
+      // If we reach here, ALL models failed for the current API key.
+      const isLastKey = keyAttempt === totalKeys;
+      if (!isLastKey) {
+        this.rotateKey();
+        console.warn(`[Gemini Provider] All models failed for key ${keyAttempt}/${totalKeys}. Rotating to next API key.`);
       }
     }
 
