@@ -206,7 +206,7 @@ const getMyRoleFit = async (studentId) => {
 const refreshMyRoleFit = async (studentId) => {
   // Cancel any running sessions for this student so they can force a fresh run
   await query(
-    `UPDATE benchmark_sessions SET status='cancelled', updated_at=NOW()
+    `UPDATE benchmark_sessions SET status='error', error_message='Cancelled by user', updated_at=NOW()
      WHERE  created_by=$1 AND status='running'`,
     [studentId],
   );
