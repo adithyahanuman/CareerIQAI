@@ -31,7 +31,7 @@ const getMyStatus = async (req, res, next) => {
 };
 
 // ── POST /api/benchmark/my-role-fit/refresh  ─────────────────────────────────
-// Force a fresh AI run even if cached results exist.
+// Returns DB data if a done session exists. Only triggers AI if nothing is cached.
 const refreshMyRoleFit = async (req, res, next) => {
   try {
     const data = await benchmarkService.refreshMyRoleFit(req.user.id);

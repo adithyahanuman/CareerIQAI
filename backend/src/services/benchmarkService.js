@@ -206,9 +206,17 @@ const getMyStatus = async (studentId) => {
 };
 
 /**
- * Force a fresh AI run (bypass cache).
+ * Force-refresh endpoint — but only runs AI if NO done session exists.
+ * If the student already has results in the DB, those are returned immediately.
  */
-const refreshMyRoleFit = (studentId) => getMyRoleFit(studentId, true);
+const refreshMyRoleFit = async (studentId) => {
+  // Always honour existing DB data — never re-run AI if results are already there.
+  const cached = await _getLatestDoneSession(studentId);
+  if (cached) return { ...cached, status: 'done' };
+
+  // Nothing in DB yet — run the AI for the first time.
+  return getMyRoleFit(studentId, false);
+};
 
 /**
  * Retrieve the most recent completed session for a student.
