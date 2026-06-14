@@ -21,7 +21,12 @@
  * @param {string} resumeText - Plain text extracted from the resume PDF
  * @returns {string} Prompt ready to be sent to the AI provider
  */
-const fullResumeAnalysis = (resumeText) => `You are an expert resume analyst and university career counselor specializing in helping students land their first internships and entry-level roles. You have reviewed over 30,000 student resumes and know exactly what internship recruiters at top companies look for.
+const fullResumeAnalysis = (resumeText) => {
+  const now = new Date();
+  const currentDate = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric', day: 'numeric' });
+  return `You are an expert resume analyst and university career counselor specializing in helping students land their first internships and entry-level roles. You have reviewed over 30,000 student resumes and know exactly what internship recruiters at top companies look for.
+
+TODAY'S DATE: ${currentDate}. Use this as your reference for evaluating all dates. Do NOT flag any date on or before today as a future date. Only flag dates strictly after today as future dates.
 
 IMPORTANT CONTEXT: This resume belongs to a STUDENT. Apply student-appropriate standards:
 - No full-time work experience is expected or required
@@ -309,6 +314,7 @@ ${resumeText.slice(0, 12000)}
 """
 
 Return ONLY the JSON object. No markdown fences, no explanation, no extra text.`;
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CAREER ROADMAP  (on-demand AI call — needs a user-supplied target role)
