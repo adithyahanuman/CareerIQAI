@@ -9,11 +9,17 @@
 
 'use strict';
 
+const crypto              = require('crypto');
 const { query }           = require('../config/db');
 const aiService           = require('../ai/aiService');
 const prompts             = require('../ai/prompts');
 // Lazy-required to avoid a circular dependency at module load time
 const getBenchmarkService = () => require('./benchmarkService');
+
+/** SHA-256 hex of a string */
+function sha256(text) {
+  return crypto.createHash('sha256').update(text || '').digest('hex');
+}
 
 // ---------------------------------------------------------------------------
 // CREATE / UPLOAD
@@ -37,20 +43,25 @@ const uploadResume = async ({ student_id, resume_text, file_name = 'resume.txt' 
     throw err;
   }
 
-  // ── Smart cache: only return stored analysis if it has the master analysis columns ──
-  // If overall_analysis exists with a score, the resume was already fully analyzed.
+  // ── Content-hash cache: only reuse analysis if the TEXT is identical ──────
+  // Compute SHA-256 of the raw resume text so any edit (even one word) busts
+  // the cache and forces a fresh AI run.
+  const contentHash = sha256(resume_text);
+  console.log(`[resumeService] content hash = ${contentHash.slice(0, 12)}…`);
+
   const cached = await query(
     `SELECT * FROM resumes
-     WHERE  student_id = $1
-       AND  file_name  = $2
-       AND  status     = 'done'
+     WHERE  student_id       = $1
+       AND  resume_text_hash = $2
+       AND  status           = 'done'
        AND  overall_analysis IS NOT NULL
      ORDER  BY created_at DESC
      LIMIT  1`,
-    [student_id, file_name],
+    [student_id, contentHash],
   );
 
   if (cached.rows.length > 0) {
+    // Same content already analyzed — just re-promote as primary
     await query(
       'UPDATE resumes SET is_primary = FALSE WHERE student_id = $1 AND is_primary = TRUE',
       [student_id],
@@ -59,11 +70,11 @@ const uploadResume = async ({ student_id, resume_text, file_name = 'resume.txt' 
       `UPDATE resumes SET is_primary = TRUE WHERE id = $1 RETURNING *`,
       [cached.rows[0].id],
     );
-    console.log('[resumeService] Cache hit (master analysis) – returning for:', file_name);
+    console.log('[resumeService] Cache HIT (hash match) – returning existing analysis for:', file_name);
     return promoted[0];
   }
 
-  // ── No cache hit — unset old primary and insert a fresh record ─────────────
+  // ── No cache hit — content is new or changed. Insert a fresh record ────────
   await query(
     'UPDATE resumes SET is_primary = FALSE WHERE student_id = $1 AND is_primary = TRUE',
     [student_id],
@@ -71,10 +82,10 @@ const uploadResume = async ({ student_id, resume_text, file_name = 'resume.txt' 
 
   const { rows } = await query(
     `INSERT INTO resumes
-       (student_id, file_name, status, is_primary)
-     VALUES ($1, $2, 'parsed', TRUE)
+       (student_id, file_name, resume_text_hash, status, is_primary)
+     VALUES ($1, $2, $3, 'parsed', TRUE)
      RETURNING *`,
-    [student_id, file_name],
+    [student_id, file_name, contentHash],
   );
 
   // ONE AI call — master prompt returns 13 sections
