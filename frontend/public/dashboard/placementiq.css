@@ -1163,38 +1163,70 @@
     color: var(--text-secondary);
 }
 
-.piq-ai-prompts {
+.piq-ai-chat-history {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
     margin-bottom: 16px;
+    max-height: 250px;
+    overflow-y: auto;
+    padding-right: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
 }
 
-.piq-ai-prompt {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 14px;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
-    border-radius: 8px;
+.piq-ai-chat-history::-webkit-scrollbar {
+    width: 6px;
+}
+.piq-ai-chat-history::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+.chat-message {
     font-size: 13px;
-    color: var(--text-secondary);
-    cursor: pointer;
-    text-align: left;
-    transition: all 0.2s;
+    line-height: 1.5;
+    padding: 10px 14px;
+    border-radius: 12px;
+    max-width: 90%;
+    word-wrap: break-word;
     font-family: var(--font-sans);
 }
 
-.piq-ai-prompt:hover {
-    background: var(--bg-glass-hover);
-    border-color: var(--border-strong);
+.chat-message.user-message {
+    background: rgba(194, 24, 91, 0.15); /* Brand tint */
+    border: 1px solid rgba(194, 24, 91, 0.3);
     color: var(--text-primary);
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
 }
 
-.piq-ai-prompt svg {
-    color: var(--brand);
-    flex-shrink: 0;
+.chat-message.ai-message {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+}
+
+.chat-message.ai-typing {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    padding: 12px 14px;
+}
+.chat-message.ai-typing span {
+    width: 6px;
+    height: 6px;
+    background: var(--text-secondary);
+    border-radius: 50%;
+    animation: typing 1.4s infinite ease-in-out both;
+}
+.chat-message.ai-typing span:nth-child(1) { animation-delay: -0.32s; }
+.chat-message.ai-typing span:nth-child(2) { animation-delay: -0.16s; }
+@keyframes typing {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1); }
 }
 
 .piq-ai-input-row {

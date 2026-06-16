@@ -23,6 +23,7 @@ const careerRoutes      = require('./routes/careerRoutes');
 const benchmarkRoutes   = require('./routes/benchmarkRoutes');
 const resumeUploadRoutes = require('./routes/resumeUpload');
 const contactRoutes      = require('./routes/contactRoutes');
+const chatRoutes         = require('./routes/chatRoutes');
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.use('/api/resumes',   resumeRoutes);
 app.use('/api/career',      careerRoutes);
 app.use('/api/benchmark',   benchmarkRoutes);
 app.use('/api/contact',     contactRoutes);
+app.use('/api/chat',        chatRoutes);
 app.use('/resume',        resumeUploadRoutes);
 
 // ── 404 & Error handlers ───────────────────────────────────────────────────────

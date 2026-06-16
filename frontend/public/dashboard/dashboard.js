@@ -2633,6 +2633,76 @@ const initApp = async () => {
                     uploadResumeBtnCta.addEventListener("click", () => resumeFileInput.click());
                 }
 
+                // ── AI Career Assistant Chat Bot Logic ─────────────────────
+                const initAIChatBot = () => {
+                    const chatInput = document.getElementById('aiChatInput');
+                    const chatSendBtn = document.getElementById('aiChatSendBtn');
+                    const chatHistory = document.getElementById('aiChatHistory');
+
+                    if (!chatInput || !chatSendBtn || !chatHistory) return;
+
+                    const addMessage = (text, isUser = false, isTyping = false) => {
+                        const msgDiv = document.createElement('div');
+                        msgDiv.className = `chat-message ${isUser ? 'user-message' : 'ai-message'}`;
+                        if (isTyping) {
+                            msgDiv.classList.add('ai-typing');
+                            msgDiv.innerHTML = `<span></span><span></span><span></span>`;
+                        } else {
+                            msgDiv.textContent = text;
+                        }
+                        chatHistory.appendChild(msgDiv);
+                        chatHistory.scrollTop = chatHistory.scrollHeight;
+                        return msgDiv;
+                    };
+
+                    const handleSend = async () => {
+                        const message = chatInput.value.trim();
+                        if (!message) return;
+
+                        // 1. Add user message
+                        addMessage(message, true);
+                        chatInput.value = '';
+
+                        // 2. Add typing indicator
+                        const typingIndicator = addMessage('', false, true);
+
+                        // 3. Send to backend
+                        try {
+                            const res = await fetch('http://localhost:5000/api/chat', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${await firebase.auth().currentUser.getIdToken()}`
+                                },
+                                body: JSON.stringify({ message })
+                            });
+
+                            const data = await res.json();
+                            typingIndicator.remove(); // Remove typing indicator
+
+                            if (!res.ok) {
+                                addMessage(`Error: ${data.error || 'Failed to get response.'}`, false);
+                            } else {
+                                addMessage(data.response, false);
+                            }
+                        } catch (err) {
+                            console.error('Chat error:', err);
+                            typingIndicator.remove();
+                            addMessage('Network error. Please try again later.', false);
+                        }
+                    };
+
+                    chatSendBtn.addEventListener('click', handleSend);
+                    chatInput.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleSend();
+                        }
+                    });
+                };
+
+                initAIChatBot();
+
             };
 
 

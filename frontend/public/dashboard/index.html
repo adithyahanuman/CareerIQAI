@@ -396,23 +396,14 @@
                                         <div class="piq-ai-sub">Ask anything about your readiness, roles, or roadmap</div>
                                     </div>
                                 </div>
-                                <div class="piq-ai-prompts">
-                                    <button class="piq-ai-prompt" onclick="this.closest('.piq-ai-card').querySelector('.piq-ai-input').value=this.textContent.trim(); this.closest('.piq-ai-card').querySelector('.piq-ai-input').focus()">
-                                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                                        What roles am I most undervalued for?
-                                    </button>
-                                    <button class="piq-ai-prompt" onclick="this.closest('.piq-ai-card').querySelector('.piq-ai-input').value=this.textContent.trim(); this.closest('.piq-ai-card').querySelector('.piq-ai-input').focus()">
-                                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                                        How do I close my System Design gap fast?
-                                    </button>
-                                    <button class="piq-ai-prompt" onclick="this.closest('.piq-ai-card').querySelector('.piq-ai-input').value=this.textContent.trim(); this.closest('.piq-ai-card').querySelector('.piq-ai-input').focus()">
-                                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                                        Compare me to top SDE profiles.
-                                    </button>
+                                <div class="piq-ai-chat-history" id="aiChatHistory">
+                                    <div class="chat-message ai-message">
+                                        Hi! I'm your CareerIQ AI Assistant. Ask me anything about your resume, career roadmap, or this platform!
+                                    </div>
                                 </div>
                                 <div class="piq-ai-input-row">
-                                    <input type="text" class="piq-ai-input" placeholder="Ask the AI career coach...">
-                                    <button class="piq-ai-send">
+                                    <input type="text" class="piq-ai-input" id="aiChatInput" placeholder="Ask the AI career coach...">
+                                    <button class="piq-ai-send" id="aiChatSendBtn">
                                         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                                     </button>
                                 </div>

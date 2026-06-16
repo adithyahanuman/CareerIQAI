@@ -14,7 +14,6 @@ const { testConnection, closePool } = require('../config/db');
 const getHealth = async (_req, res) => {
   try {
     await testConnection();
-    await closePool();
     res.status(200).json({
       success: true,
       message: 'CareerIQ AI API is healthy',
