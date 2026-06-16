@@ -1,5 +1,5 @@
 /**
- * controllers/benchmarkController.js  (v2)
+ * controllers/benchmarkController.js  (v3 — role-table edition)
  */
 
 'use strict';
@@ -7,7 +7,6 @@
 const benchmarkService = require('../services/benchmarkService');
 
 // ── GET /api/benchmark/my-role-fit  ──────────────────────────────────────────
-// Order: hash match → DB | hash mismatch → run AI
 const getMyRoleFit = async (req, res, next) => {
   try {
     const data = await benchmarkService.getMyRoleFit(req.user.id);
@@ -19,7 +18,6 @@ const getMyRoleFit = async (req, res, next) => {
 };
 
 // ── GET /api/benchmark/my-role-fit/status  ───────────────────────────────────
-// Lightweight poll — never triggers AI. Returns {status:'done'|'running'|'none'}.
 const getMyStatus = async (req, res, next) => {
   try {
     const data = await benchmarkService.getMyStatus(req.user.id);
@@ -31,11 +29,36 @@ const getMyStatus = async (req, res, next) => {
 };
 
 // ── POST /api/benchmark/my-role-fit/refresh  ─────────────────────────────────
-// Follows the SAME logic as GET: if resume hash matches, returns DB data.
-// If resume hash doesn't match, forces AI run.
 const refreshMyRoleFit = async (req, res, next) => {
   try {
     const data = await benchmarkService.refreshMyRoleFit(req.user.id);
+    res.status(200).json({ success: true, data });
+  } catch (err) {
+    if (err.statusCode) res.status(err.statusCode);
+    next(err);
+  }
+};
+
+// ── GET /api/benchmark/leaderboard/:role  ────────────────────────────────────
+// Returns the global leaderboard for a role (all tiers, ranked by fit_score).
+// Example: GET /api/benchmark/leaderboard/Business%20Analyst?limit=25
+const getRoleLeaderboard = async (req, res, next) => {
+  try {
+    const roleName = decodeURIComponent(req.params.role);
+    const limit    = Math.min(200, Math.max(1, parseInt(req.query.limit) || 50));
+    const data     = await benchmarkService.getRoleLeaderboard(roleName, limit);
+    res.status(200).json({ success: true, data });
+  } catch (err) {
+    if (err.statusCode) res.status(err.statusCode);
+    next(err);
+  }
+};
+
+// ── GET /api/benchmark/my-role-ranks  ────────────────────────────────────────
+// Returns the logged-in student's rank in every role they've been benchmarked for.
+const getMyRoleRanks = async (req, res, next) => {
+  try {
+    const data = await benchmarkService.getMyRoleRanks(req.user.id);
     res.status(200).json({ success: true, data });
   } catch (err) {
     if (err.statusCode) res.status(err.statusCode);
@@ -88,4 +111,8 @@ const getCandidates = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-module.exports = { getMyRoleFit, getMyStatus, refreshMyRoleFit, runBenchmark, listSessions, getSession, getCandidates };
+module.exports = {
+  getMyRoleFit, getMyStatus, refreshMyRoleFit,
+  getRoleLeaderboard, getMyRoleRanks,
+  runBenchmark, listSessions, getSession, getCandidates,
+};

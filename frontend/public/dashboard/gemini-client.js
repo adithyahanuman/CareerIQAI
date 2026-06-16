@@ -5,9 +5,8 @@
  * requests to Gemini. The API key NEVER leaves the backend server.
  *
  * Usage:
- *   const result = await GeminiClient.analyzeResume(resumeText);
- *   // result → { skills_score, education_score, experience_score,
- *   //            overall_resume_score, feedback }
+ *   const result = await GeminiClient.analyzeResume(resumeText, token, fileName);
+ *   // result → full resume row with overall_analysis, skills_analysis, etc.
  */
 
 (function () {
@@ -16,15 +15,14 @@
   const BACKEND_URL = 'http://localhost:5000';
 
   /**
-   * Analyze a resume via the backend Gemini proxy.
-   * @param {string} resumeText - Plain text extracted from the resume PDF
-   * @returns {Promise<{
-   *   skills_score: number,
-   *   education_score: number,
-   *   experience_score: number,
-   *   overall_resume_score: number,
-   *   feedback: string
-   * }>}
+   * Upload + analyze a resume via the backend.
+   * Calls POST /api/resumes/upload which runs the master AI prompt and
+   * stores all 13 analysis sections in dedicated JSONB columns.
+   *
+   * @param {string} resumeText   - Plain text extracted from the resume PDF
+   * @param {string} token        - Firebase ID token for auth
+   * @param {string} [fileName]   - Original filename (for display)
+   * @returns {Promise<object>}   - Full resume row from PostgreSQL
    */
   async function analyzeResume(resumeText, token, fileName = 'resume.pdf') {
     if (!resumeText || resumeText.trim().length < 50) {
@@ -37,7 +35,7 @@
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body:    JSON.stringify({
+      body: JSON.stringify({
         resume_text: resumeText,
         file_name:   fileName
       }),
@@ -54,12 +52,19 @@
 
     const json = await res.json();
 
-    // Backend returns { success: true, data: { analysis: { ...scores } } }
-    if (!json.success || !json.data || !json.data.analysis) {
+    // Backend returns { success: true, data: <resume row> }
+    // The resume row has overall_analysis, skills_analysis, etc. as top-level keys
+    if (!json.success || !json.data) {
       throw new Error('Unexpected response from server.');
     }
 
-    return json.data.analysis;
+    // If status is 'error', the AI failed — surface the error message
+    if (json.data.status === 'error') {
+      throw new Error(json.data.error_message || 'Resume analysis failed on the server.');
+    }
+
+    // Return the full resume row — dashboard reads .overall_analysis, .skills_analysis, etc.
+    return json.data;
   }
 
   // Expose globally

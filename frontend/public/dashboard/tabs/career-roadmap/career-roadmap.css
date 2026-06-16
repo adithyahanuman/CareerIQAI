@@ -4,12 +4,12 @@
 
 /* ── Design tokens (scoped, dark mode defaults — Rose Gold) ── */
 #page-career-roadmap {
-    --rm-violet:  var(--brand-dark, #c2185b);
-    --rm-cyan:    var(--brand-light, #ffd7de);
-    --rm-amber:   var(--orange, #fbbf24);
-    --rm-green:   var(--green, #86efac);
+    --rm-violet:  #8b5cf6;
+    --rm-cyan:    #06b6d4;
+    --rm-amber:   #f59e0b;
+    --rm-green:   #10b981;
     --rm-surface: var(--bg-card, #281d26);
-    --rm-glass:   var(--bg-glass, rgba(244, 165, 176, 0.05));
+    --rm-glass:   var(--bg-glass, rgba(244, 63, 94, 0.05));
     --rm-border:  var(--border, #4a3545);
     --rm-text:    var(--text-primary, #f4eff2);
     --rm-dim:     var(--text-secondary, #d4bfca);
@@ -19,12 +19,12 @@
 
 /* Light mode token overrides */
 [data-theme="light"] #page-career-roadmap {
-    --rm-violet:  var(--brand, #c2185b);
-    --rm-cyan:    var(--brand-light, #f4a5b0);
-    --rm-amber:   #92400e;
-    --rm-green:   var(--green, #166534);
+    --rm-violet:  #7c3aed;
+    --rm-cyan:    #0891b2;
+    --rm-amber:   #d97706;
+    --rm-green:   #059669;
     --rm-surface: var(--bg-card, #ffffff);
-    --rm-glass:   rgba(194, 24, 91, 0.04);
+    --rm-glass:   rgba(225, 29, 72, 0.04);
     --rm-border:  var(--border, #f0c8d0);
     --rm-text:    var(--text-primary, #1f0f15);
     --rm-dim:     var(--text-secondary, #5c3347);
@@ -174,9 +174,9 @@
     z-index: 0;
     animation: crmFloat 10s infinite alternate ease-in-out;
 }
-.crm-orb.violet { top: -40px; left: 8%;  width: 280px; height: 280px; background: var(--brand-dark, #c2185b); }
-.crm-orb.cyan   { bottom: -80px; right: 8%; width: 360px; height: 360px; background: var(--brand, #f4a5b0); animation-delay: -3s; }
-.crm-orb.amber  { top: 30%; left: 38%; width: 220px; height: 220px; background: var(--pink, #ffb3b0); animation-delay: -6s; }
+.crm-orb.violet { top: -40px; left: 8%;  width: 280px; height: 280px; background: var(--brand-dark, #e11d48); }
+.crm-orb.cyan   { bottom: -80px; right: 8%; width: 360px; height: 360px; background: var(--brand, #f43f5e); animation-delay: -3s; }
+.crm-orb.amber  { top: 30%; left: 38%; width: 220px; height: 220px; background: var(--pink, #ef4444); animation-delay: -6s; }
 
 @keyframes crmFloat {
     0%   { transform: translateY(0); }
@@ -311,7 +311,7 @@
     padding: 24px;
     position: relative;
     box-shadow: var(--shadow-lg, 0 10px 30px rgba(0,0,0,0.2));
-    border-top: 3px solid var(--phase-color, var(--brand-dark, #c2185b));
+    border-top: 3px solid var(--phase-color, var(--brand-dark, #e11d48));
     transition: opacity 0.6s ease, transform 0.6s ease, box-shadow 0.3s ease,
                 background 0.3s, border-color 0.3s;
     opacity: 0;
@@ -333,7 +333,7 @@
     font-size: 0.78rem;
     font-weight: 700;
     text-transform: uppercase;
-    color: var(--phase-color, var(--brand-dark, #c2185b));
+    color: var(--phase-color, var(--brand-dark, #e11d48));
     margin-bottom: 8px;
     letter-spacing: 1.2px;
     font-family: var(--font-sans);

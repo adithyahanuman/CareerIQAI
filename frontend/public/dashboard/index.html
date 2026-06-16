@@ -14,14 +14,14 @@
                 if (saved) document.documentElement.setAttribute('data-theme', saved);
             })();
         </script>
-        <link rel="stylesheet" href="../auth/auth.css?v=12" />
+        <link rel="stylesheet" href="../auth/auth.css?v=1781596867135" />
         <!-- Dashboard layout & sidebar styles -->
-        <link rel="stylesheet" href="dashboard.css?v=12" />
+        <link rel="stylesheet" href="dashboard.css?v=1781596867135" />
         <!-- Tab-specific styles -->
-        <link rel="stylesheet" href="tabs/resume-analysis/resume-analysis.css?v=12" />
-        <link rel="stylesheet" href="tabs/career-roadmap/career-roadmap.css?v=12" />
+        <link rel="stylesheet" href="tabs/resume-analysis/resume-analysis.css?v=1781597123038" />
+        <link rel="stylesheet" href="tabs/career-roadmap/career-roadmap.css?v=1781597123038" />
         <!-- PlacementIQ Dashboard Styles -->
-        <link rel="stylesheet" href="placementiq.css?v=12" />
+        <link rel="stylesheet" href="placementiq.css?v=1781596867135" />
         <!-- Benchmarking Tab Styles -->
         <link rel="stylesheet" href="tabs/benchmarking/benchmarking.css" />
         <!-- pdf.js for PDF text extraction (required by browser-resume-extractor.js) -->
@@ -185,7 +185,7 @@
                                     </svg>
                                     Analyze with AI
                                 </button>
-                                <a href="../admin/index.html" class="piq-upload-btn" style="background:#ffb3b0;display:none;" id="adminLink">Admin Panel</a>
+                                <a href="../admin/index.html" class="piq-upload-btn" style="background:#ef4444;display:none;" id="adminLink">Admin Panel</a>
                             </div>
                         </div>
 
@@ -311,27 +311,15 @@
                                 <h3 class="piq-card-title">Skills Intelligence</h3>
 
                                 <div class="piq-skills-section">
-                                    <div class="piq-skills-section-title">TECHNICAL</div>
-                                    <div class="piq-skill-bars" id="piqTechSkills">
+                                    <div class="piq-skills-section-title">ALL EXTRACTED SKILLS</div>
+                                    <div class="piq-role-tags" id="piqAllSkills" style="margin-top: 8px;">
                                         <div class="piq-empty-state piq-empty-sm">
                                             <div class="piq-empty-text">Skills will appear after resume analysis</div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="piq-skills-section">
-                                    <div class="piq-skills-section-title">SOFT SKILLS</div>
-                                    <div class="piq-skill-bars" id="piqSoftSkills">
-                                        <div class="piq-empty-state piq-empty-sm">
-                                            <div class="piq-empty-text">Skills will appear after resume analysis</div>
-                                        </div>
-                                    </div>
-                                </div>
 
-                                <div class="piq-skills-section" id="piqMissingSkillsSection" style="display:none">
-                                    <div class="piq-skills-section-title">MISSING FOR TARGET ROLES</div>
-                                    <div class="piq-missing-tags" id="piqMissingSkills"></div>
-                                </div>
                             </div>
 
                             <!-- Resume Insights -->
@@ -484,11 +472,7 @@
                                 </div>
                                 <div style="display:flex;gap:12px;align-items:center;">
                                     <button class="ra-reanalyze-btn" id="raReanalyzeBtn">
-                                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                            <polyline points="23 4 23 10 17 10" />
-                                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-                                        </svg>
-                                        Refresh from DB
+                                        Refresh
                                     </button>
                                     <!-- Analyze button in the analysis tab (visible) -->
                                     <button id="analyzeResumeBtnInAnalysis" class="piq-analyze-btn" style="display:none;">
@@ -702,7 +686,7 @@
                                 </div>
                                 <div class="ra-grid-2" style="margin-bottom: 1rem">
                                     <div class="ra-chart-panel">
-                                        <div class="ra-chart-title">Fixes by Severity</div>
+                                        <div class="ra-chart-title">Action Items by Category</div>
                                         <div class="ra-chart-wrap ra-chart-h140"><canvas id="raChartActionSev"></canvas></div>
                                         <div class="ra-legend" id="raLegendActionSev"></div>
                                     </div>
@@ -844,15 +828,15 @@
         <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
         <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
         <!-- Auth helper -->
-        <script src="../auth/auth.js"></script>
+        <script src="../auth/auth.js?v=1781599704723"></script>
         <!-- Resume extractor -->
         <script src="browser-resume-extractor.js?v=12"></script>
         <!-- Gemini API client -->
         <script src="gemini-client.js?v=12"></script>
         <!-- Main Dashboard JS -->
-        <script src="dashboard.js?v=12"></script>
+        <script src="dashboard.js?v=1781600629446"></script>
         <!-- PlacementIQ Dashboard JS -->
-        <script src="placementiq.js?v=12"></script>
+        <script src="placementiq.js?v=1781599348527"></script>
         <!-- Benchmarking Tab JS -->
         <script src="tabs/benchmarking/benchmarking.js"></script>
     </body>

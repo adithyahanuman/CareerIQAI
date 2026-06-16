@@ -89,4 +89,25 @@ const login = async (req, res) => {
   });
 };
 
-module.exports = { session, getMe, logout, register, login };
+
+const checkEmail = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ success: false, message: 'Email required' });
+    const { getAuth } = require('firebase-admin/auth');
+    try {
+      await getAuth().getUserByEmail(email);
+      res.status(200).json({ success: true, exists: true });
+    } catch (err) {
+      if (err.code === 'auth/user-not-found') {
+        res.status(200).json({ success: true, exists: false });
+      } else {
+        throw err;
+      }
+    }
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { session, getMe, logout, register, login, checkEmail };

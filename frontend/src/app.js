@@ -525,78 +525,6 @@
   // COPY TO CLIPBOARD for code snippets (if any)
   // ======================================================
 
-  // ======================================================
-  // INITIALIZE CHATBOT FLOATING BUTTON
-  // ======================================================
-  const ChatBot = {
-    init() {
-      const btn = document.createElement('button');
-      btn.id = 'chatBotBtn';
-      btn.setAttribute('aria-label', 'Open AI Career Coach');
-      btn.innerHTML = `
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-        </svg>
-        <span class="chat-tooltip">Ask AI Coach</span>
-      `;
-      btn.style.cssText = `
-        position: fixed;
-        bottom: 88px;
-        right: 28px;
-        width: 52px;
-        height: 52px;
-        border-radius: 50%;
-        background: var(--chatbot-bg, linear-gradient(135deg, #c2185b, #f4a5b0));
-        color: var(--on-brand, #fff);
-        border: none;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 4px 20px rgba(var(--chatbot-glow-rgb, 244,165,176), 0.45);
-        z-index: 900;
-        transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
-        font-family: var(--font-sans);
-      `;
-
-      const tooltip = document.createElement('style');
-      tooltip.textContent = `
-        #chatBotBtn .chat-tooltip {
-          position: absolute;
-          right: 60px;
-          top: 50%;
-          transform: translateY(-50%);
-          background: var(--bg-card, #281d26);
-          color: var(--text-primary, #f4eff2);
-          border: 1px solid var(--border, rgba(255,255,255,0.08));
-          border-radius: 8px;
-          padding: 6px 12px;
-          font-size: 12px;
-          font-weight: 600;
-          white-space: nowrap;
-          opacity: 0;
-          pointer-events: none;
-          transition: opacity 0.2s ease;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }
-        #chatBotBtn:hover .chat-tooltip { opacity: 1; }
-        #chatBotBtn:hover { transform: translateY(-4px) scale(1.1); box-shadow: 0 8px 28px rgba(var(--chatbot-glow-rgb, 244,165,176), 0.55); }
-        #chatBotBtn:active { transform: scale(0.95); }
-      `;
-      document.head.appendChild(tooltip);
-      document.body.appendChild(btn);
-
-      btn.addEventListener('click', () => {
-        // Scroll to how-it-works section
-        const target = document.getElementById('how-it-works') || document.getElementById('features');
-        if (target) target.scrollIntoView({ behavior: 'smooth' });
-        // Pulse animation
-        btn.style.animation = 'none';
-        void btn.offsetHeight;
-        btn.style.animation = '';
-      });
-    }
-  };
 
   // ======================================================
   // FEATURE CARD INTERACTIVE GLOW
@@ -679,8 +607,8 @@
     RoadmapAnimation.init();
     Spotlight.init();
     ReadingProgress.init();
+
     LogoEffect.init();
-    ChatBot.init();
     FeatureGlow.init();
     StepNumbers.init();
     PricingGlow.init();

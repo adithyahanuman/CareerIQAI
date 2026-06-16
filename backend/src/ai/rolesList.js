@@ -134,4 +134,61 @@ function getRolesForCourse(courseText) {
   return ROLES[detectCourseTier(courseText)] || ROLES.btech;
 }
 
-module.exports = { ROLES, detectCourseTier, getRolesForCourse };
+/**
+ * Maps every role string → its dedicated PostgreSQL table name.
+ * Rule: lowercase, non-alphanumeric runs → single underscore, prefix `role_`.
+ * Special cases (GET, AI/ML, /) are handled explicitly below.
+ */
+const ROLE_TABLE_MAP = {
+  // ── B.Tech / M.Tech ────────────────────────────────────────────────────────
+  'Software Engineer':                    'role_software_engineer',
+  'Full Stack Developer':                 'role_full_stack_developer',
+  'Data Engineer':                        'role_data_engineer',
+  'Data Scientist':                       'role_data_scientist',
+  'Machine Learning Engineer':            'role_machine_learning_engineer',
+  'DevOps Engineer':                      'role_devops_engineer',
+  'Cyber Security Engineer':              'role_cyber_security_engineer',
+  'Embedded Systems Engineer':            'role_embedded_systems_engineer',
+  'VLSI Engineer':                        'role_vlsi_engineer',
+  'Hardware Engineer':                    'role_hardware_engineer',
+  'Electrical Engineer':                  'role_electrical_engineer',
+  'Mechanical Engineer':                  'role_mechanical_engineer',
+  'Civil Engineer':                       'role_civil_engineer',
+  'Process Engineer':                     'role_process_engineer',
+  'Biomedical Engineer':                  'role_biomedical_engineer',
+  'Business Analyst':                     'role_business_analyst',
+  'Consultant':                           'role_consultant',
+  'Financial Analyst':                    'role_financial_analyst',
+  'Product Manager':                      'role_product_manager',
+  'Graduate Engineer Trainee (GET)':      'role_graduate_engineer_trainee',
+  // ── M.Tech additions ───────────────────────────────────────────────────────
+  'Cloud Architect':                      'role_cloud_architect',
+  'Research Scientist':                   'role_research_scientist',
+  'Senior VLSI Engineer':                 'role_senior_vlsi_engineer',
+  'Senior Embedded Systems Engineer':     'role_senior_embedded_systems_engineer',
+  'Advanced AI/ML Engineer':              'role_advanced_ai_ml_engineer',
+  // ── M.Sc ───────────────────────────────────────────────────────────────────
+  'Bioinformatics Scientist':             'role_bioinformatics_scientist',
+  // ── MBA ────────────────────────────────────────────────────────────────────
+  'Marketing Analyst':                    'role_marketing_analyst',
+  'HR Specialist':                        'role_hr_specialist',
+  'Supply Chain Analyst':                 'role_supply_chain_analyst',
+  'Management Trainee':                   'role_management_trainee',
+  // ── PhD ────────────────────────────────────────────────────────────────────
+  'Professor / Academic Researcher':      'role_professor_academic_researcher',
+  'AI Research Scientist':                'role_ai_research_scientist',
+  'Semiconductor Research Scientist':     'role_semiconductor_research_scientist',
+  'Technology Specialist':                'role_technology_specialist',
+};
+
+/**
+ * Resolve a role display name to its DB table name.
+ * Returns null if the role is not in the map (safe fallback).
+ * @param {string} roleName
+ * @returns {string|null}
+ */
+function getRoleTable(roleName) {
+  return ROLE_TABLE_MAP[roleName] ?? null;
+}
+
+module.exports = { ROLES, ROLE_TABLE_MAP, detectCourseTier, getRolesForCourse, getRoleTable };

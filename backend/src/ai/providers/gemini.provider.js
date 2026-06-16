@@ -46,6 +46,7 @@ class GeminiProvider extends BaseAIProvider {
       msg.includes('connection was closed') ||
       msg.includes('econnreset') ||
       msg.includes('etimedout') ||
+      msg.includes('fetch failed') ||      // network error / DNS timeout
       msg.includes('failed to parse') ||   // model returned non-JSON
       msg.includes('not valid json') ||     // model ignored JSON instruction
       msg.includes('empty response')        // model returned nothing

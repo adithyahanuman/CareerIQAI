@@ -4,11 +4,11 @@
                                 --ra-bg: var(--bg-primary, #1a1218);
                                 --ra-card: var(--bg-card, #281d26);
                                 --ra-elevated: var(--bg-secondary, #221720);
-                                --ra-blue: #f4a5b0;      /* rose (brand) */
-                                --ra-emerald: #86efac;   /* green */
-                                --ra-amber: #fbbf24;     /* amber */
-                                --ra-rose: #ffb3b0;      /* error/red */
-                                --ra-purple: #ffd7de;    /* light rose tint */
+                                --ra-blue: #3b82f6;
+                                --ra-emerald: #10b981;
+                                --ra-amber: #f59e0b;
+                                --ra-rose: #ef4444;
+                                --ra-purple: #8b5cf6;
                                 --ra-text: var(--text-primary, #f4eff2);
                                 --ra-muted: var(--text-secondary, #d4bfca);
                                 --ra-dim: var(--text-muted, #9a7f92);
@@ -23,11 +23,11 @@
                                 --ra-bg: #fff8f9;
                                 --ra-card: #ffffff;
                                 --ra-elevated: #fdeef1;
-                                --ra-blue: #c2185b;      /* deep rose (brand) */
-                                --ra-emerald: #166534;
-                                --ra-amber: #92400e;
-                                --ra-rose: #a01040;
-                                --ra-purple: #880e4f;
+                                --ra-blue: #2563eb;
+                                --ra-emerald: #059669;
+                                --ra-amber: #d97706;
+                                --ra-rose: #dc2626;
+                                --ra-purple: #7c3aed;
                                 --ra-text: #1f0f15;
                                 --ra-muted: #5c3347;
                                 --ra-dim: #9a6080;
@@ -360,7 +360,7 @@
                             .ra-insight {
                                 background: var(--ra-elevated, #1a1218);
                                 border: 1px solid var(--ra-border);
-                                border-left: 2px solid var(--insight-c, #c2185b);
+                                border-left: 2px solid var(--insight-c, #ef4444);
                                 border-radius: 8px;
                                 padding: 0.45rem 0.6rem;
                                 font-size: 11px;
@@ -1005,11 +1005,12 @@
                                 letter-spacing: 0.04em;
                             }
                             .ra-comp-item {
-                                font-size: 12px;
-                                padding: 0.2rem 0;
+                                font-size: 13px;
+                                padding: 0.3rem 0;
                                 display: flex;
-                                align-items: center;
-                                gap: 0.35rem;
+                                align-items: flex-start;
+                                gap: 0.4rem;
+                                line-height: 1.4;
                             }
                             .ra-comp-note {
                                 font-style: italic;

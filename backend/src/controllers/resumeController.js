@@ -8,6 +8,8 @@
 'use strict';
 
 const resumeService = require('../services/resumeService');
+const aiService     = require('../ai/aiService');
+const prompts       = require('../ai/prompts');
 
 // ---------------------------------------------------------------------------
 // POST /api/resumes/upload
@@ -31,7 +33,8 @@ const uploadResume = async (req, res, next) => {
 
     const resume = await resumeService.uploadResume({ student_id: targetStudentId, resume_text, file_name });
 
-    const statusCode = resume.status === 'done' && resume.analysis ? 200 : 201;
+    // 200 = analysis done (cache hit or fresh); 202 = saved but AI still processing/failed
+    const statusCode = resume.status === 'done' && resume.overall_analysis ? 200 : 202;
     res.status(statusCode).json({ success: true, data: resume });
   } catch (err) {
     if (err.statusCode) res.status(err.statusCode);

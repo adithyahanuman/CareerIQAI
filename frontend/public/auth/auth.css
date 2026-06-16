@@ -543,10 +543,10 @@ input, select, textarea { font-family: inherit; }
   border-radius: 2px;
   transition: background var(--transition-md);
 }
-.strength-bar.weak { background: var(--red); }
-.strength-bar.fair { background: var(--orange); }
-.strength-bar.good { background: var(--lime); }
-.strength-bar.strong { background: var(--green); }
+.strength-bar.weak { background: var(--red) !important; }
+.strength-bar.fair { background: var(--orange) !important; }
+.strength-bar.good { background: var(--lime) !important; }
+.strength-bar.strong { background: var(--green) !important; }
 .strength-label { font-size: 11px; color: var(--text-muted); }
 
 /* Checkbox */

@@ -21,6 +21,7 @@ const studentRoutes  = require('./routes/studentRoutes');
 const resumeRoutes   = require('./routes/resumeRoutes');
 const careerRoutes      = require('./routes/careerRoutes');
 const benchmarkRoutes   = require('./routes/benchmarkRoutes');
+const resumeUploadRoutes = require('./routes/resumeUpload');
 
 const app = express();
 
@@ -40,6 +41,7 @@ app.use('/api/students',  studentRoutes);
 app.use('/api/resumes',   resumeRoutes);
 app.use('/api/career',      careerRoutes);
 app.use('/api/benchmark',   benchmarkRoutes);
+app.use('/resume',        resumeUploadRoutes);
 
 // ── 404 & Error handlers ───────────────────────────────────────────────────────
 app.use(notFound);

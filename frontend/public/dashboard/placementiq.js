@@ -12,10 +12,7 @@
 
     // Color helpers
     function scoreColor(s) {
-        if (s >= 80) return '#f4a5b0';
-        if (s >= 65) return '#e8607a';
-        if (s >= 50) return '#ffb3b0';
-        return '#c2185b';
+        return window.COLORS.getScoreColor(s);
     }
 
     // ── Draw readiness trend chart ────────────────────────────────────────────
@@ -38,12 +35,13 @@
         data[months - 1] = currentScore; // last point = actual score
 
         const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-        const gridColor = isLight ? 'rgba(194, 24, 91, 0.08)' : 'rgba(244, 165, 176, 0.06)';
-        const tickColor = isLight ? '#9a6080' : '#d4bfca';
+        const gridColor = isLight ? 'rgba(225, 29, 72, 0.08)' : 'rgba(244, 63, 94, 0.06)';
+        const tickColor = isLight ? '#1a1218' : '#ffffff';
 
+        const color = scoreColor(currentScore);
         const gradient = canvas.getContext('2d').createLinearGradient(0, 0, 0, 120);
-        gradient.addColorStop(0, 'rgba(244, 165, 176, 0.30)');
-        gradient.addColorStop(1, 'rgba(244, 165, 176, 0)');
+        gradient.addColorStop(0, color + '4d'); // 30% opacity
+        gradient.addColorStop(1, color + '00'); // 0% opacity
 
         trendChart = new Chart(canvas.getContext('2d'), {
             type: 'line',
@@ -51,10 +49,10 @@
                 labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
                 datasets: [{
                     data: data,
-                    borderColor: '#f4a5b0',
+                    borderColor: color,
                     borderWidth: 2,
                     backgroundColor: gradient,
-                    pointBackgroundColor: '#c2185b',
+                    pointBackgroundColor: color,
                     pointRadius: 3,
                     pointHoverRadius: 5,
                     tension: 0.4,
@@ -111,36 +109,19 @@
         requestAnimationFrame(step);
     }
 
-    // ── Populate skill bars ───────────────────────────────────────────────────
-    function buildSkillBars(skills, containerId, color) {
+    // ── Populate skill tags ───────────────────────────────────────────────────
+    function buildSkillTags(skills, containerId, limit = 8) {
         const el = document.getElementById(containerId);
         if (!el) return;
-        if (!skills || !skills.length) return;
+        if (!skills || !skills.length) {
+            el.innerHTML = `<div class="piq-empty-state piq-empty-sm"><div class="piq-empty-text">None found</div></div>`;
+            return;
+        }
 
-        el.innerHTML = '';
-        skills.slice(0, 6).forEach(skill => {
+        el.innerHTML = skills.slice(0, limit).map(skill => {
             const name = typeof skill === 'string' ? skill : (skill.name || skill);
-            // Assign a plausible proficiency (75–95 range, pseudo-random based on name)
-            const hash = name.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-            const val = 72 + (hash % 24);
-            const row = document.createElement('div');
-            row.className = 'piq-skill-row';
-            row.innerHTML = `
-                <div class="piq-skill-name" title="${name}">${name}</div>
-                <div class="piq-skill-bar-bg">
-                    <div class="piq-skill-bar-fill" data-w="${val}" style="width:0%;background:${color}"></div>
-                </div>
-                <div class="piq-skill-val">${val}</div>
-            `;
-            el.appendChild(row);
-        });
-
-        // Animate bars
-        setTimeout(() => {
-            el.querySelectorAll('.piq-skill-bar-fill').forEach(b => {
-                b.style.width = b.dataset.w + '%';
-            });
-        }, 200);
+            return `<span class="piq-role-tag" style="background: rgba(34, 197, 94, 0.15); color: #10b981; border: 1px solid rgba(34, 197, 94, 0.3);">${name}</span>`;
+        }).join('');
     }
 
     // ── Populate best-fit roles ───────────────────────────────────────────────
@@ -157,10 +138,10 @@
 
         const roleIcons = ['💻', '📊', '🤖', '🎨', '🔧', '📱', '🌐', '⚡'];
         const roleColors = [
-            'linear-gradient(135deg,#f4a5b0,#c2185b)',
-            'linear-gradient(135deg,#ffd7de,#f4a5b0)',
-            'linear-gradient(135deg,#e8607a,#c2185b)',
-            'linear-gradient(135deg,#ffb3b0,#e8607a)',
+            'linear-gradient(135deg,#f43f5e,#8b5cf6)', // Indigo to Violet
+            'linear-gradient(135deg,#22c55e,#10b981)', // Green to Emerald
+            'linear-gradient(135deg,#f59e0b,#f97316)', // Amber to Orange
+            'linear-gradient(135deg,#06b6d4,#3b82f6)', // Cyan to Blue
         ];
 
         el.innerHTML = '';
@@ -268,7 +249,7 @@
         // ── Extract projects (for Step 2 tags) ───────────────────────────────
         const aiSuggestions = projD.projects_suggestions || [];
         const PROJECT_ICONS = ['🌐','🤖','⚙️','📊','🏗️','🔗'];
-        const PROJECT_COLORS = ['#f4a5b0','#e8607a','#ffd7de','#ffb3b0','#c2185b','#f9c9d0'];
+        const PROJECT_COLORS = ['#f43f5e','#8b5cf6','#ec4899','#22c55e','#f59e0b','#06b6d4'];
         const FALLBACK_PROJECTS = [
             { title: 'Full-Stack SaaS App' },
             { title: 'ML Prediction Pipeline' },
@@ -347,7 +328,7 @@
         const FIXED_STEPS = [
             {
                 icon:  '⚡',
-                color: '#ffb3b0',
+                color: '#f59e0b', // Amber
                 label: 'STEP 1',
                 title: 'Skill Gap Analysis',
                 time:  '2–4 weeks',
@@ -357,7 +338,7 @@
             },
             {
                 icon:  '🛠️',
-                color: '#f4a5b0',
+                color: '#f43f5e', // Indigo
                 label: 'STEP 2',
                 title: 'Required Projects',
                 time:  '4–8 weeks',
@@ -367,7 +348,7 @@
             },
             {
                 icon:  '📝',
-                color: '#ffd7de',
+                color: '#ec4899', // Pink
                 label: 'STEP 3',
                 title: 'Resume Changes Required',
                 time:  '1 week',
@@ -377,7 +358,7 @@
             },
             {
                 icon:  '🎯',
-                color: '#c2185b',
+                color: '#22c55e', // Green
                 label: 'STEP 4',
                 title: 'Apply for Jobs / Internships',
                 time:  'Ongoing',
@@ -493,7 +474,7 @@
         const atsVal = { low: 85, medium: 68, high: 45, critical: 25 }[atsRisk] || 68;
         if (atsScore) {
             atsScore.textContent = `${atsVal}/100`;
-            atsScore.style.color = atsRisk === 'low' ? '#f4a5b0' : atsRisk === 'medium' ? '#ffd7de' : '#c2185b';
+            atsScore.style.color = atsRisk === 'low' ? '#22c55e' : atsRisk === 'medium' ? '#f59e0b' : '#ef4444';
         }
         if (atsSub) {
             const fixes = D.action_plan?.critical_fixes?.length || 0;
@@ -522,35 +503,16 @@
         populateRoles(pgResume);
 
         // ── 6. Skills Intelligence ──
-        const techSkills = [
+        const allSkills = [
             ...(D.skills.technical_skills || []),
-            ...(D.skills.frameworks_and_libraries || [])
+            ...(D.skills.tools_and_platforms || []),
+            ...(D.skills.frameworks_and_libraries || []),
+            ...(D.skills.soft_skills || [])
         ];
-        const softSkills = D.skills.soft_skills || [];
 
-        buildSkillBars(techSkills, 'piqTechSkills', '#c2185b');
-        buildSkillBars(softSkills, 'piqSoftSkills', '#f4a5b0');
+        buildSkillTags(allSkills, 'piqAllSkills', 30);
 
-        // Missing skills
-        const missingSection = document.getElementById('piqMissingSkillsSection');
-        const missingEl = document.getElementById('piqMissingSkills');
-        const longTerm = D.action_plan?.long_term_suggestions || [];
-        const missingKeywords = [];
-        longTerm.forEach(s => {
-            const txt = s.suggestion || '';
-            ['Docker', 'AWS', 'System Design', 'Kubernetes', 'Tableau', 'Statistics', 'Spark'].forEach(kw => {
-                if (txt.toLowerCase().includes(kw.toLowerCase()) && !missingKeywords.includes(kw)) {
-                    missingKeywords.push(kw);
-                }
-            });
-        });
 
-        if (missingKeywords.length && missingEl && missingSection) {
-            missingSection.style.display = '';
-            missingEl.innerHTML = missingKeywords.map(k =>
-                `<span class="piq-missing-tag">${k}</span>`
-            ).join('');
-        }
 
         // ── 7. Resume Insights ──
         populateStrengths(pgResume);

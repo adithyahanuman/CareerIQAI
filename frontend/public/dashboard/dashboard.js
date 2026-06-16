@@ -1,4 +1,22 @@
-    const initApp = async () => {
+window.COLORS = {
+  success: '#22c55e', // Green (80-100)
+  warning: '#f59e0b', // Amber (60-79)
+  orange:  '#f97316', // Orange (40-59)
+  danger:  '#ef4444', // Red (0-39)
+  chart:   ['#3b82f6', '#14b8a6', '#8b5cf6', '#f97316', '#ec4899', '#22c55e'], // Multi-color palette
+  radar: {
+    fill: 'rgba(99, 102, 241, 0.3)', // Indigo
+    border: '#6366f1'
+  },
+  getScoreColor: function(s) {
+    if (s >= 80) return this.success;
+    if (s >= 60) return this.warning;
+    if (s >= 40) return this.orange;
+    return this.danger;
+  }
+};
+
+const initApp = async () => {
       const { Session, ProtectedRoute, db } = window.CareerIQAuth;
 
       // Setup Navigation and Toggle actions
@@ -275,7 +293,7 @@
           const token = await firebase.auth().currentUser.getIdToken();
           const analysis = await window.GeminiClient.analyzeResume(resumeText, token, resumeName);
 
-          pgResume = { file_name: resumeName, analysis };
+          pgResume = analysis;
 
           populateResumeAnalysisTab(pgResume);
 
@@ -330,27 +348,25 @@
         RA_CHARTS[id] = new Chart(canvas.getContext('2d'), config);
         return RA_CHARTS[id];
       }
-      const RA_PALETTE = ['#f4a5b0','#ffd7de','#ffb3b0','#c2185b','#f9c9d0','#f4a5b0','#e8a0b0','#ffb3b0','#c2185b'];
+      const RA_PALETTE = window.COLORS.chart;
       const RA_SECTION_META = [
-        { key:'contact',          label:'Contact',          icon:'📇', max:2,  accent:'#f4a5b0' },
-        { key:'summary',          label:'Summary',          icon:'📝', max:2,  accent:'#ffd7de' },
-        { key:'experience',       label:'Experience',       icon:'💼', max:20, accent:'#c2185b' },
-        { key:'education',        label:'Education',        icon:'🎓', max:20, accent:'#f4a5b0' },
-        { key:'skills',           label:'Skills',           icon:'⚡', max:20, accent:'#f4a5b0' },
-        { key:'projects',         label:'Projects',         icon:'🚀', max:20, accent:'#e8607a' },
-        { key:'formatting',       label:'Formatting',       icon:'📄', max:6,  accent:'#ffd7de' },
-        { key:'certifications',   label:'Certs',            icon:'🏅', max:20, accent:'#ffb3b0' },
-        { key:'extracurriculars', label:'Extracurriculars', icon:'🌐', max:20, accent:'#c2185b' },
+        { key:'contact',          label:'Contact',          icon:'📇', max:2 },
+        { key:'summary',          label:'Summary',          icon:'📝', max:2 },
+        { key:'experience',       label:'Experience',       icon:'💼', max:20 },
+        { key:'education',        label:'Education',        icon:'🎓', max:20 },
+        { key:'skills',           label:'Skills',           icon:'⚡', max:20 },
+        { key:'projects',         label:'Projects',         icon:'🚀', max:20 },
+        { key:'formatting',       label:'Formatting',       icon:'📄', max:6 },
+        { key:'certifications',   label:'Certs',            icon:'🏅', max:20 },
+        { key:'extracurriculars', label:'Extracurriculars', icon:'🌐', max:20 },
       ];
-      function raGaugeColor(s) {
-        if (s>=80) return '#f4a5b0'; if (s>=65) return '#e8607a'; if (s>=50) return '#ffb3b0'; return '#c2185b';
-      }
-      function raProgColor(p) {
-        if (p>=75) return '#f4a5b0'; if (p>=50) return '#e8607a'; return '#c2185b';
-      }
+      function raGaugeColor(s) { return window.COLORS.getScoreColor(s); }
+      function raProgColor(p) { return window.COLORS.getScoreColor(p); }
       function raHeatBg(p) {
-        if (p>=80) return 'rgba(244, 165, 176, 0.22)'; if (p>=65) return 'rgba(232, 96, 122, 0.18)';
-        if (p>=50) return 'rgba(255, 179, 176, 0.18)'; return 'rgba(194, 24, 91, 0.15)';
+        if (p>=80) return 'rgba(34, 197, 94, 0.15)'; // success bg
+        if (p>=60) return 'rgba(245, 158, 11, 0.15)'; // warning bg
+        if (p>=40) return 'rgba(249, 115, 22, 0.15)'; // orange bg
+        return 'rgba(239, 68, 68, 0.15)'; // danger bg
       }
       function raScore(sec, sectionKey) {
         if (!sec) return { score:0, max:0, grade:'—', issues:[], suggestion:null };
@@ -367,28 +383,29 @@
       function raHtmlLegend(containerId, items) {
         const el = document.getElementById(containerId); if (!el) return;
         const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-        const valColor = isLight ? '#dfe3e7' : '#44474a';
-        el.innerHTML = items.map(item =>
-          `<div class="ra-legend-item"><span class="ra-legend-dot" style="background:${item.color}"></span><span>${item.label}</span><span style="margin-left:auto;color:${valColor};font-weight:500">${item.value}</span></div>`
-        ).join('');
+        const valColor = isLight ? '#1a1218' : '#ffffff';
+        el.innerHTML = items.map(item => {
+          return `<div class="ra-legend-item"><span class="ra-legend-dot" style="background:${item.color}"></span><span>${item.label}</span><span style="margin-left:auto;color:${valColor};font-weight:500">${item.value}</span></div>`;
+        }).join('');
       }
       function raChartOpts(extra={}) {
         const { plugins, layout, ...rest } = extra;
         return { responsive:true, maintainAspectRatio:false, resizeDelay:100,
           plugins:{ legend:{display:false}, ...plugins },
-          layout:{ padding:{top:4,right:8,bottom:4,left:4}, ...layout }, ...rest };
+          layout:{ padding:{top:4,right:8,bottom:4,left:16}, ...layout }, ...rest };
       }
       function raAxisStyle() {
         const isLight = document.documentElement.getAttribute('data-theme') === 'light';
         const gridColor = isLight ? 'rgba(194, 24, 91, 0.08)' : 'rgba(244, 165, 176, 0.08)';
-        const tickColor = isLight ? '#9a6080' : '#d4bfca';
+        const tickColor = isLight ? '#1a1218' : '#ffffff';
         return {
           grid:{ color: gridColor },
-          ticks:{ color: tickColor, font:{family:'inherit',size:10}, maxRotation:0, autoSkip:true, maxTicksLimit:8 }
+          ticks:{ color: tickColor, font:{family:"'Hanken Grotesk', sans-serif",size:10}, maxRotation:0, autoSkip:false }
         };
       }
 
       const populateResumeAnalysisTab = (resume) => {
+        window._populateResumeAnalysisTab = populateResumeAnalysisTab;
         // ── PlacementIQ Dashboard bridge ──
         window._piqResumeData = resume;
         if (window.PlacementIQ && typeof window.PlacementIQ.populate === 'function') {
@@ -474,7 +491,7 @@
         if (el_stats) el_stats.innerHTML = `
           <div class="ra-hero-stat"><div class="ra-hero-stat-val" style="color:${color}">${score}</div><div class="ra-hero-stat-lbl">Overall Score</div></div>
           <div class="ra-hero-stat"><div class="ra-hero-stat-val">${ov.raw_score || 0}</div><div class="ra-hero-stat-lbl">Raw Points</div></div>
-          <div class="ra-hero-stat"><div class="ra-hero-stat-val">${rc.completeness_score || 0}%</div><div class="ra-hero-stat-lbl">Completeness</div></div>
+          <div class="ra-hero-stat"><div class="ra-hero-stat-val" style="color:${window.COLORS.getScoreColor(rc.completeness_score || 0)}">${rc.completeness_score || 0}%</div><div class="ra-hero-stat-lbl">Completeness</div></div>
           <div class="ra-hero-stat"><div class="ra-hero-stat-val">${D.projects.total_projects || 0}</div><div class="ra-hero-stat-lbl">Projects</div></div>`;
 
                     // Hero insights from action plan critical fixes
@@ -484,7 +501,7 @@
                             .slice(0, 3)
                             .map(
                                 (f) =>
-                                    `<div class="ra-insight" style="--insight-c:${f.severity === "critical" ? "#c2185b" : "#ffb3b0"}">
+                                    `<div class="ra-insight" style="--insight-c:${f.severity === "critical" ? "#ef4444" : "#f59e0b"}">
               <strong>${f.fix}</strong>${f.action}</div>`,
                             )
                             .join("");
@@ -495,15 +512,15 @@
                     const secLabels = [],
                         secRaw = [],
                         secMax = [],
-                        secPct = [],
-                        secColors = [];
-                    RA_SECTION_META.forEach((m, i) => {
+                        secPct = [], secColors = [];
+                        RA_SECTION_META.forEach((m, i) => {
                         secLabels.push(m.label);
                         const r = breakdown[m.key] ?? 0;
                         secRaw.push(r);
                         secMax.push(m.max);
-                        secPct.push(Math.round((r / m.max) * 100));
-                        secColors.push(m.accent);
+                        const pct = Math.round((r / m.max) * 100) || 0;
+                        secPct.push(pct);
+                        secColors.push(window.COLORS.getScoreColor(pct));
                     });
 
                     // Hero Top Sections chart
@@ -534,10 +551,10 @@
                     if (el_strip) {
                         const metrics = [
                             { v: score, l: 'Overall', c: color },
-                            { v: ov.raw_score || 0, l: 'Raw Pts', c: '#f4a5b0' },
-                            { v: (rc.completeness_score || 0) + '%', l: 'Complete', c: '#ffd7de' },
-                            { v: D.projects.total_projects || 0, l: 'Projects', c: '#e8607a' },
-                            { v: D.skills.total_skills_count || 0, l: 'Skills', c: '#c2185b' },
+                            { v: ov.raw_score || 0, l: 'Raw Pts', c: '#3b82f6' },
+                            { v: (rc.completeness_score || 0) + '%', l: 'Complete', c: '#8b5cf6' },
+                            { v: D.projects.total_projects || 0, l: 'Projects', c: '#14b8a6' },
+                            { v: D.skills.total_skills_count || 0, l: 'Skills', c: '#ef4444' },
                         ];
                         el_strip.innerHTML = metrics
                             .map(
@@ -557,8 +574,8 @@
                             datasets: [
                                 {
                                     data: secRaw,
-                                    backgroundColor: secColors,
-                                    borderColor: 'rgba(26, 18, 24, 0.8)',
+                                    backgroundColor: RA_PALETTE,
+                                    borderColor: 'transparent',
                                     borderWidth: 2,
                                 },
                             ],
@@ -570,11 +587,13 @@
                         secLabels.map((l, i) => ({
                             label: l,
                             value: secRaw[i] + " pts",
-                            color: secColors[i],
+                            color: RA_PALETTE[i % RA_PALETTE.length],
                         })),
                     );
 
                     // Section bars chart
+                    const sbCanvas = document.getElementById("raChartSectionBars");
+                    if (sbCanvas) sbCanvas.parentElement.style.height = Math.max(140, secLabels.length * 32) + "px";
                     raCreateChart("raChartSectionBars", {
                         type: "bar",
                         data: {
@@ -620,14 +639,14 @@
                             .map(
                                 (l, i) =>
                                     `<div class="ra-heatmap-cell" style="background:${raHeatBg(secPct[i])};border-color:${secColors[i]}44" title="${l}: ${secPct[i]}%">
-            <span>${secPct[i]}%</span><span>${RA_SECTION_META[i].icon}</span></div>`,
+            <span>${secPct[i]}%</span><span style="font-size:14px; margin: 2px 0;">${RA_SECTION_META[i].icon}</span><span style="font-size:10px; font-weight:500; text-align:center; word-break: break-word;">${l}</span></div>`,
                             )
                             .join("");
 
                     const _isLight = document.documentElement.getAttribute('data-theme') === 'light';
-                    const _radarGrid = _isLight ? 'rgba(194, 24, 91, 0.10)' : 'rgba(244, 165, 176, 0.10)';
-                    const _ptBorder = _isLight ? '#fff0f3' : '#1a1218';
-                    const _ptLabel  = _isLight ? '#5c3347' : '#d4bfca';
+                    const _radarGrid = _isLight ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)';
+                    const _ptBorder = _isLight ? '#ffffff' : '#1a1218';
+                    const _ptLabel  = _isLight ? '#1a1218' : '#ffffff';
                     // Radar
                     raCreateChart("raRadarChart", {
                         type: "radar",
@@ -636,8 +655,8 @@
                             datasets: [
                                 {
                                     data: secPct,
-                                    backgroundColor: 'rgba(244, 165, 176, 0.15)',
-                                    borderColor: '#f4a5b0',
+                                    backgroundColor: window.COLORS.radar.fill,
+                                    borderColor: window.COLORS.radar.border,
                                     borderWidth: 2,
                                     pointBackgroundColor: secColors,
                                     pointRadius: 5,
@@ -654,7 +673,7 @@
                                     max: 100,
                                     ticks: {
                                         stepSize: 25,
-                                        color: _isLight ? "#c5c6ca" : "#c5c6ca",
+                                        color: _isLight ? '#1a1218' : '#ffffff',
                                         backdropColor: "transparent",
                                         font: { size: 9 },
                                     },
@@ -720,24 +739,25 @@
                             const p = mx ? Math.round((sc / mx) * 100) : 0;
                             const card = document.createElement("div");
                             card.className = "ra-card ra-score-card";
-                            card.style.setProperty("--sc-accent", meta.accent);
+                            const cAcc = window.COLORS.getScoreColor(p);
+                            card.style.setProperty("--sc-accent", cAcc);
                             card.innerHTML = `
               <div class="ra-sc-header">
                 <span class="ra-sc-title">
-                  <span class="ra-sc-icon" style="background:${meta.accent}18;border-color:${meta.accent}35">${meta.icon}</span>
+                  <span class="ra-sc-icon" style="background:${cAcc}18;border-color:${cAcc}35">${meta.icon}</span>
                   ${meta.label}
                 </span>
-                <span class="ra-badge ra-badge-blue">${gr}</span>
+                <span class="ra-badge" style="background:${cAcc}18;color:${cAcc};border-color:${cAcc}35">${gr}</span>
               </div>
               <div class="ra-sc-meta">
                 <span>${sc} / ${mx} pts</span>
-                <span class="ra-sc-pct" style="color:${meta.accent}">${p}%</span>
+                <span class="ra-sc-pct" style="color:${cAcc}">${p}%</span>
               </div>
               <div class="ra-prog-bar" style="height:7px">
-                <div class="ra-prog-fill" style="width:0%;background:${meta.accent}" data-w="${p}"></div>
+                <div class="ra-prog-fill" style="width:0%;background:${cAcc}" data-w="${p}"></div>
               </div>
               <div class="ra-sc-foot">
-                <div class="ra-sc-stat"><b style="color:${meta.accent}">${sc}</b>earned</div>
+                <div class="ra-sc-stat"><b style="color:${cAcc}">${sc}</b>earned</div>
                 <div class="ra-sc-stat"><b>${mx - sc}</b>to gain</div>
                 <div class="ra-sc-stat"><b>${issues.length}</b>issues</div>
               </div>
@@ -783,12 +803,7 @@
                         sk.tools_and_platforms?.length || 0,
                         sk.soft_skills?.length || 0,
                     ];
-                    const catColors = [
-                        "#f4a5b0",
-                        "#f4a5b0",
-                        "#ffb3b0",
-                        "#ffd7de",
-                    ];
+                    const catColors = ['#3b82f6', '#14b8a6', '#8b5cf6', '#f97316'];
                     raCreateChart("raChartSkillsCat", {
                         type: "doughnut",
                         data: {
@@ -797,7 +812,7 @@
                                 {
                                     data: catData,
                                     backgroundColor: catColors,
-                                    borderColor: "#1a1218",
+                                    borderColor: "transparent",
                                     borderWidth: 2,
                                 },
                             ],
@@ -836,11 +851,7 @@
                             datasets: [
                                 {
                                     data: [wEvidence, noEv, basic],
-                                    backgroundColor: [
-                                        "#f4a5b0",
-                                        "#ffb3b0",
-                                        "#c2185b",
-                                    ],
+                                    backgroundColor: ['#22c55e', '#f59e0b', '#ef4444'],
                                     borderRadius: 8,
                                 },
                             ],
@@ -906,13 +917,7 @@
                             datasets: [
                                 {
                                     data: projScores,
-                                    backgroundColor: projScores.map((s) =>
-                                        s >= 8
-                                            ? "#f4a5b0"
-                                            : s >= 5
-                                              ? "#ffb3b0"
-                                              : "#c2185b",
-                                    ),
+                                    backgroundColor: projScores.map((_, i) => window.COLORS.chart[i % window.COLORS.chart.length]),
                                     borderRadius: 8,
                                 },
                             ],
@@ -943,11 +948,11 @@
                                 {
                                     data: [withLink, withOutcome, tutorial],
                                     backgroundColor: [
-                                        "#f4a5b0",
-                                        "#f4a5b0",
-                                        "#ffb3b0",
+                                        window.COLORS.chart[0],
+                                        window.COLORS.chart[1],
+                                        window.COLORS.chart[2]
                                     ],
-                                    borderColor: "#1a1218",
+                                    borderColor: "transparent",
                                     borderWidth: 2,
                                 },
                             ],
@@ -958,17 +963,17 @@
                         {
                             label: "Has Link",
                             value: withLink,
-                            color: "#f4a5b0",
+                            color: window.COLORS.chart[0],
                         },
                         {
                             label: "Has Outcome",
                             value: withOutcome,
-                            color: "#f4a5b0",
+                            color: window.COLORS.chart[1],
                         },
                         {
                             label: "Tutorial",
                             value: tutorial,
-                            color: "#ffb3b0",
+                            color: window.COLORS.chart[2],
                         },
                     ]);
 
@@ -1001,7 +1006,7 @@
               </div>
               <div style="display:flex;align-items:center;gap:0.5rem;font-size:11px;color:var(--ra-muted)">
                 <span>Score</span>
-                <div class="ra-prog-bar" style="flex:1"><div class="ra-prog-fill" style="width:${(p.project_score || 0) * 10}%;background:#f4a5b0"></div></div>
+                <div class="ra-prog-bar" style="flex:1"><div class="ra-prog-fill" style="width:${(p.project_score || 0) * 10}%;background:#3b82f6"></div></div>
                 <span>${p.project_score || 0}/10</span>
               </div>`;
                             el_prgrid.appendChild(card);
@@ -1024,9 +1029,9 @@
                         (r) => r.duration_months || 0,
                     );
                     const dotMap = {
-                        active: "#f4a5b0",
-                        mostly_observation: "#ffb3b0",
-                        unclear: "#c2185b",
+                        active: "#3b82f6",
+                        mostly_observation: "#f59e0b",
+                        unclear: "#ef4444",
                     };
                     raCreateChart("raChartExpScores", {
                         type: "bar",
@@ -1038,7 +1043,7 @@
                                     backgroundColor: roles.map(
                                         (r) =>
                                             dotMap[r.contribution_quality] ||
-                                            "#f4a5b0",
+                                            "#3b82f6",
                                     ),
                                     borderRadius: 6,
                                 },
@@ -1061,8 +1066,8 @@
                             datasets: [
                                 {
                                     data: roleDurations,
-                                    backgroundColor: "#f4a5b099",
-                                    borderColor: "#f4a5b0",
+                                    backgroundColor: window.COLORS.chart[0],
+                                    borderColor: window.COLORS.chart[0],
                                     borderWidth: 1,
                                     borderRadius: 6,
                                 },
@@ -1135,9 +1140,9 @@
                                             ),
                                         ],
                                         backgroundColor: [
-                                            "#f4a5b0",
-                                            "#f4a5b0",
-                                            "#ffd7de",
+                                            "#3b82f6",
+                                            "#3b82f6",
+                                            "#8b5cf6",
                                         ],
                                         borderRadius: 8,
                                     },
@@ -1206,10 +1211,10 @@
                         relData = Object.values(relMap);
                     const relColors = relLabels.map((l) =>
                         l.includes("highly")
-                            ? "#f4a5b0"
+                            ? "#3b82f6"
                             : l.includes("somewhat")
-                              ? "#ffb3b0"
-                              : "#c2185b",
+                              ? "#f59e0b"
+                              : "#ef4444",
                     );
                     raCreateChart("raChartCertRel", {
                         type: "pie",
@@ -1219,7 +1224,7 @@
                                 {
                                     data: relData,
                                     backgroundColor: relColors,
-                                    borderColor: "#1a1218",
+                                    borderColor: "transparent",
                                     borderWidth: 2,
                                 },
                             ],
@@ -1240,7 +1245,7 @@
                         type: "bar",
                         data: {
                             labels: acts.map((a) =>
-                                (a.activity_name || "Activity").slice(0, 14),
+                                ((a.activity_name || "Activity").length > 14 ? (a.activity_name || "Activity").slice(0, 13) + "…" : (a.activity_name || "Activity")),
                             ),
                             datasets: [
                                 {
@@ -1248,7 +1253,7 @@
                                         (a) => a.activity_score || 0,
                                     ),
                                     backgroundColor: acts.map((a) =>
-                                        a.is_leadership ? "#ffd7de" : "#f4a5b0",
+                                        a.is_leadership ? "#8b5cf6" : "#3b82f6",
                                     ),
                                     borderRadius: 6,
                                 },
@@ -1323,11 +1328,7 @@
                     const strong = (fm.strong_verbs_found || []).length,
                         weak = (fm.weak_verbs_found || []).length,
                         filler = (fm.filler_phrases || []).length;
-                    const _vBorder =
-                        document.documentElement.getAttribute("data-theme") ===
-                        "light"
-                            ? "#1b2023"
-                            : "#1a1218";
+                    const _vBorder = 'transparent';
                     raCreateChart("raChartFmtVerbs", {
                         type: "doughnut",
                         data: {
@@ -1335,11 +1336,7 @@
                             datasets: [
                                 {
                                     data: [strong, weak, filler],
-                                    backgroundColor: [
-                                        "#f4a5b0",
-                                        "#ffb3b0",
-                                        "#c2185b",
-                                    ],
+                                    backgroundColor: ['#22c55e', '#f59e0b', '#ef4444'],
                                     borderColor: _vBorder,
                                     borderWidth: 2,
                                 },
@@ -1348,9 +1345,9 @@
                         options: raChartOpts({ cutout: "55%" }),
                     });
                     raHtmlLegend("raLegendFmtVerbs", [
-                        { label: "Strong", value: strong, color: "#f4a5b0" },
-                        { label: "Weak", value: weak, color: "#ffb3b0" },
-                        { label: "Filler", value: filler, color: "#c2185b" },
+                        { label: "Strong", value: strong, color: "#3b82f6" },
+                        { label: "Weak", value: weak, color: "#f59e0b" },
+                        { label: "Filler", value: filler, color: "#ef4444" },
                     ]);
 
                     const atsV =
@@ -1359,10 +1356,10 @@
                         ] || 50;
                     const atsC =
                         fm.ats_risk_level === "low"
-                            ? "#f4a5b0"
+                            ? "#3b82f6"
                             : fm.ats_risk_level === "medium"
-                              ? "#ffb3b0"
-                              : "#c2185b";
+                              ? "#f59e0b"
+                              : "#ef4444";
                     const _gaugeBg =
                         document.documentElement.getAttribute("data-theme") ===
                         "light"
@@ -1413,18 +1410,18 @@
                         el_apSub.textContent = `${(ap.critical_fixes || []).length} critical · ${(ap.quick_wins || []).length} quick wins`;
 
                     const sevCounts = {};
-                    (ap.critical_fixes || []).forEach((f) => {
-                        sevCounts[f.severity] =
-                            (sevCounts[f.severity] || 0) + 1;
-                    });
-                    const sevL = Object.keys(sevCounts),
-                        sevD = Object.values(sevCounts);
+                    if ((ap.critical_fixes || []).length > 0) sevCounts["Critical"] = ap.critical_fixes.length;
+                    if ((ap.quick_wins || []).length > 0) sevCounts["Quick Wins"] = ap.quick_wins.length;
+                    if ((ap.this_week || []).length > 0) sevCounts["This Week"] = ap.this_week.length;
+                    if ((ap.long_term_suggestions || []).length > 0) sevCounts["Long Term"] = ap.long_term_suggestions.length;
+                    
+                    const sevL = Object.keys(sevCounts);
+                    const sevD = Object.values(sevCounts);
                     const sevColors = sevL.map((s) =>
-                        s === "critical"
-                            ? "#c2185b"
-                            : s === "high"
-                              ? "#ffb3b0"
-                              : "#f4a5b0",
+                        s === "Critical" ? "#ef4444" :
+                        s === "Quick Wins" ? "#f59e0b" :
+                        s === "This Week" ? "#3b82f6" :
+                        "#8b5cf6"
                     );
                     raCreateChart("raChartActionSev", {
                         type: "pie",
@@ -1434,7 +1431,7 @@
                                 {
                                     data: sevD,
                                     backgroundColor: sevColors,
-                                    borderColor: "#1a1218",
+                                    borderColor: "transparent",
                                     borderWidth: 2,
                                 },
                             ],
@@ -1453,9 +1450,9 @@
                     const gains = (ap.quick_wins || []).map(
                         (w) => parseInt(w.expected_score_gain) || 1,
                     );
-                    const gainLabels = (ap.quick_wins || []).map((w) =>
-                        (w.action || "").slice(0, 20),
-                    );
+                    const gainLabels = (ap.quick_wins || []).map(w => { let a = w.action || ""; return a.length > 16 ? a.slice(0, 15) + "…" : a; });
+                    const qwCanvas = document.getElementById("raChartQuickWins");
+                    if (qwCanvas) qwCanvas.parentElement.style.height = Math.max(140, gains.length * 32) + "px";
                     raCreateChart("raChartQuickWins", {
                         type: "bar",
                         data: {
@@ -1463,7 +1460,7 @@
                             datasets: [
                                 {
                                     data: gains,
-                                    backgroundColor: "#f4a5b0",
+                                    backgroundColor: window.COLORS.chart[0],
                                     borderRadius: 6,
                                 },
                             ],
@@ -1554,11 +1551,11 @@
                                 {
                                     data: [comp, miss, under],
                                     backgroundColor: [
-                                        "#f4a5b0",
-                                        "#c2185b",
-                                        "#ffb3b0",
+                                        "#3b82f6",
+                                        "#ef4444",
+                                        "#f59e0b",
                                     ],
-                                    borderColor: "#1a1218",
+                                    borderColor: "transparent",
                                     borderWidth: 2,
                                 },
                             ],
@@ -1566,12 +1563,12 @@
                         options: raChartOpts({ cutout: "60%" }),
                     });
                     raHtmlLegend("raLegendCompStatus", [
-                        { label: "Complete", value: comp, color: "#f4a5b0" },
-                        { label: "Missing", value: miss, color: "#c2185b" },
+                        { label: "Complete", value: comp, color: "#3b82f6" },
+                        { label: "Missing", value: miss, color: "#ef4444" },
                         {
                             label: "Underdeveloped",
                             value: under,
-                            color: "#ffb3b0",
+                            color: window.COLORS.chart[0],
                         },
                     ]);
 
@@ -1602,9 +1599,9 @@
                                         ] || 50,
                                     ],
                                     backgroundColor: [
-                                        "#f4a5b0",
-                                        "#f4a5b0",
-                                        "#ffb3b0",
+                                        "#3b82f6",
+                                        "#3b82f6",
+                                        "#f59e0b",
                                     ],
                                     borderRadius: 8,
                                 },
@@ -1625,9 +1622,9 @@
                     if (el_compC) {
                         el_compC.innerHTML = `
             <div class="ra-comp-cols">
-              <div><div class="ra-comp-col-title">✅ Complete</div>${(rc2.sections_complete || []).map((s) => `<div class="ra-comp-item">✅ ${s}</div>`).join("") || "None"}</div>
-              <div><div class="ra-comp-col-title">❌ Missing</div>${(rc2.sections_missing || []).map((s) => `<div class="ra-comp-item">❌ ${s}</div>`).join("") || "None"}</div>
-              <div><div class="ra-comp-col-title">⚠️ Underdeveloped</div>${(rc2.sections_underdeveloped || []).map((s) => `<div class="ra-comp-item">⚠️ <strong>${s.section}</strong>: ${s.reason}</div>`).join("") || "None"}</div>
+              <div><div class="ra-comp-col-title">✅ Complete</div>${(rc2.sections_complete || []).map((s) => '<div class="ra-comp-item"><span>✅</span><span>' + s + '</span></div>').join("") || "None"}</div>
+              <div><div class="ra-comp-col-title">❌ Missing</div>${(rc2.sections_missing || []).map((s) => '<div class="ra-comp-item"><span>❌</span><span>' + s + '</span></div>').join("") || "None"}</div>
+              <div><div class="ra-comp-col-title">⚠️ Underdeveloped</div>${(rc2.sections_underdeveloped || []).map((s) => '<div class="ra-comp-item"><span>⚠️</span><span><strong>' + s.section + '</strong>: ' + s.reason + '</span></div>').join("") || "None"}</div>
             </div>
             ${rc2.completeness_note ? `<div class="ra-comp-note">${rc2.completeness_note}</div>` : ""}`;
                     }
@@ -1665,7 +1662,7 @@
             <div class="ra-roles-pills">${roles2}</div>
             <div class="ra-certs-rec-grid">${certs}</div>
             ${ap.encouragement ? `<div class="ra-encouragement">${ap.encouragement}</div>` : ""}
-            ${D.confidence.confidence_score ? `<div style="margin-top:1rem;display:flex;justify-content:flex-end"><span class="ra-confidence-badge">🛡️ <span style="color:var(--ra-emerald)">Analysis Confidence: ${D.confidence.confidence_score}%</span> · ${D.confidence.extraction_quality || ""}</span></div>` : ""}`;
+            ${D.confidence.confidence_score ? `<div style="margin-top:1rem;display:flex;justify-content:flex-end"><span class="ra-confidence-badge">🛡️ <span style="color:${window.COLORS.getScoreColor(D.confidence.confidence_score)}">Analysis Confidence: ${D.confidence.confidence_score}%</span> · ${D.confidence.extraction_quality || ""}</span></div>` : ""}`;
                     }
                 };
 
@@ -1711,7 +1708,7 @@
                             console.error("Re-fetch failed:", e);
                         }
                         raReanalyzeBtn.innerHTML =
-                            '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Refresh from DB';
+                            '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Refresh';
                         raReanalyzeBtn.disabled = false;
                     });
                 }
@@ -1740,7 +1737,7 @@
                 const crmPhasesCont   = document.getElementById("crmPhasesContainer");
                 const crmSummary      = document.getElementById("crmSummaryFooter");
 
-                const RM_COLORS = ['#c2185b','#ffd7de','#ffb3b0','#e8a0b0','#c2185b','#f4a5b0'];
+                const RM_COLORS = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899'];
                 const RM_ICONS  = ['🚀','⚡','🛠️','🔥','🎯','🏆'];
 
                 // ── Auto-load saved roadmap from DB on tab init ────────────────────
@@ -1870,7 +1867,7 @@
                                  style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;">
                                 <!-- Single thin glowing line -->
                                 <path d="${d}" stroke="rgba(0, 94, 208, 0.15)" stroke-width="6" stroke-linecap="round" fill="none"/>
-                                <path d="${d}" stroke="#c2185b" stroke-width="2" stroke-linecap="round" fill="none"/>
+                                <path d="${d}" stroke="#ef4444" stroke-width="2" stroke-linecap="round" fill="none"/>
                         `;
                         steps.forEach((_, i) => {
                             const cy    = i * cardSpacing + 180;
@@ -2103,7 +2100,7 @@
                         roadmapWrap.appendChild(phasesContainer);
 
                         const icons = ["🚀", "⚡", "🛠️", "🔥", "🎯", "🏆"];
-                        const colors = ["#f4a5b0", "#c2185b", "#ffb3b0", "#e8a0b0", "#c2185b", "#f4a5b0"];
+                        const colors = window.COLORS.chart;
 
                         // Render Cards (Clean text to match the infographic style)
                         parsedData.steps.forEach((step, index) => {
@@ -2198,7 +2195,7 @@
                                     <path d="${d}" stroke="#313539" stroke-width="70" stroke-linecap="round" fill="none"></path>
                                     
                                     <!-- Thick vibrant blue main road -->
-                                    <path d="${d}" stroke="#c2185b" stroke-width="60" stroke-linecap="round" fill="none"></path>
+                                    <path d="${d}" stroke="#ef4444" stroke-width="60" stroke-linecap="round" fill="none"></path>
                                     
                                     <!-- Center dashed white line -->
                                     <path d="${d}" stroke="#dfe3e7" stroke-width="5" stroke-dasharray="24 16" stroke-linecap="round" fill="none"></path>
@@ -2216,10 +2213,10 @@
                                 
                                 svgHTML += `
                                     <!-- Connecting line from road to big circle -->
-                                    <line x1="${roadX}" y1="${cy}" x2="${bigCircleX}" y2="${cy}" stroke="#ffb3b0" stroke-width="6"></line>
+                                    <line x1="${roadX}" y1="${cy}" x2="${bigCircleX}" y2="${cy}" stroke="#f59e0b" stroke-width="6"></line>
                                     
                                     <!-- Small yellow road anchor dot -->
-                                    <circle cx="${roadX}" cy="${cy}" r="12" fill="#ffb3b0" stroke="#dfe3e7" stroke-width="4"></circle>
+                                    <circle cx="${roadX}" cy="${cy}" r="12" fill="#f59e0b" stroke="#dfe3e7" stroke-width="4"></circle>
                                     
                                     <!-- Huge colored icon circle -->
                                     <circle cx="${bigCircleX}" cy="${cy}" r="45" fill="${color}" stroke="#dfe3e7" stroke-width="6" style="filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));"></circle>
@@ -2546,7 +2543,20 @@
                             throw new Error("PDF library not loaded. Please refresh the page and try again.");
                         }
 
-                        const extracted = await ResumeExtractor.extractFromFile(file);
+                        // Upload PDF to backend to extract text (with OCR fallback)
+                        const formData = new FormData();
+                        formData.append('resumeFile', file);
+
+                        const response = await fetch("http://localhost:5000/resume/extract", {
+                            method: "POST",
+                            body: formData
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Failed to extract resume: ' + response.statusText);
+                        }
+
+                        const extracted = await response.json();
                         const resumeText = extracted.raw_text;
 
                         if (!resumeText || resumeText.trim().length < 50) {
@@ -2561,6 +2571,7 @@
                             {
                                 resumeName: file.name,
                                 resumeText: resumeText,
+                                resumeExtractionMethod: extracted.method || 'pdfjs',
                                 resumeExtractedAt: new Date().toISOString(),
                                 resumeAnalysis: FieldValue.delete(),
                                 resumeScore: FieldValue.delete(),
@@ -2577,7 +2588,7 @@
                         const ctaBtn = document.getElementById("uploadResumeBtnCta");
                         if (ctaBtn) {
                             ctaBtn.textContent = "✅ " + file.name + " uploaded";
-                            ctaBtn.style.color = "#f4a5b0";
+                            ctaBtn.style.color = "#3b82f6";
                         }
 
                         if (window.CareerIQAuth?.Toast) {
@@ -2630,3 +2641,12 @@
             } else {
                 document.addEventListener("CareerIQAuthReady", initApp);
             }
+
+
+      // Listen for theme changes to redraw charts with correct text colors
+      window.addEventListener('themeChanged', () => {
+        if (window._piqResumeData) {
+          if (window._populateResumeAnalysisTab) window._populateResumeAnalysisTab(window._piqResumeData);
+        }
+      });
+    

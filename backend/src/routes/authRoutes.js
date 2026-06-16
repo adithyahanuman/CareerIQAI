@@ -19,6 +19,7 @@ const {
   logout,
   register,
   login,
+  checkEmail,
 } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -32,5 +33,6 @@ router.post('/logout',   protect, logout);    // client-side signout
 // ── Legacy routes (kept for backward compatibility) ────────────────────────
 router.post('/register', register);
 router.post('/login',    login);
+router.post('/check-email', checkEmail);
 
 module.exports = router;

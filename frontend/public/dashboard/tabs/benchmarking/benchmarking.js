@@ -50,25 +50,21 @@
     }
 
     function gradeColor(grade) {
-        if (!grade) return '#9a6080';
-        const g = grade.replace('-', '-');
-        if (g.startsWith('A')) return '#e8a0b0';
-        if (g === 'B+') return '#f4a5b0';
-        if (g === 'B')  return '#f4a5b0';
-        if (g === 'B-') return '#ffd7de';
-        if (g.startsWith('C')) return '#ffb3b0';
-        if (g === 'D')  return '#c2185b';
-        return '#c2185b';
+        if (!grade) return '#ef4444';
+        const g = grade.replace('−', '-');
+        if (g === 'A+' || g === 'A' || g === 'B+') return '#22c55e';
+        if (g === 'A-' || g === 'B' || g === 'C+') return '#f59e0b';
+        if (g === 'B-' || g === 'C' || g === 'C-') return '#f97316';
+        return '#ef4444';
     }
 
     function barColor(score) {
-        if (score >= 85) return '#e8a0b0';
-        if (score >= 75) return '#f4a5b0';
-        if (score >= 65) return '#f4a5b0';
-        if (score >= 55) return '#ffb3b0';
-        if (score >= 45) return '#ffb3b0';
-        return '#c2185b';
+        if (score >= 80) return '#22c55e';
+        if (score >= 60) return '#f59e0b';
+        if (score >= 40) return '#f97316';
+        return '#ef4444';
     }
+
 
     function podiumEmoji(rank) { return ['🥇','🥈','🥉'][rank] || ''; }
     function tierLabel(tier) {
@@ -314,12 +310,19 @@
         const color  = gradeColor(r.grade);
         const bColor = barColor(r.fit_score);
         const id     = `brc-${r.role_name.replace(/\W/g,'_')}`;
+        const rankBadge = (r.role_rank && r.total_role_peers)
+            ? `<div class="bench-role-peer-rank" title="Your global rank for this role">
+                   <span style="font-weight:800;color:${color};">#${r.role_rank}</span>
+                   <span style="opacity:0.65;font-size:0.78em;"> of ${r.total_role_peers} peers</span>
+               </div>`
+            : '';
         return `
         <div class="bench-role-card" id="${id}" onclick="window.benchExpandCard('${id}')">
             <div class="bench-role-card-main">
                 <div class="bench-role-rank-badge">#${rank}</div>
                 <div class="bench-role-info">
                     <div class="bench-role-name">${r.role_name}</div>
+                    ${rankBadge}
                 </div>
                 <div class="bench-score-bar-wrap">
                     <div class="bench-score-bar" style="width:${r.fit_score}%;background:${bColor};"></div>
@@ -409,17 +412,17 @@
                 <div class="bench-role-detail" style="display:flex;">
                     ${r.major_strength ? `
                     <div class="bench-detail-item">
-                        <div class="bench-detail-dot" style="background:#e8a0b0;"></div>
+                        <div class="bench-detail-dot" style="background:#8b5cf6;"></div>
                         <div>
-                            <div class="bench-detail-label" style="color:#e8a0b0;">Strength</div>
+                            <div class="bench-detail-label" style="color:#22c55e;">Strength</div>
                             <div class="bench-detail-text">${r.major_strength}</div>
                         </div>
                     </div>` : ''}
                     ${r.improvement_suggestion ? `
                     <div class="bench-detail-item">
-                        <div class="bench-detail-dot" style="background:#ffb3b0;"></div>
+                        <div class="bench-detail-dot" style="background:#e0e7ff;"></div>
                         <div>
-                            <div class="bench-detail-label" style="color:#ffb3b0;">To Improve</div>
+                            <div class="bench-detail-label" style="color:#ef4444;">To Improve</div>
                             <div class="bench-detail-text">${r.improvement_suggestion}</div>
                         </div>
                     </div>` : ''}

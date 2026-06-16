@@ -608,11 +608,19 @@ const OnboardingWizard = {
     this.data.resumeName = file.name;
 
     try {
-      if (window.ResumeExtractor) {
-        console.log('[Onboarding] Starting PDF extraction...');
-        const result = await window.ResumeExtractor.extractFromFile(file);
+      if (true) {
+        console.log('[Onboarding] Starting backend PDF extraction...');
+        const formData = new FormData();
+        formData.append('resumeFile', file);
+        const response = await fetch("http://localhost:5000/resume/extract", {
+          method: "POST",
+          body: formData
+        });
+        if (!response.ok) throw new Error("Failed to extract resume from backend");
+        const result = await response.json();
         if (result && result.raw_text && result.raw_text.trim().length > 0) {
           this.data.resumeText        = result.raw_text;
+          this.data.resumeExtractionMethod = result.method || 'pdfjs';
           this.data.resumeExtractedAt = new Date().toISOString();
           fileNameDisplay.textContent = file.name + ' ✅ Uploaded';
           CareerIQAuth.Toast.show('Resume uploaded successfully!', 'success');

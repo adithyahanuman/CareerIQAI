@@ -1,19 +1,21 @@
 /**
- * services/benchmarkService.js  (v3)
+ * services/benchmarkService.js  (v4 — role-table edition)
  *
- * Smart cache flow — runs in this exact order every time (both on load and on refresh):
+ * Key changes vs v3:
+ *  - AI results are written to BOTH benchmark_results (backward compat) AND
+ *    the dedicated role table (e.g. role_business_analyst).
+ *  - UNIQUE(student_id) on each role table means the latest session always wins
+ *    (INSERT … ON CONFLICT DO UPDATE).
+ *  - Role ranking is GLOBAL across all tiers — a student's rank in
+ *    `role_business_analyst` is their position among EVERY student who has ever
+ *    been benchmarked for that role, regardless of course.
+ *  - Overall rank is BRANCH-SCOPED — ranked against students in the same branch
+ *    using the primary resume's overall_score.
  *
- *   1. Fetch current resume raw text from Firestore → compute SHA-256 hash
- *   2. Look for a 'done' session whose resume_text_hash = current hash
- *        → MATCH: resume unchanged → return DB data immediately (no AI)
- *   3. Look for any 'done' session (different hash = old resume)
- *        → Found: show existing DB data (still informative)
- *        → Not found: no data at all → run AI, save hash, return fresh data
- *
- * Refresh button follows the SAME order — AI is only called when there is
- * truly no done session in the database.
- *
- * Multi-candidate session API (kept for admin use) is unchanged at the bottom.
+ * Smart cache flow (unchanged from v3):
+ *   1. Fetch Firestore raw text → SHA-256 hash
+ *   2. Done session with SAME hash + SAME roles → return DB data (no AI)
+ *   3. Nothing → run AI, store hash, return fresh data
  */
 
 'use strict';
@@ -22,7 +24,7 @@ const crypto                               = require('crypto');
 const { query }                            = require('../config/db');
 const aiService                            = require('../ai/aiService');
 const { benchmarkCandidates }              = require('../ai/benchmarkPrompt');
-const { getRolesForCourse, detectCourseTier } = require('../ai/rolesList');
+const { getRolesForCourse, detectCourseTier, getRoleTable } = require('../ai/rolesList');
 const { admin }                            = require('../config/firebase');
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -57,10 +59,9 @@ async function _fetchRawText(firebaseUid) {
  * Optionally filter by resume_text_hash.
  * Optionally validate against currentJobRoles (invalidates cache if roles changed).
  *
- * @param {string}      studentId
- * @param {string|null} [hash]   – if provided, only return sessions with this hash
- * @param {string[]|null} [currentJobRoles] - if provided, ensures roles match exactly
- * @returns {object|null}
+ * Results are enriched with:
+ *  - role_rank     : global rank within that role's dedicated table
+ *  - total_role_peers : total students benchmarked for that role
  */
 async function _getLatestDoneSession(studentId, hash = null, currentJobRoles = null) {
   let sql = `SELECT * FROM benchmark_sessions
@@ -82,91 +83,122 @@ async function _getLatestDoneSession(studentId, hash = null, currentJobRoles = n
     const sessionRoles = Array.isArray(session.job_roles)
       ? session.job_roles
       : JSON.parse(session.job_roles || '[]');
-    
+
     if (JSON.stringify(sessionRoles) !== JSON.stringify(currentJobRoles)) {
-      console.log('[benchmark] Cache MISMATCH: Job roles configuration changed. Invalidating cache.');
+      console.log('[benchmark] Cache MISMATCH: Job roles changed. Invalidating cache.');
       return null;
     }
   }
 
-  const { rows: results } = await query(`
-    WITH unique_resumes AS (
-      SELECT DISTINCT ON (resume_text_hash) id
-      FROM benchmark_sessions
-      WHERE status = 'done'
-      ORDER BY resume_text_hash, created_at DESC
-    ),
-    peer_results AS (
-      SELECT r.role_name, r.fit_score
-      FROM benchmark_results r
-      JOIN unique_resumes ur ON r.session_id = ur.id
-    )
-    SELECT 
-      my_res.*,
-      (
-        SELECT COUNT(*) + 1 
-        FROM peer_results pr 
-        WHERE pr.role_name = my_res.role_name AND pr.fit_score > my_res.fit_score
-      ) AS role_rank,
-      (
-        SELECT COUNT(*)
-        FROM resumes
-        WHERE status = 'done'
-      ) AS total_role_peers
-    FROM benchmark_results my_res
-    WHERE my_res.session_id = $1
-    ORDER BY my_res.fit_score DESC
-  `, [session.id]);
+  // Fetch basic results from benchmark_results for this session
+  const { rows: results } = await query(
+    `SELECT * FROM benchmark_results WHERE session_id = $1 ORDER BY fit_score DESC`,
+    [session.id],
+  );
 
-  return { ...session, results };
+  // Role rank — ranked by this resume's exact fit_score, one per resume, all branches.
+  // Each benchmark result gets its own rank position based on its own score.
+  const enriched = await Promise.all(results.map(async (r) => {
+    if (!r.role_name) return { ...r, role_rank: null, total_role_peers: null };
+
+    try {
+      const { rows: [rankRow] } = await query(`
+        SELECT
+          (SELECT COUNT(*) + 1
+           FROM   benchmark_results br
+           JOIN   benchmark_sessions bs ON bs.id = br.session_id
+           WHERE  br.role_name = $1
+             AND  bs.status    = 'done'
+             AND  br.fit_score > $2)  AS role_rank,
+          (SELECT COUNT(*)
+           FROM   benchmark_results br
+           JOIN   benchmark_sessions bs ON bs.id = br.session_id
+           WHERE  br.role_name = $1
+             AND  bs.status    = 'done') AS total_role_peers
+      `, [r.role_name, r.fit_score]);
+
+      return {
+        ...r,
+        role_rank:        rankRow ? Number(rankRow.role_rank)        : null,
+        total_role_peers: rankRow ? Number(rankRow.total_role_peers) : null,
+      };
+    } catch (err) {
+      console.warn(`[benchmark] role rank query failed for "${r.role_name}":`, err.message);
+      return { ...r, role_rank: null, total_role_peers: null };
+    }
+  }));
+
+  return { ...session, results: enriched };
 }
 
+
 /**
- * Calculate accurate rankings, peer counts, and top score gaps from the DB.
+ * Overall rank — branch-scoped, one entry per resume in the peer pool.
+ * Student's rank position is based on their PRIMARY resume score.
+ * total_peers = total count of all analyzed resumes in the branch.
  */
 async function _getStudentMetrics(studentId) {
   const sql = `
     WITH my_branch AS (
       SELECT branch FROM students WHERE id = $1
     ),
-    scores AS (
-      SELECT r.id, r.student_id, r.is_primary, COALESCE(CAST(r.overall_analysis->>'overall_score' AS numeric), 0) AS score
+    all_resumes AS (
+      -- Every analyzed resume in the branch (one per resume, not per student)
+      SELECT
+        r.id         AS resume_id,
+        r.student_id,
+        COALESCE(CAST(r.overall_analysis->>'overall_score' AS numeric), 0) AS score
       FROM resumes r
       JOIN students s ON s.id = r.student_id
-      WHERE r.status = 'done' AND s.branch IS NOT DISTINCT FROM (SELECT branch FROM my_branch)
+      WHERE r.status = 'done'
+        AND s.branch IS NOT DISTINCT FROM (SELECT branch FROM my_branch)
+    ),
+    my_primary AS (
+      -- This student's primary resume score
+      SELECT
+        COALESCE(CAST(r.overall_analysis->>'overall_score' AS numeric), 0) AS score
+      FROM resumes r
+      WHERE r.student_id = $1
+        AND r.is_primary  = TRUE
+        AND r.status      = 'done'
+      LIMIT 1
     )
     SELECT
-      (SELECT COUNT(*) FROM scores) AS total_peers,
-      (SELECT MAX(score) FROM scores) AS top_score,
-      (SELECT score FROM scores WHERE student_id = $1 AND is_primary = TRUE LIMIT 1) AS my_score,
-      (SELECT COUNT(*) + 1 FROM scores WHERE score > (SELECT score FROM scores WHERE student_id = $1 AND is_primary = TRUE LIMIT 1)) AS my_rank
+      (SELECT COUNT(*)     FROM all_resumes)                                  AS total_peers,
+      (SELECT MAX(score)   FROM all_resumes)                                  AS top_score,
+      (SELECT score        FROM my_primary)                                   AS my_score,
+      (SELECT COUNT(*) + 1 FROM all_resumes
+       WHERE  score > (SELECT score FROM my_primary))                         AS my_rank
   `;
   try {
     const { rows } = await query(sql, [studentId]);
     if (!rows || !rows.length) return null;
     const row = rows[0];
-    
+
     const totalPeers = Number(row.total_peers) || 0;
-    const topScore = Number(row.top_score) || 0;
-    const myScore = Number(row.my_score) || 0;
-    const myRank = Number(row.my_rank) || 0;
-  
-    const gap = topScore - myScore;
-    const percentile = totalPeers > 1 ? Math.round(((totalPeers - myRank) / (totalPeers - 1)) * 100) : 100;
-    
+    const topScore   = Number(row.top_score)   || 0;
+    const myScore    = Number(row.my_score)    || 0;
+    const myRank     = Number(row.my_rank)     || 0;
+
+    const gap        = topScore - myScore;
+    const percentile = totalPeers > 1
+      ? Math.round(((totalPeers - myRank) / (totalPeers - 1)) * 100)
+      : 100;
+
     return {
       total_peers: totalPeers,
-      top_score: topScore,
-      my_score: myScore,
-      my_rank: myRank,
-      top_gap: gap > 0 ? gap : 0,
-      percentile: Math.max(0, percentile)
+      top_score:   topScore,
+      my_score:    myScore,
+      my_rank:     myRank,
+      top_gap:     gap > 0 ? gap : 0,
+      percentile:  Math.max(0, percentile),
     };
   } catch (e) {
     console.warn('[benchmark] Error calculating student metrics:', e.message);
     return null;
   }
 }
+
 
 
 /**
@@ -177,18 +209,17 @@ function _extractDegreeText(row) {
   try {
     const edu = row.education_analysis;
     if (edu) {
-      // Look in the new structure (education_entries) or old structures
-      const d = edu.education_entries?.[0]?.degree || 
-                edu.degree || 
-                edu.degrees?.[0]?.degree || 
+      const d = edu.education_entries?.[0]?.degree ||
+                edu.degree ||
+                edu.degrees?.[0]?.degree ||
                 edu.institution?.degree;
       if (d) return d;
     }
   } catch (_) {}
 
-  if (row.course) return row.course;
-  if (row.branch) return row.branch;
-  return 'B.Tech'; // safe default
+  if (row.course)  return row.course;
+  if (row.branch)  return row.branch;
+  return 'B.Tech';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -203,8 +234,6 @@ function _extractDegreeText(row) {
  *   2. Detect course and target roles
  *   3. Done session with SAME hash AND SAME roles → return it (no AI)
  *   4. Nothing in DB matching both → run AI, store hash, return fresh data
- *
- * @param {string}  studentId
  */
 const getMyRoleFit = async (studentId) => {
   // ── Step 1: fetch student + primary resume from DB ─────────────────────────
@@ -222,8 +251,8 @@ const getMyRoleFit = async (studentId) => {
             r.action_plan_analysis
      FROM   students s
      JOIN   resumes  r ON r.student_id = s.id
-                      AND r.is_primary  = TRUE
-                      AND r.status      = 'done'
+                       AND r.is_primary  = TRUE
+                       AND r.status      = 'done'
      WHERE  s.id = $1
      LIMIT  1`,
     [studentId],
@@ -236,16 +265,16 @@ const getMyRoleFit = async (studentId) => {
   }
 
   // ── Step 2: get current resume text + hash ─────────────────────────────────
-  const rawText    = await _fetchRawText(studentRow.firebase_uid);
+  const rawText     = await _fetchRawText(studentRow.firebase_uid);
   const currentHash = sha256(rawText);
-  
+
   // ── Step 3: detect current roles expected for this student ─────────────────
   const eduText       = _extractDegreeText(studentRow);
   const tier          = detectCourseTier(eduText);
   const currentJobRoles = getRolesForCourse(eduText);
   console.log(`[benchmark] uid=${studentRow.firebase_uid} tier=${tier} hash=${currentHash.slice(0, 12)}…`);
 
-  // ── Step 4: done session with SAME hash AND SAME roles → return immediately ─
+  // ── Step 4: done session with SAME hash AND SAME roles → return immediately ──
   const exactMatch = await _getLatestDoneSession(studentId, currentHash, currentJobRoles);
   if (exactMatch) {
     console.log('[benchmark] Cache HIT (hash match) — returning DB data');
@@ -254,10 +283,9 @@ const getMyRoleFit = async (studentId) => {
   }
 
   // ── Step 5: in-progress session? tell caller to poll ──────────────────────
-  // Ignore sessions older than 5 minutes (they are stuck/crashed)
   const { rows: [running] } = await query(
     `SELECT id FROM benchmark_sessions
-     WHERE  created_by = $1 
+     WHERE  created_by = $1
        AND status = 'running'
        AND created_at > NOW() - INTERVAL '5 minutes'
      ORDER  BY created_at DESC LIMIT 1`,
@@ -273,29 +301,20 @@ const getMyRoleFit = async (studentId) => {
   return runResult;
 };
 
-/**
- * Refresh endpoint — User explicitly clicked the Refresh button.
- * This MUST separate from getMyRoleFit because if there's a stuck session,
- * we need to actively cancel it so they aren't permanently locked out.
- */
 const refreshMyRoleFit = async (studentId) => {
-  // Cancel any running sessions for this student so they can force a fresh run
-  await query(
-    `UPDATE benchmark_sessions SET status='error', error_message='Cancelled by user', updated_at=NOW()
-     WHERE  created_by=$1 AND status='running'`,
-    [studentId],
-  );
-
+  // Delegate to getMyRoleFit which perfectly handles:
+  // 1. Checking the exact hash of the *current* resume.
+  // 2. Returning the live SQL ranks instantly without AI if it's already analyzed.
+  // 3. Not cancelling any actively running sessions.
   return getMyRoleFit(studentId);
 };
 
 const getMyStatus = async (studentId) => {
   const metrics = await _getStudentMetrics(studentId);
 
-  // 1. If there's an active running session, we must return 'running' so the UI keeps polling
   const { rows: [running] } = await query(
     `SELECT id FROM benchmark_sessions
-     WHERE  created_by = $1 
+     WHERE  created_by = $1
        AND status = 'running'
        AND created_at > NOW() - INTERVAL '5 minutes'
      ORDER  BY created_at DESC LIMIT 1`,
@@ -303,9 +322,20 @@ const getMyStatus = async (studentId) => {
   );
   if (running) return { status: 'running', session_id: running.id, results: [], metrics };
 
-  // 2. Otherwise return the latest completed session
   const done = await _getLatestDoneSession(studentId, null);
-  if (done) return { status: 'done', ...done, metrics };
+  if (done) {
+    // Also pull course_tier so the frontend can show the correct tier label
+    const { rows: [studentRow] } = await query(
+      `SELECT s.course, s.branch, r.education_analysis
+       FROM students s
+       LEFT JOIN resumes r ON r.student_id = s.id AND r.is_primary = TRUE AND r.status = 'done'
+       WHERE s.id = $1 LIMIT 1`,
+      [studentId],
+    );
+    const eduText  = studentRow ? _extractDegreeText(studentRow) : 'B.Tech';
+    const tier     = detectCourseTier(eduText);
+    return { status: 'done', ...done, course_tier: tier, metrics };
+  }
 
   return { status: 'none', results: [], metrics };
 };
@@ -318,7 +348,6 @@ const getLatestSession = (studentId) => _getLatestDoneSession(studentId, null);
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function _runAI(studentId, studentRow, rawText, resumeHash, jobRoles, tier) {
-
   const resumePayload = [{
     id:       studentRow.id,
     name:     studentRow.full_name,
@@ -353,40 +382,74 @@ async function _runAI(studentId, studentRow, rawText, resumeHash, jobRoles, tier
     console.log(`[benchmark] Running AI for studentId=${studentId}`);
     const prompt  = benchmarkCandidates(resumePayload, jobRoles);
     const aiResp  = await aiService.benchmarkResumes(prompt);
+    
+    // Check if the session was cancelled or deleted while the AI was processing
+    const { rows: [checkSession] } = await query(
+      `SELECT status FROM benchmark_sessions WHERE id = $1`,
+      [session.id]
+    );
+    if (!checkSession || checkSession.status !== 'running') {
+      console.log(`[benchmark] Auto-refresh skipped: Session ${session.id} was cancelled or deleted during AI processing.`);
+      throw new Error('Cancelled by user');
+    }
+
     const results = Array.isArray(aiResp.data) ? aiResp.data : [];
 
     if (!results.length) throw new Error('AI returned an empty response.');
 
     for (const r of results) {
       const detailedAnalysis = {
-        role_description: r.role_description || '',
-        readiness_score: r.readiness_score || 0,
-        growth_potential: r.growth_potential || '',
-        required_skills: Array.isArray(r.required_skills) ? r.required_skills : [],
-        missing_competencies: Array.isArray(r.missing_competencies) ? r.missing_competencies : [],
-        common_projects: Array.isArray(r.common_projects) ? r.common_projects : [],
-        recommended_certifications: Array.isArray(r.recommended_certifications) ? r.recommended_certifications : []
+        role_description:           r.role_description          || '',
+        readiness_score:            r.readiness_score           || 0,
+        growth_potential:           r.growth_potential          || '',
+        required_skills:            Array.isArray(r.required_skills)            ? r.required_skills            : [],
+        missing_competencies:       Array.isArray(r.missing_competencies)       ? r.missing_competencies       : [],
+        common_projects:            Array.isArray(r.common_projects)            ? r.common_projects            : [],
+        recommended_certifications: Array.isArray(r.recommended_certifications) ? r.recommended_certifications : [],
       };
 
-      // Attach it to the result object so the API response has it!
       r.detailed_analysis = detailedAnalysis;
 
+      const fitScore  = Math.min(100, Math.max(0, Math.round(Number(r.fit_score) || 0)));
+      const grade     = r.grade        || 'F';
+      const strength  = r.major_strength         || null;
+      const suggest   = r.improvement_suggestion || null;
+      const roleName  = r.role_name || '';
+
+      // ── 1. Write to benchmark_results (backward compat) ───────────────────
       await query(
         `INSERT INTO benchmark_results
            (session_id, student_id, student_name, role_name, fit_score, grade, major_strength, improvement_suggestion, detailed_analysis)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [
-          session.id,
-          studentId,
-          studentRow.full_name,
-          r.role_name    || '',
-          Math.min(100, Math.max(0, Math.round(Number(r.fit_score) || 0))),
-          r.grade        || 'F',
-          r.major_strength         || null,
-          r.improvement_suggestion || null,
-          JSON.stringify(detailedAnalysis)
-        ],
+        [session.id, studentId, studentRow.full_name, roleName, fitScore, grade, strength, suggest, JSON.stringify(detailedAnalysis)],
       );
+
+      // ── 2. Upsert into dedicated role table (global ranking) ───────────────
+      const roleTable = getRoleTable(roleName);
+      if (roleTable) {
+        try {
+          await query(
+            `INSERT INTO ${roleTable}
+               (session_id, student_id, student_name, fit_score, grade, major_strength, improvement_suggestion, detailed_analysis, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+             ON CONFLICT (student_id) DO UPDATE SET
+               session_id             = EXCLUDED.session_id,
+               student_name           = EXCLUDED.student_name,
+               fit_score              = EXCLUDED.fit_score,
+               grade                  = EXCLUDED.grade,
+               major_strength         = EXCLUDED.major_strength,
+               improvement_suggestion = EXCLUDED.improvement_suggestion,
+               detailed_analysis      = EXCLUDED.detailed_analysis,
+               updated_at             = NOW()`,
+            [session.id, studentId, studentRow.full_name, fitScore, grade, strength, suggest, JSON.stringify(detailedAnalysis)],
+          );
+        } catch (roleErr) {
+          console.error(`[benchmark] ❌ Role table upsert FAILED for "${roleName}" → ${roleTable}: ${roleErr.message}`);
+        }
+      } else {
+        console.warn(`[benchmark] No role table mapped for role: "${roleName}"`);
+      }
+
     }
 
     const { rows: [done] } = await query(
@@ -405,6 +468,109 @@ async function _runAI(studentId, studentRow, rawText, resumeHash, jobRoles, tier
     throw err;
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LEADERBOARD  — global top-N students for a specific role
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Fetch the global leaderboard for a given role.
+ * Ranking is done across ALL tiers on fit_score DESC.
+ *
+ * @param {string} roleName   – display name, e.g. "Business Analyst"
+ * @param {number} [limit=50] – max rows to return
+ * @returns {{ role_name, table_name, total, leaderboard: Array }}
+ */
+const getRoleLeaderboard = async (roleName, limit = 50) => {
+  const table = getRoleTable(roleName);
+  if (!table) {
+    const err = new Error(`Unknown role: "${roleName}". No dedicated table exists.`);
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const { rows } = await query(`
+    SELECT
+      rt.student_id,
+      rt.student_name,
+      rt.fit_score,
+      rt.grade,
+      rt.major_strength,
+      rt.improvement_suggestion,
+      rt.updated_at,
+      s.branch,
+      s.course,
+      RANK()  OVER (ORDER BY rt.fit_score DESC) AS role_rank,
+      COUNT(*) OVER ()                           AS total_peers
+    FROM ${table} rt
+    JOIN students s ON s.id = rt.student_id
+    ORDER BY rt.fit_score DESC
+    LIMIT $1
+  `, [limit]);
+
+  return {
+    role_name:  roleName,
+    table_name: table,
+    total:      rows.length ? Number(rows[0].total_peers) : 0,
+    leaderboard: rows.map(r => ({
+      rank:                   Number(r.role_rank),
+      student_id:             r.student_id,
+      student_name:           r.student_name,
+      fit_score:              r.fit_score,
+      grade:                  r.grade,
+      major_strength:         r.major_strength,
+      improvement_suggestion: r.improvement_suggestion,
+      branch:                 r.branch,
+      course:                 r.course,
+      updated_at:             r.updated_at,
+    })),
+  };
+};
+
+/**
+ * Fetch a student's rank in every role they've been benchmarked for.
+ * Returns one row per role, sorted by fit_score DESC.
+ *
+ * @param {string} studentId
+ */
+const getMyRoleRanks = async (studentId) => {
+  const { ROLE_TABLE_MAP } = require('../ai/rolesList');
+
+  const rankPromises = Object.entries(ROLE_TABLE_MAP).map(async ([roleName, table]) => {
+    try {
+      // Subquery: compute ranks over the full table, then filter for this student.
+      // (WHERE before the window fn would collapse the window to 1 row → rank always 1)
+      const { rows: [row] } = await query(`
+        SELECT fit_score, grade, role_rank, total_peers
+        FROM (
+          SELECT
+            student_id,
+            fit_score,
+            grade,
+            RANK()   OVER (ORDER BY fit_score DESC) AS role_rank,
+            COUNT(*) OVER ()                         AS total_peers
+          FROM ${table}
+        ) ranked
+        WHERE student_id = $1
+      `, [studentId]);
+
+      if (!row) return null;
+      return {
+        role_name:    roleName,
+        fit_score:    row.fit_score,
+        grade:        row.grade,
+        role_rank:    Number(row.role_rank),
+        total_peers:  Number(row.total_peers),
+      };
+    } catch (_) {
+      return null;
+    }
+  });
+
+  const results = (await Promise.all(rankPromises)).filter(Boolean);
+  results.sort((a, b) => b.fit_score - a.fit_score);
+  return results;
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LEGACY multi-candidate (kept for admin use)
@@ -460,6 +626,24 @@ const createSession = async ({ createdBy, candidateIds, jobRoles }) => {
          Math.min(100,Math.max(0,Math.round(Number(r.fit_score)||0))), r.grade||'F',
          r.major_strength||null, r.improvement_suggestion||null],
       );
+
+      const roleTable = getRoleTable(r.role_name || '');
+      if (roleTable && r.student_id) {
+        const fitScore = Math.min(100, Math.max(0, Math.round(Number(r.fit_score) || 0)));
+        await query(
+          `INSERT INTO ${roleTable}
+             (session_id, student_id, student_name, fit_score, grade, major_strength, improvement_suggestion, updated_at)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,NOW())
+           ON CONFLICT (student_id) DO UPDATE SET
+             session_id = EXCLUDED.session_id, student_name = EXCLUDED.student_name,
+             fit_score = EXCLUDED.fit_score, grade = EXCLUDED.grade,
+             major_strength = EXCLUDED.major_strength,
+             improvement_suggestion = EXCLUDED.improvement_suggestion,
+             updated_at = NOW()`,
+          [session.id, r.student_id, r.student_name||'Unknown', fitScore, r.grade||'F',
+           r.major_strength||null, r.improvement_suggestion||null],
+        );
+      }
     }
 
     const { rows: [done] } = await query(
@@ -504,5 +688,6 @@ const getAvailableCandidates = async () => {
 
 module.exports = {
   getMyRoleFit, getMyStatus, refreshMyRoleFit, getLatestSession,
+  getRoleLeaderboard, getMyRoleRanks,
   createSession, getSession, listSessions, getAvailableCandidates,
 };
