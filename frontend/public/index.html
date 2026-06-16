@@ -557,7 +557,7 @@
   </section>
 
   <!-- ==================== CTA BANNER ==================== -->
-  <section class="cta-banner">
+  <section class="cta-banner" style="padding-bottom: 3rem;">
     <div class="cta-bg">
       <div class="cta-orb cta-orb-1"></div>
       <div class="cta-orb cta-orb-2"></div>
@@ -582,6 +582,96 @@
       </div>
     </div>
   </section>
+
+  <!-- ==================== CONTACT US ==================== -->
+  <section class="section bg-light" id="contact" style="padding-top: 2rem; padding-bottom: 5rem;">
+    <div class="container">
+      <div class="section-header text-center">
+        <h2 class="section-title">Contact <span class="gradient-text">Us</span></h2>
+        <p class="section-subtitle">Have questions or need help? We'd love to hear from you. Send us a message and our team will respond shortly.</p>
+      </div>
+
+      <div class="contact-wrapper" style="max-width: 600px; margin: 0 auto; background: var(--bg-card); padding: 3rem; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.05); border: 1px solid var(--border); position: relative; overflow: hidden;">
+        <!-- decorative gradient blob -->
+        <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: linear-gradient(135deg, rgba(175,198,255,0.4), rgba(0,94,208,0.1)); border-radius: 50%; filter: blur(40px); pointer-events: none;"></div>
+        
+        <form id="contactForm" class="contact-form" style="position: relative; z-index: 1;">
+          <div class="form-group" style="margin-bottom: 1.5rem;">
+            <label for="contactName" style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: var(--text-primary);">Name</label>
+            <input type="text" id="contactName" class="form-control" placeholder="John Doe" required style="width: 100%; padding: 0.875rem 1.25rem; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-main); color: var(--text-primary); font-size: 1rem; transition: border-color 0.2s, box-shadow 0.2s; outline: none;" onfocus="this.style.borderColor='var(--text-primary)'; this.style.boxShadow='0 0 0 3px rgba(0,0,0,0.05)'" onblur="this.style.borderColor='var(--border)'; this.style.boxShadow='none'">
+          </div>
+          <div class="form-group" style="margin-bottom: 1.5rem;">
+            <label for="contactEmail" style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: var(--text-primary);">Email Address</label>
+            <input type="email" id="contactEmail" class="form-control" placeholder="john@example.com" required style="width: 100%; padding: 0.875rem 1.25rem; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-main); color: var(--text-primary); font-size: 1rem; transition: border-color 0.2s, box-shadow 0.2s; outline: none;" onfocus="this.style.borderColor='var(--text-primary)'; this.style.boxShadow='0 0 0 3px rgba(0,0,0,0.05)'" onblur="this.style.borderColor='var(--border)'; this.style.boxShadow='none'">
+          </div>
+          <div class="form-group" style="margin-bottom: 2rem;">
+            <label for="contactMessage" style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: var(--text-primary);">How can we help?</label>
+            <textarea id="contactMessage" class="form-control" rows="4" placeholder="Tell us about your needs..." required style="width: 100%; padding: 0.875rem 1.25rem; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-main); color: var(--text-primary); font-size: 1rem; transition: border-color 0.2s, box-shadow 0.2s; outline: none; resize: vertical;" onfocus="this.style.borderColor='var(--text-primary)'; this.style.boxShadow='0 0 0 3px rgba(0,0,0,0.05)'" onblur="this.style.borderColor='var(--border)'; this.style.boxShadow='none'"></textarea>
+          </div>
+          <button type="submit" class="btn-primary" style="width: 100%; padding: 1rem; font-weight: 600; font-size: 1rem; border-radius: 10px; border: none; color: #ffffff; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform 0.2s, opacity 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.opacity='0.9'" onmouseout="this.style.transform='none'; this.style.opacity='1'">
+            Send Message
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+          </button>
+        </form>
+        <div id="contactSuccessMessage" style="display: none; margin-top: 1.5rem; padding: 1rem; background: rgba(34, 197, 94, 0.1); color: #16a34a; border-radius: 10px; text-align: center; border: 1px solid rgba(34, 197, 94, 0.2); font-weight: 500;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 6px; margin-top: -2px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+          Message sent successfully! We'll be in touch soon.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Script for Contact Form -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const form = document.getElementById('contactForm');
+      const successMsg = document.getElementById('contactSuccessMessage');
+      
+      if (form) {
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          
+          const btn = form.querySelector('button');
+          const originalText = btn.innerHTML; // preserve svg
+          btn.textContent = 'Sending...';
+          btn.disabled = true;
+          
+          const name = document.getElementById('contactName').value;
+          const email = document.getElementById('contactEmail').value;
+          const message = document.getElementById('contactMessage').value;
+
+          try {
+            const response = await fetch('http://localhost:5000/api/contact', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ name, email, message })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+              form.reset();
+              successMsg.style.display = 'block';
+              
+              setTimeout(() => {
+                successMsg.style.display = 'none';
+              }, 5000);
+            } else {
+              alert('Failed to send message: ' + (data.error || 'Unknown error'));
+            }
+          } catch (error) {
+            console.error('Error submitting form:', error);
+            alert('Failed to send message. Please ensure the backend is running and configured.');
+          } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+          }
+        });
+      }
+    });
+  </script>
 
   <!-- ==================== FOOTER ==================== -->
   <footer class="footer" id="footer">
@@ -611,15 +701,14 @@
           <ul class="footer-links">
             <li><a href="#features">Features</a></li>
             <li><a href="#how-it-works">How It Works</a></li>
-            <li><a href="#">API</a></li>
             </ul>
         </div>
 
         <div class="footer-col">
           <h4 class="footer-col-title">Company</h4>
           <ul class="footer-links">
-            <li><a href="#">About</a></li>
-            <li><a href="#">Contact</a></li>
+            <li><a href="#" id="aboutFooterLink">About</a></li>
+            <li><a href="#contact">Contact</a></li>
           </ul>
         </div>
 
@@ -680,6 +769,181 @@
     } else {
       document.addEventListener('CareerIQAuthReady', initApp);
     }
+  </script>
+
+  <!-- ==================== ABOUT MODAL ==================== -->
+  <div id="aboutModal" class="about-modal-overlay">
+    <div class="about-modal-content">
+      <!-- Decorative Glow -->
+      <div class="about-glow"></div>
+      
+      <div class="about-modal-header" style="position: relative; z-index: 1;">
+        <h3 class="gradient-text" style="font-size: 1.75rem; font-weight: 800; margin: 0; background: var(--gradient-text); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">CareerIQ AI</h3>
+        <button id="closeAboutModal" aria-label="Close modal">&times;</button>
+      </div>
+      
+      <div class="about-modal-body" style="position: relative; z-index: 1;">
+        <p style="font-size: 1.05rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 24px;">A next-generation career intelligence platform powered by advanced artificial intelligence. Discover your ideal career path, analyze skill gaps, and optimize your application materials with deeply personalized roadmaps.</p>
+        
+        <div class="about-modal-highlight" style="flex-direction: column; align-items: flex-start; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 12px; width: 100%; margin-bottom: 8px;">
+            <div class="pulse-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+            </div>
+            <div style="flex: 1;">
+              <strong style="display: block; font-size: 1.1rem; color: var(--text-primary); margin-bottom: 2px;">Built for VITians</strong>
+              <span style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.3; display: block;">Proudly crafted by a student of VIT.</span>
+            </div>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 1fr; gap: 8px; width: 100%; padding-top: 12px; border-top: 1px solid rgba(244, 165, 176, 0.1);">
+            <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+              <span style="color: var(--text-muted);">Name:</span>
+              <strong style="color: var(--text-primary);">NARNE ADITHYA HANUMAN</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+              <span style="color: var(--text-muted);">Admission No:</span>
+              <strong style="color: var(--text-primary);">24BDS0220</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+              <span style="color: var(--text-muted);">Phone:</span>
+              <strong style="color: var(--text-primary);">+91 6281559121</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+              <span style="color: var(--text-muted);">Email:</span>
+              <strong style="color: var(--text-primary);"><a href="mailto:narne.adithya2024@vitstudent.ac.in" style="color: inherit; text-decoration: none;">narne.adithya2024@vitstudent.ac.in</a></strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .about-modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(10, 15, 26, 0.8); backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 9999; opacity: 0; visibility: hidden; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      perspective: 1200px;
+    }
+    .about-modal-overlay.active {
+      opacity: 1; visibility: visible;
+    }
+    .about-modal-content {
+      background: var(--bg-card); border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 24px; padding: 32px; max-width: 480px; width: 90%;
+      box-shadow: 0 25px 60px -12px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.02) inset, 0 10px 40px rgba(194, 24, 91, 0.15);
+      transform: translateY(40px) scale(0.9) translateZ(-50px) rotateX(5deg); opacity: 0; 
+      transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+      position: relative; overflow: hidden;
+      transform-style: preserve-3d;
+      will-change: transform;
+    }
+    .about-modal-overlay.active .about-modal-content {
+      transform: translateY(0) scale(1) translateZ(0) rotateX(0); opacity: 1;
+    }
+    .about-modal-content.tilt-active {
+      transition: transform 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+    .about-glow {
+      position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+      background: radial-gradient(circle at center, rgba(244, 165, 176, 0.15) 0%, transparent 50%);
+      pointer-events: none; z-index: 0;
+      transform: translateZ(-20px);
+    }
+    .about-modal-header, .about-modal-body {
+      transform: translateZ(30px);
+      transform-style: preserve-3d;
+    }
+    .about-modal-header {
+      display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;
+    }
+    .about-modal-header button {
+      background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+      font-size: 1.25rem; color: var(--text-secondary); cursor: pointer; transition: all 0.3s ease;
+    }
+    .about-modal-header button:hover {
+      background: rgba(255, 255, 255, 0.1); color: var(--text-primary); transform: rotate(90deg);
+    }
+    .about-modal-highlight {
+      display: flex; align-items: center; gap: 16px;
+      padding: 20px; background: linear-gradient(145deg, rgba(244, 165, 176, 0.08), rgba(194, 24, 91, 0.05)); 
+      border-radius: 16px; border: 1px solid rgba(244, 165, 176, 0.2); 
+      position: relative; overflow: hidden;
+      transform: translateZ(50px);
+      box-shadow: 0 15px 35px rgba(0,0,0,0.25);
+    }
+    .about-modal-highlight::before {
+      content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+      background: var(--gradient-brand);
+    }
+    .pulse-icon {
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      width: 48px; height: 48px; border-radius: 12px;
+      background: rgba(244, 165, 176, 0.1); color: var(--brand);
+      box-shadow: 0 0 0 0 rgba(244, 165, 176, 0.4);
+      animation: pulse 2s infinite cubic-bezier(0.66, 0, 0, 1);
+    }
+    @keyframes pulse {
+      to { box-shadow: 0 0 0 15px rgba(244, 165, 176, 0); }
+    }
+  </style>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const aboutLink = document.getElementById('aboutFooterLink');
+      const aboutModal = document.getElementById('aboutModal');
+      const closeBtn = document.getElementById('closeAboutModal');
+
+      if (aboutLink && aboutModal && closeBtn) {
+        const content = aboutModal.querySelector('.about-modal-content');
+        
+        aboutLink.addEventListener('click', (e) => {
+          e.preventDefault();
+          aboutModal.classList.add('active');
+          content.style.transform = '';
+          content.classList.remove('tilt-active');
+        });
+
+        closeBtn.addEventListener('click', () => {
+          aboutModal.classList.remove('active');
+          content.style.transform = '';
+          content.classList.remove('tilt-active');
+        });
+
+        aboutModal.addEventListener('click', (e) => {
+          if (e.target === aboutModal) {
+            aboutModal.classList.remove('active');
+            content.style.transform = '';
+            content.classList.remove('tilt-active');
+          }
+        });
+
+        // 3D Hover Tilt Logic
+        content.addEventListener('mousemove', (e) => {
+          content.classList.add('tilt-active');
+          const rect = content.getBoundingClientRect();
+          const x = e.clientX - rect.left; 
+          const y = e.clientY - rect.top;
+          
+          const centerX = rect.width / 2;
+          const centerY = rect.height / 2;
+          
+          // Max tilt of 8 degrees
+          const rotateX = ((y - centerY) / centerY) * -8;
+          const rotateY = ((x - centerX) / centerX) * 8;
+          
+          content.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+        });
+
+        content.addEventListener('mouseleave', () => {
+          content.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
+          setTimeout(() => content.classList.remove('tilt-active'), 500);
+        });
+      }
+    });
   </script>
 </body>
 </html>

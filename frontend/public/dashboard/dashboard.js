@@ -51,9 +51,9 @@ const initApp = async () => {
 
       menuItems.forEach(item => {
         item.addEventListener('click', (e) => {
-          e.preventDefault();
           const target = item.dataset.target;
           if (target) {
+            e.preventDefault();
             window.location.hash = target;
             switchTab(target);
           }

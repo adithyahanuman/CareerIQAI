@@ -37,6 +37,21 @@ IMPORTANT CONTEXT: This resume belongs to a STUDENT. Apply student-appropriate s
 - Career trajectory scoring is NOT applicable
 - Impact metrics are appreciated but not expected — effort to quantify is rewarded
 
+## INPUT TEXT RULES — READ BEFORE ANY ANALYSIS
+
+The text you receive may be noisy, broken, or incomplete due to extraction issues.
+Before analyzing, always apply these rules:
+
+1. NEVER skip any word, line, or symbol — even if it looks like noise
+2. If words are merged, split them at logical boundaries: "SoftwareEngineer" → "Software Engineer"
+3. If a sentence is broken across lines, rejoin it into one complete sentence
+4. If a word looks garbled, infer the correct word from surrounding context and flag it
+5. Bullet symbols (●, □, ■, ◆, *, –) all mean the same thing — treat as list items
+6. If a section header and its content are on the same line, separate them before analysis
+7. If you are uncertain about any word, still include it — mark it as suspected error, never drop it
+8. Process the text exactly as given — do not assume any part is irrelevant or already covered
+9. After reconstruction, re-read your output and verify no sentence from the input is missing
+
 Analyze the resume and return ONE valid JSON object with ALL scored sections below.
 Return ONLY the JSON. No markdown, no explanation, no code blocks, no preamble.
 Every score must reference actual resume content. Never be vague or generic.
@@ -48,6 +63,11 @@ Certifications & Achievements: 20, Extracurriculars & Leadership: 20
 
 Return this exact JSON structure (fill all fields based on the resume):
 
+CRITICAL INSTRUCTIONS FOR EXTRACTION:
+1. Do NOT limit lists to 1 item. You must extract ALL projects, ALL roles, and ALL education degrees listed on the resume.
+2. For issues and suggestions, generate comprehensive lists. Always provide 3-5 actionable suggestions and 2+ issues per section where applicable.
+
+
 {
   "contact": {
     "contact_score": 0,
@@ -56,8 +76,8 @@ Return this exact JSON structure (fill all fields based on the resume):
     "fields_found": ["name","email","linkedin","github"],
     "fields_missing": [],
     "email_professionalism": "professional",
-    "issues": [{"issue": "describe issue here"}],
-    "contact_suggestions": ["suggestion1"]
+    "issues": [{"issue": "describe issue 1 here"}, {"issue": "describe issue 2 here"}],
+    "contact_suggestions": ["suggestion 1", "suggestion 2"]
   },
   "summary": {
     "summary_score": 0,
@@ -66,8 +86,8 @@ Return this exact JSON structure (fill all fields based on the resume):
     "summary_type": "objective",
     "buzzwords_found": [],
     "length_assessment": "too short",
-    "issues": [{"issue": "describe issue here"}],
-    "summary_suggestions": ["specific rewrite example tailored to their field"]
+    "issues": [{"issue": "describe issue 1 here"}, {"issue": "describe issue 2 here"}],
+    "summary_suggestions": ["specific rewrite example 1", "specific rewrite example 2"]
   },
   "experience": {
     "experience_score": 0,
@@ -85,9 +105,9 @@ Return this exact JSON structure (fill all fields based on the resume):
         "role_score": 0
       }
     ],
-    "issues": [{"issue": "describe issue here"}],
+    "issues": [{"issue": "describe issue 1 here"}, {"issue": "describe issue 2 here"}],
     "no_experience_note": null,
-    "experience_suggestions": ["suggestion"]
+    "experience_suggestions": ["suggestion 1", "suggestion 2", "suggestion 3"]
   },
   "education": {
     "education_score": 0,
@@ -107,8 +127,8 @@ Return this exact JSON structure (fill all fields based on the resume):
       }
     ],
     "field_relevance": "highly_relevant",
-    "issues": [],
-    "education_suggestions": ["suggestion"]
+    "issues": [{"issue": "issue 1"}, {"issue": "issue 2"}],
+    "education_suggestions": ["suggestion 1", "suggestion 2", "suggestion 3"]
   },
   "skills": {
     "skills_score": 0,
@@ -122,8 +142,8 @@ Return this exact JSON structure (fill all fields based on the resume):
     "skills_without_evidence": [],
     "inflated_claims": [],
     "too_basic_flagged": [],
-    "issues": [],
-    "skills_suggestions": ["suggestion"]
+    "issues": [{"issue": "issue 1"}, {"issue": "issue 2"}],
+    "skills_suggestions": ["suggestion 1", "suggestion 2", "suggestion 3"]
   },
   "projects": {
     "projects_score": 0,
@@ -144,8 +164,8 @@ Return this exact JSON structure (fill all fields based on the resume):
       }
     ],
     "overall_assessment": "developing",
-    "issues": [],
-    "projects_suggestions": ["suggestion"]
+    "issues": [{"issue": "issue 1"}, {"issue": "issue 2"}],
+    "projects_suggestions": ["suggestion 1", "suggestion 2", "suggestion 3"]
   },
   "formatting": {
     "formatting_score": 0,
@@ -162,8 +182,8 @@ Return this exact JSON structure (fill all fields based on the resume):
     "passive_voice_examples": [],
     "filler_phrases": [],
     "grammar_errors": [],
-    "issues": [],
-    "formatting_suggestions": ["suggestion"]
+    "issues": [{"issue": "issue 1"}, {"issue": "issue 2"}],
+    "formatting_suggestions": ["suggestion 1", "suggestion 2", "suggestion 3"]
   },
   "certifications": {
     "certifications_score": 0,
@@ -187,11 +207,11 @@ Return this exact JSON structure (fill all fields based on the resume):
       }
     ],
     "most_impressive_achievement": null,
-    "issues": [],
+    "issues": [{"issue": "issue 1"}, {"issue": "issue 2"}],
     "no_certifications_note": null,
     "no_achievements_note": null,
-    "certifications_suggestions": ["suggestion"],
-    "achievements_suggestions": ["suggestion"]
+    "certifications_suggestions": ["suggestion 1", "suggestion 2", "suggestion 3"],
+    "achievements_suggestions": ["suggestion 1", "suggestion 2", "suggestion 3"]
   },
   "extracurriculars": {
     "extracurricular_score": 0,
@@ -209,9 +229,9 @@ Return this exact JSON structure (fill all fields based on the resume):
         "activity_score": 0
       }
     ],
-    "issues": [],
+    "issues": [{"issue": "issue 1"}, {"issue": "issue 2"}],
     "no_extracurricular_note": null,
-    "extracurricular_suggestions": ["suggestion"]
+    "extracurricular_suggestions": ["suggestion 1", "suggestion 2", "suggestion 3"]
   },
   "overall": {
     "overall_score": 0,

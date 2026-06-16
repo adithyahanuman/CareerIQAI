@@ -28,11 +28,32 @@ const env = {
   geminiApiKey:  process.env.GEMINI_API_KEY || '',
   grokApiKey:    process.env.GROK_API_KEY   || '',
 
-  // Comma-separated lists for per-provider key rotation
-  geminiApiKeys: process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || '',
-  grokApiKeys:   process.env.GROK_API_KEYS   || process.env.GROK_API_KEY   || '',
+  // Gather 10 API key slots for Gemini (GEMINI_API_KEY_1 to GEMINI_API_KEY_10)
+  geminiApiKeys: [
+    process.env.GEMINI_API_KEY_1,
+    process.env.GEMINI_API_KEY_2,
+    process.env.GEMINI_API_KEY_3,
+    process.env.GEMINI_API_KEY_4,
+    process.env.GEMINI_API_KEY_5,
+    process.env.GEMINI_API_KEY_6,
+    process.env.GEMINI_API_KEY_7,
+    process.env.GEMINI_API_KEY_8,
+    process.env.GEMINI_API_KEY_9,
+    process.env.GEMINI_API_KEY_10,
+    process.env.GEMINI_API_KEYS, // Fallback to old comma-separated list if slots are empty
+    process.env.GEMINI_API_KEY   // Ultimate fallback to single key
+  ].filter(Boolean).flatMap(k => k.split(',').map(s => s.trim()).filter(Boolean)), // Still allow comma-separated fallback string just in case
+
+  grokApiKeys: [
+    process.env.GROK_API_KEYS,
+    process.env.GROK_API_KEY
+  ].filter(Boolean).flatMap(k => k.split(',').map(s => s.trim()).filter(Boolean)),
 
   aiProvider: process.env.AI_PROVIDER || 'gemini',
+
+  // ── SMTP / Email ──────────────────────────────────────────────────────────
+  smtpUser: process.env.SMTP_USER || '',
+  smtpPass: process.env.SMTP_PASS || '',
 };
 
 module.exports = env;

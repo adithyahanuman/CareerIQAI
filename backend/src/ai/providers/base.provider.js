@@ -7,12 +7,20 @@ class BaseAIProvider {
   /**
    * @param {string} name 
    * @param {string} model 
-   * @param {string} keysString - Comma-separated API keys list
+   * @param {string[]|string} keys - Array of API keys
    */
-  constructor(name, model, keysString = '') {
+  constructor(name, model, keys = []) {
     this.name = name;
     this.model = model;
-    this.apiKeys = keysString ? keysString.split(',').map(k => k.trim()).filter(Boolean) : [];
+    
+    if (Array.isArray(keys)) {
+      this.apiKeys = [...new Set(keys)]; // remove duplicates
+    } else if (typeof keys === 'string') {
+      this.apiKeys = keys ? keys.split(',').map(k => k.trim()).filter(Boolean) : [];
+    } else {
+      this.apiKeys = [];
+    }
+    
     this.currentKeyIndex = 0;
   }
 

@@ -73,10 +73,10 @@ class GeminiProvider extends BaseAIProvider {
   }
 
   /**
-   * Failover strategy (as requested by user):
-   * Outer loop: API Keys
-   * Inner loop: Models
-   * It tries all models for Key 1. If all models fail, it rotates to Key 2 and tries all models again.
+   * Failover strategy:
+   * Outer loop: Models
+   * Inner loop: API Keys
+   * It tries all API keys for Model 1. If all API keys fail (e.g. rate limit), it moves to Model 2.
    */
   async _callWithModelFailover(prompt) {
     const models = GEMINI_MODEL_FAILOVER && GEMINI_MODEL_FAILOVER.length
@@ -86,16 +86,17 @@ class GeminiProvider extends BaseAIProvider {
     const totalKeys = Math.max(1, this.apiKeys.length);
     let lastError;
 
-    // Outer loop: API Keys
-    for (let keyAttempt = 1; keyAttempt <= totalKeys; keyAttempt++) {
-      
-      // Initialize client with the current key
-      this._initClient();
+    // Outer loop: Models
+    for (const modelId of models) {
+      this.currentModel = modelId;
+      this.model = modelId; // update for logging
 
-      // Inner loop: Models
-      for (const modelId of models) {
-        this.currentModel = modelId;
-        this.model = modelId; // update for logging
+      // Reset to the first key whenever we start a new model, 
+      // or just rotate through. To strictly do api1, api2... we iterate exactly totalKeys times.
+      for (let keyAttempt = 1; keyAttempt <= totalKeys; keyAttempt++) {
+        
+        // Initialize client with the current key
+        this._initClient();
         
         try {
           const data = await this._callModel(modelId, prompt);
@@ -103,22 +104,28 @@ class GeminiProvider extends BaseAIProvider {
           return data;
         } catch (err) {
           lastError = err;
-          // If the model hit a rate limit (quota) OR is overloaded (unavailable), try the next model
+          
           if (this.isQuotaError(err) || this.isModelUnavailable(err)) {
-            console.warn(`[Gemini Provider] ⚠️ Model ${modelId} failed on key ${keyAttempt}/${totalKeys} — trying next model.`);
-            continue; // try next model
+            let reason = err.message || "Unknown error";
+            if (this.isQuotaError(err)) reason = "Rate Limit / Quota Exceeded";
+            else if (reason.includes('503') || reason.includes('overloaded')) reason = "Server Busy / Overloaded";
+            
+            console.warn(`[Gemini Provider] ⚠️ Model ${modelId} failed on key ${keyAttempt}/${totalKeys} (Reason: ${reason}) — trying next key/model.`);
+            
+            // If we have more keys to try for this model, rotate the key and try again
+            if (keyAttempt < totalKeys) {
+              this.rotateKey();
+              continue; 
+            } else {
+              // We've exhausted all keys for this model. Break inner loop to move to the next model.
+              console.warn(`[Gemini Provider] All API keys exhausted for model ${modelId}. Moving to next model.`);
+              break; 
+            }
           } else {
             // Non-recoverable error (e.g. bad prompt syntax) — throw immediately
             throw err;
           }
         }
-      }
-
-      // If we reach here, ALL models failed for the current API key.
-      const isLastKey = keyAttempt === totalKeys;
-      if (!isLastKey) {
-        this.rotateKey();
-        console.warn(`[Gemini Provider] All models failed for key ${keyAttempt}/${totalKeys}. Rotating to next API key.`);
       }
     }
 
