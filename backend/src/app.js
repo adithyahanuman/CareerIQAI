@@ -47,6 +47,11 @@ app.use('/api/contact',     contactRoutes);
 app.use('/api/chat',        chatRoutes);
 app.use('/resume',        resumeUploadRoutes);
 
+// ── Root health check (for Render / load balancers) ───────────────────────────
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', message: 'CareerIQ AI API is running 🚀' });
+});
+
 // ── 404 & Error handlers ───────────────────────────────────────────────────────
 app.use(notFound);
 app.use(errorHandler);
