@@ -9,6 +9,12 @@
     "migrate": "node src/db/migrate.js",
     "migrate:reset": "node src/db/migrate.js --reset",
     "db:test": "node src/db/testConnection.js",
+    "provision:admin": "node scripts/provisionAdmin.js",
+    "wipe:resumes": "node scripts/wipeResumes.js",
+    "wipe:all": "node scripts/wipeAllData.js",
+    "wipe:admin": "node scripts/wipeAdminData.js",
+    "wipe:firebase": "node scripts/wipeFirebase.js",
+    "wipe:everything": "node scripts/wipeEverything.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS rankings (
 
 CREATE INDEX IF NOT EXISTS idx_rankings_student_id     ON rankings (student_id);
 CREATE INDEX IF NOT EXISTS idx_rankings_overall_score  ON rankings (overall_score DESC);
-CREATE INDEX IF NOT EXISTS idx_rankings_rank_position  ON rankings (rank_position ASC NULLS LAST);
+CREATE INDEX IF NOT EXISTS idx_rankings_rank_position  ON rankings (rank_position ASC);
 
 DROP TRIGGER IF EXISTS trg_rankings_updated_at ON rankings;
 CREATE TRIGGER trg_rankings_updated_at

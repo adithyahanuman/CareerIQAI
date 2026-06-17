@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS benchmark_results (
   grade                 VARCHAR(4)    NOT NULL,
   major_strength        TEXT,
   improvement_suggestion TEXT,
+  detailed_analysis     JSONB,
   created_at            TIMESTAMPTZ   NOT NULL DEFAULT NOW()
 );
 

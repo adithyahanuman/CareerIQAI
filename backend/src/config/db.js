@@ -11,6 +11,11 @@
 
 'use strict';
 
+const dns = require('dns');
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
+
 const { Pool } = require('pg');
 const env = require('./env');
 
@@ -18,12 +23,25 @@ const env = require('./env');
 // Pool configuration
 // ---------------------------------------------------------------------------
 
-const pool = new Pool({
+const connectionString = env.dbConnectionString;
+const isCockroach = connectionString
+  ? connectionString.includes('cockroachlabs.cloud')
+  : env.dbHost.includes('cockroachlabs.cloud');
+
+const poolConfig = connectionString ? {
+  connectionString,
+  ssl: isCockroach ? { rejectUnauthorized: true } : false,
+} : {
   host:     env.dbHost,
   port:     env.dbPort,
   database: env.dbName,
   user:     env.dbUser,
   password: env.dbPassword,
+  ssl: isCockroach ? { rejectUnauthorized: true } : false,
+};
+
+const pool = new Pool({
+  ...poolConfig,
 
   // Connection pool sizing
   max:              10,   // maximum simultaneous connections

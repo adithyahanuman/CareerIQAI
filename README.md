@@ -27,7 +27,7 @@
 
 **Backend**
 - Node.js + Express REST API
-- PostgreSQL (via `pg`) for benchmark sessions, results, and student data
+- CockroachDB Serverless (PostgreSQL-compatible) via `pg`
 - Firebase Admin SDK for user verification
 - Google Gemini API (primary AI) with automatic failover to Grok (xAI)
 
@@ -40,6 +40,14 @@ careeriqai/
 ├── backend/
 │   ├── server.js               # Express entry point
 │   ├── .env.example            # Environment variable template
+│   ├── scripts/                # Admin & maintenance utilities
+│   │   ├── provisionAdmin.js   # Create admin account
+│   │   ├── wipeResumes.js      # Delete all resumes
+│   │   ├── wipeAllData.js      # Wipe all student data
+│   │   ├── wipeAdminData.js    # Wipe admin records
+│   │   ├── wipeFirebase.js     # Remove Firebase users
+│   │   ├── wipeEverything.js   # Nuclear wipe
+│   │   └── wipeEverythingExceptAdminAccount.js
 │   └── src/
 │       ├── ai/                 # AI prompt builders & role lists
 │       ├── config/             # DB & Firebase config
@@ -47,7 +55,8 @@ careeriqai/
 │       ├── db/                 # Migrations & DB helpers
 │       ├── middleware/         # Auth middleware
 │       ├── routes/             # API route definitions
-│       └── services/           # Business logic (resume, benchmark, career, student)
+│       ├── services/           # Business logic (resume, benchmark, career, student)
+│       └── utils/              # Shared helper functions
 │
 └── frontend/
     └── public/

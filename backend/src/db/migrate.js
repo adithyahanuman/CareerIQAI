@@ -12,6 +12,11 @@
 
 'use strict';
 
+const dns = require('dns');
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
+
 require('dotenv').config();          // load .env before anything else
 
 const fs   = require('fs');
@@ -23,13 +28,26 @@ const env  = require('../config/env');
 // Dedicated pool for the migration script (not reusing the app pool)
 // ---------------------------------------------------------------------------
 
-const pool = new Pool({
+const connectionString = env.dbConnectionString;
+const isCockroach = connectionString
+  ? connectionString.includes('cockroachlabs.cloud')
+  : env.dbHost.includes('cockroachlabs.cloud');
+
+const poolConfig = connectionString ? {
+  connectionString,
+  ssl: isCockroach ? { rejectUnauthorized: true } : false,
+  lookup: (hostname, options, callback) => dns.lookup(hostname, { family: 4 }, callback),
+} : {
   host:     env.dbHost,
   port:     env.dbPort,
   database: env.dbName,
   user:     env.dbUser,
   password: env.dbPassword,
-});
+  ssl: isCockroach ? { rejectUnauthorized: true } : false,
+  lookup: (hostname, options, callback) => dns.lookup(hostname, { family: 4 }, callback),
+};
+
+const pool = new Pool(poolConfig);
 
 const SCHEMA_DIR = path.join(__dirname, 'schema');
 
@@ -67,11 +85,24 @@ async function recordMigration(client, filename) {
 // ---------------------------------------------------------------------------
 
 async function resetDatabase(client) {
-  console.warn('[migrate] ⚠  --reset flag detected – dropping all tables …');
-  await client.query(`
-    DROP TABLE IF EXISTS rankings, projects, resumes, students, migrations CASCADE
+  console.warn('[migrate] ⚠  --reset flag detected – dropping all tables and functions …');
+  
+  // Get all table names in public schema
+  const { rows } = await client.query(`
+    SELECT table_name 
+    FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+      AND table_type = 'BASE TABLE'
   `);
-  console.log('[migrate] All tables dropped.');
+  
+  for (const row of rows) {
+    await client.query(`DROP TABLE IF EXISTS ${row.table_name} CASCADE`);
+  }
+
+  // Drop the trigger function after tables are gone
+  await client.query('DROP FUNCTION IF EXISTS set_updated_at');
+  
+  console.log('[migrate] All tables and functions dropped.');
 }
 
 // ---------------------------------------------------------------------------
