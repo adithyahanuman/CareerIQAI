@@ -1,6 +1,5 @@
 'use strict';
 
-const nodemailer = require('nodemailer');
 const env = require('../config/env');
 
 /**
@@ -18,51 +17,51 @@ exports.submitContactForm = async (req, res, next) => {
       });
     }
 
-    if (!env.smtpUser || !env.smtpPass) {
-      console.error('[ContactController] SMTP_USER or SMTP_PASS is missing in .env file.');
+    if (!env.resendApiKey) {
+      console.error('[ContactController] RESEND_API_KEY is missing in .env file.');
       return res.status(500).json({
         success: false,
-        error: 'Email service is not configured on the server.'
+        error: 'Email service is not configured on the server (Missing Resend API Key).'
       });
     }
 
-    // Configure the Nodemailer transporter explicitly for Gmail
-    const transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false, // false for 587 (uses STARTTLS)
-      family: 4, // Force IPv4 to prevent ENETUNREACH on Render
-      auth: {
-        user: env.smtpUser,
-        pass: env.smtpPass
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
+        <h2 style="color: #005ed0; margin-top: 0;">New Contact Form Submission</h2>
+        <p>You have received a new message from the <strong>CareerIQ AI</strong> landing page.</p>
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+        <p><strong>Name:</strong> ${name}</p>
+        <p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p>
+        <p><strong>Message:</strong></p>
+        <div style="background: #f8fafc; padding: 15px; border-radius: 5px; white-space: pre-wrap; color: #333;">${message}</div>
+      </div>
+    `;
+
+    // The email you want to receive the messages at. 
+    // IMPORTANT: On Resend's free tier, this MUST be the email address you used to register for Resend!
+    const toEmail = env.contactEmailTo || env.smtpUser || 'careeriqai.admin@gmail.com';
+
+    // Call Resend's HTTP API directly (bypasses Render's SMTP blocks)
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${env.resendApiKey}`,
+        'Content-Type': 'application/json'
       },
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 10000
+      body: JSON.stringify({
+        from: 'CareerIQ AI <onboarding@resend.dev>', // Free tier must use onboarding@resend.dev
+        to: [toEmail],
+        reply_to: email, // If you click "reply" in your inbox, it goes to the user who filled the form
+        subject: `New Contact Us Message from ${name}`,
+        html: htmlContent
+      })
     });
 
-    // Format the email
-    const mailOptions = {
-      from: `"${name}" <${env.smtpUser}>`, // Must send from the authenticated user to avoid spam filters
-      replyTo: email,
-      to: env.contactEmailTo, // Send the message to the designated receiver
-      subject: `New Contact Us Message from ${name}`,
-      text: `You have received a new message from the CareerIQ AI Contact Form.\n\nName: ${name}\nEmail: ${email}\n\nMessage:\n${message}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
-          <h2 style="color: #005ed0; margin-top: 0;">New Contact Form Submission</h2>
-          <p>You have received a new message from the <strong>CareerIQ AI</strong> landing page.</p>
-          <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
-          <p><strong>Name:</strong> ${name}</p>
-          <p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p>
-          <p><strong>Message:</strong></p>
-          <div style="background: #f8fafc; padding: 15px; border-radius: 5px; white-space: pre-wrap; color: #333;">${message}</div>
-        </div>
-      `
-    };
+    const data = await response.json();
 
-    // Send the email
-    await transporter.sendMail(mailOptions);
+    if (!response.ok) {
+      throw new Error(data.message || 'Resend API returned an error');
+    }
 
     return res.status(200).json({
       success: true,
@@ -70,7 +69,7 @@ exports.submitContactForm = async (req, res, next) => {
     });
 
   } catch (error) {
-    console.error('[ContactController] Error sending email:', error);
+    console.error('[ContactController] Error sending email via Resend:', error);
     return res.status(500).json({
       success: false,
       error: `Failed to send the message: ${error.message}`
