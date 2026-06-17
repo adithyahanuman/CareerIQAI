@@ -11,7 +11,10 @@
 
 'use strict';
 
-
+const dns = require('dns');
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
 
 const { Pool } = require('pg');
 const env = require('./env');

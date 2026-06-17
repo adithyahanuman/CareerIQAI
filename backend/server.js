@@ -8,11 +8,6 @@
 
 'use strict';
 
-const dns = require('dns');
-if (dns.setDefaultResultOrder) {
-  dns.setDefaultResultOrder('ipv4first'); // Fix IPv6 ENETUNREACH on Render
-}
-
 require('dotenv').config();
 
 const app              = require('./src/app');
