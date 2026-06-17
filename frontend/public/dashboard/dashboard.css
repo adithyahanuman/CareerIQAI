@@ -775,6 +775,201 @@
                     background: var(--bg-card);
                     backdrop-filter: blur(10px);
                     background: rgba(22, 27, 34, 0.9);
+.sidebar {
+                    position: fixed;
+                    left: -260px;
+                    height: 100vh;
+                    z-index: 100;
+                }
+
+                .sidebar.open {
+                    left: 0;
+                }
+
+                .sidebar-overlay.open {
+                    display: block;
+                }
+
+                .mobile-header {
+                    display: flex;
+                }
+
+                .main-container {
+                    padding: 20px;
+                }
+
+                .stats-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
+
+            /* Upload / Analyze spinner */
+            .upload-spinner {
+                display: inline-block;
+                width: 16px;
+                height: 16px;
+                border: 2px solid rgba(255, 255, 255, 0.3);
+                border-top-color: currentColor;
+                border-radius: 50%;
+                animation: spin 0.7s linear infinite;
+                vertical-align: middle;
+                margin-right: 6px;
+            }
+            @keyframes spin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+
+            /* ── Dashboard Light Mode overrides ── */
+            [data-theme="light"] .sidebar {
+                background: var(--bg-secondary);
+                border-right-color: var(--border);
+            }
+            [data-theme="light"] .mobile-header {
+                background: var(--bg-card);
+                border-bottom-color: var(--border);
+            }
+            [data-theme="light"] .content-area {
+                background: var(--bg-primary);
+            }
+            [data-theme="light"] .sidebar-overlay {
+                background: rgba(26, 28, 30, 0.35);
+            }
+            [data-theme="light"] .stat-card {
+                box-shadow: var(--shadow-md);
+            }
+            [data-theme="light"] .welcome-card::after {
+                background: radial-gradient(circle at right, var(--bg-glass) 0%, transparent 70%);
+            }
+
+            /* =========================================================
+               FULL ROADMAP FRAMEWORK (SVG & Scroll Animations)
+               ========================================================= */
+            .timeline-section {
+                position: relative;
+                padding: 60px 0;
+                max-width: 1000px;
+                margin: 0 auto;
+                min-height: 400px;
+            }
+            .timeline-svg-container {
+                position: absolute;
+                top: 0; bottom: 0; left: 0; right: 0;
+                pointer-events: none;
+                z-index: 0;
+            }
+            .timeline-svg-container svg {
+                width: 100%;
+                height: 100%;
+                overflow: visible;
+            }
+            .road-path {
+                fill: none;
+                stroke: var(--brand);
+                stroke-width: 3;
+                stroke-dasharray: 14 7;
+                filter: drop-shadow(0 0 10px var(--bg-glass));
+            }
+            .phases-container {
+                position: relative;
+                z-index: 1;
+            }
+            .phase-card {
+                background: var(--bg-card);
+                border: 1px solid var(--border);
+                border-radius: 16px;
+                padding: 30px;
+                position: relative;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+                border-top: 3px solid var(--phase-color, var(--brand));
+                transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s ease;
+                /* Animation starting state */
+                opacity: 0;
+                transform: translateY(40px);
+            }
+            .phase-card.revealed {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            .phase-card:hover {
+                transform: translateY(-4px) !important;
+                box-shadow: var(--shadow-glow-md);
+            }
+            .card-eyebrow {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 0.8rem;
+                font-weight: 700;
+                text-transform: uppercase;
+                color: var(--phase-color, var(--brand));
+                margin-bottom: 8px;
+                letter-spacing: 1px;
+            }
+            .card-title {
+                font-size: 1.4rem;
+                font-weight: 800;
+                color: var(--text-primary);
+                margin-bottom: 12px;
+                line-height: 1.3;
+            }
+            .card-objective {
+                font-size: 0.95rem;
+                color: var(--text-secondary);
+                line-height: 1.6;
+            }
+            .roadmap-tooltip {
+                position: absolute;
+                background: var(--bg-secondary);
+                border: 1px solid var(--border-strong);
+                padding: 8px 14px;
+                border-radius: 8px;
+                font-size: 0.85rem;
+                color: var(--text-primary);
+                pointer-events: none;
+                opacity: 0;
+                transform: translateY(10px);
+                transition: opacity 0.2s, transform 0.2s;
+                z-index: 100;
+                white-space: nowrap;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            }
+            .roadmap-tooltip.visible {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            @media (max-width: 768px) {
+                .timeline-svg-container { display: none; }
+                .phase-card {
+                    position: static !important;
+                    width: 100% !important;
+                    margin: 0 auto 30px !important;
+                    transform: none !important;
+                    opacity: 1 !important;
+                }
+                
+                body {
+                    flex-direction: column;
+                    padding-bottom: 70px; /* Space for bottom nav */
+                }
+                
+                /* Bottom Navigation Bar replacing Sidebar */
+                .sidebar {
+                    position: fixed;
+                    bottom: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 70px;
+                    border-right: none;
+                    border-top: 1px solid var(--border);
+                    display: flex;
+                    flex-direction: row;
+                    padding: 0;
+                    z-index: 9999;
+                    background: var(--bg-card);
+                    backdrop-filter: blur(10px);
+                    background: rgba(22, 27, 34, 0.9);
                 }
                 [data-theme="light"] .sidebar {
                     background: rgba(255, 255, 255, 0.95);
@@ -784,7 +979,7 @@
                     display: none !important;
                 }
                 
-                .sidebar-nav {
+                .sidebar-menu {
                     display: flex;
                     flex-direction: row;
                     width: 100%;
@@ -794,7 +989,7 @@
                     margin: 0;
                 }
                 
-                .sidebar-item {
+                .menu-item {
                     flex-direction: column;
                     justify-content: center;
                     padding: 8px 0;
@@ -805,21 +1000,21 @@
                     color: var(--text-secondary);
                 }
                 
-                .sidebar-item.active {
+                .menu-item.active {
                     background: transparent;
                     color: var(--brand);
                     border-bottom: 3px solid var(--brand);
                     border-radius: 0;
                 }
                 
-                .sidebar-item svg {
+                .menu-item svg {
                     margin-right: 0;
                     margin-bottom: 4px;
                     width: 22px;
                     height: 22px;
                 }
                 
-                .sidebar-item span {
+                .menu-item span {
                     font-size: 10px;
                     display: block;
                 }
