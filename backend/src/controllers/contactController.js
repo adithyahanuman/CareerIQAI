@@ -26,14 +26,18 @@ exports.submitContactForm = async (req, res, next) => {
       });
     }
 
-    // Configure the Nodemailer transporter (Defaults to Gmail if using a @gmail.com address)
-    // For production, you may need to explicitly define the service: 'gmail' or host/port.
+    // Configure the Nodemailer transporter explicitly for Gmail with timeouts
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
       auth: {
         user: env.smtpUser,
         pass: env.smtpPass
-      }
+      },
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 10000
     });
 
     // Format the email
