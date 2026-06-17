@@ -52,6 +52,11 @@ app.get('/', (req, res) => {
   res.json({ status: 'ok', message: 'CareerIQ AI API is running 🚀' });
 });
 
+// ── Health check for uptime monitoring ────────────────────────────────────────
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 // ── 404 & Error handlers ───────────────────────────────────────────────────────
 app.use(notFound);
 app.use(errorHandler);
