@@ -51,7 +51,6 @@ tools/
 docs/
 
 # ─── Legacy / Versioned backups ──────────────────────────────────────────────
-frontend/public/dashboard.html
 frontend/public/dashboard/tabs/benchmarking/benchmarking_v*.js
 frontend/public/dashboard/tabs/benchmarking/benchmarking_v*.css
 DESIGN\ (1).md
