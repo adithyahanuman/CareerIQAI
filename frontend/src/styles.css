@@ -3117,4 +3117,84 @@ textarea {
   .hamburger {
     display: flex;
   }
+  
+  /* Landing Page Typography & Spacing */
+  .hero-title {
+    font-size: 2.5rem;
+    line-height: 1.2;
+  }
+  
+  .hero-subtitle {
+    font-size: 1.1rem;
+    padding: 0 10px;
+  }
+  
+  .hero-section {
+    padding-top: 120px;
+    padding-bottom: 60px;
+  }
+  
+  /* Grids to Single Column */
+  .features-grid,
+  .how-it-works-grid,
+  .benefits-grid,
+  .faq-grid,
+  .pricing-grid {
+    grid-template-columns: 1fr !important;
+    gap: 20px;
+  }
+  
+  /* Sections Padding */
+  .section-padding {
+    padding: 60px 20px;
+  }
+  
+  /* Hero Buttons */
+  .hero-buttons {
+    flex-direction: column;
+    gap: 15px;
+    width: 100%;
+    padding: 0 20px;
+  }
+  
+  .hero-buttons .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  /* Nav actions hide on mobile */
+  .nav-actions {
+    display: none;
+  }
+  
+  /* Steps Container (How It Works) */
+  .steps-container {
+    flex-direction: column !important;
+    gap: 30px;
+    padding-left: 20px;
+  }
+  
+  .steps-line {
+    display: none; /* Hide the horizontal connector line on mobile */
+  }
+  
+  .step-item {
+    width: 100% !important;
+    max-width: none !important;
+  }
+  
+  /* Footer */
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+    text-align: center;
+  }
+  
+  .footer-col {
+    align-items: center;
+  }
+  
+  .social-links {
+    justify-content: center;
+  }
 }
