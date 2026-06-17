@@ -55,6 +55,7 @@ const env = {
   // ── SMTP / Email ──────────────────────────────────────────────────────────
   smtpUser: process.env.SMTP_USER || '',
   smtpPass: process.env.SMTP_PASS || '',
+  contactEmailTo: process.env.CONTACT_EMAIL_TO || process.env.SMTP_USER || '',
 };
 
 module.exports = env;

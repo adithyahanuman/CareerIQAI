@@ -45,7 +45,7 @@ exports.submitContactForm = async (req, res, next) => {
     const mailOptions = {
       from: `"${name}" <${env.smtpUser}>`, // Must send from the authenticated user to avoid spam filters
       replyTo: email,
-      to: env.smtpUser, // Send the message to yourself
+      to: env.contactEmailTo, // Send the message to the designated receiver
       subject: `New Contact Us Message from ${name}`,
       text: `You have received a new message from the CareerIQ AI Contact Form.\n\nName: ${name}\nEmail: ${email}\n\nMessage:\n${message}`,
       html: `
