@@ -72,7 +72,7 @@ exports.submitContactForm = async (req, res, next) => {
     console.error('[ContactController] Error sending email:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to send the message. Please try again later.'
+      error: `Failed to send the message: ${error.message}`
     });
   }
 };
