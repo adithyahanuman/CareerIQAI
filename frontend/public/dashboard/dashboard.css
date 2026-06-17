@@ -753,4 +753,114 @@
                     transform: none !important;
                     opacity: 1 !important;
                 }
+                
+                body {
+                    flex-direction: column;
+                    padding-bottom: 70px; /* Space for bottom nav */
+                }
+                
+                /* Bottom Navigation Bar replacing Sidebar */
+                .sidebar {
+                    position: fixed;
+                    bottom: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 70px;
+                    border-right: none;
+                    border-top: 1px solid var(--border);
+                    display: flex;
+                    flex-direction: row;
+                    padding: 0;
+                    z-index: 9999;
+                    background: var(--bg-card);
+                    backdrop-filter: blur(10px);
+                    background: rgba(22, 27, 34, 0.9);
+                }
+                [data-theme="light"] .sidebar {
+                    background: rgba(255, 255, 255, 0.95);
+                }
+                
+                .sidebar-header, .sidebar-user, .sidebar-actions {
+                    display: none !important;
+                }
+                
+                .sidebar-nav {
+                    display: flex;
+                    flex-direction: row;
+                    width: 100%;
+                    justify-content: space-around;
+                    align-items: center;
+                    padding: 0;
+                    margin: 0;
+                }
+                
+                .sidebar-item {
+                    flex-direction: column;
+                    justify-content: center;
+                    padding: 8px 0;
+                    border-radius: 0;
+                    margin-bottom: 0;
+                    flex: 1;
+                    text-align: center;
+                    color: var(--text-secondary);
+                }
+                
+                .sidebar-item.active {
+                    background: transparent;
+                    color: var(--brand);
+                    border-bottom: 3px solid var(--brand);
+                    border-radius: 0;
+                }
+                
+                .sidebar-item svg {
+                    margin-right: 0;
+                    margin-bottom: 4px;
+                    width: 22px;
+                    height: 22px;
+                }
+                
+                .sidebar-item span {
+                    font-size: 10px;
+                    display: block;
+                }
+                
+                /* Main Content Layouts */
+                .main-content {
+                    width: 100%;
+                    padding: 20px 15px;
+                }
+                
+                .top-header {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 15px;
+                }
+                
+                /* Stack Grids */
+                .metrics-grid, .overview-grid, .ra-grid, .ra-grid-3, .bm-grid {
+                    grid-template-columns: 1fr !important;
+                }
+                
+                /* Scrollable Tables */
+                .table-container, .bm-table-wrap {
+                    overflow-x: auto;
+                    -webkit-overflow-scrolling: touch;
+                }
+                
+                /* Modals full width */
+                .modal-content, .ra-modal-content {
+                    width: 95% !important;
+                    min-width: 0 !important;
+                    padding: 20px !important;
+                    margin: 10px auto !important;
+                }
+                
+                /* Chat window constraints */
+                .chat-container {
+                    height: calc(100vh - 150px) !important;
+                }
+                
+                .ai-msg, .user-msg {
+                    max-width: 90% !important;
+                }
             }
