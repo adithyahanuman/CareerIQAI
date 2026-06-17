@@ -171,6 +171,10 @@ class BaseAIProvider {
       data: data
     };
   }
+
+  async benchmarkResumes(prompt) {
+    return this.analyzeResume(prompt);
+  }
 }
 
 module.exports = BaseAIProvider;

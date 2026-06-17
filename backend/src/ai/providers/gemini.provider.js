@@ -2,15 +2,16 @@
 
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const BaseAIProvider = require('./base.provider');
-const { MODELS, PROVIDERS, GEMINI_MODEL_FAILOVER } = require('../constants');
+const { MODELS, PROVIDERS, GEMINI_MODEL_FAILOVER, GEMINI_BENCHMARK_MODEL_FAILOVER, GEMINI_ROADMAP_MODEL_FAILOVER } = require('../constants');
 const env = require('../../config/env');
 
 /**
  * Gemini AI Provider — supports both API key rotation AND model-level failover.
- * Order of attempts:
- *   1. Primary model (gemma-4-26b-a4b-it) with all API keys
- *   2. Fallback model 1 (gemini-3.1-flash-lite) with all API keys
- *   3. Fallback model 2 (gemini-2.5-flash-lite) with all API keys
+ * Strategy:
+ *   Outer loop: Models (from GEMINI_MODEL_FAILOVER list)
+ *   Inner loop: API Keys — only rotated for per-minute rate limits (429 RPM).
+ *   Daily quota errors (RPD) skip all keys for that model immediately,
+ *   since the daily limit is per-model and shared across all API keys.
  */
 class GeminiProvider extends BaseAIProvider {
   constructor() {
@@ -41,6 +42,7 @@ class GeminiProvider extends BaseAIProvider {
       msg.includes('overloaded') ||
       msg.includes('timeout') ||
       msg.includes('timed out') ||
+      msg.includes('aborted') ||
       msg.includes('not found') ||
       msg.includes('404') ||
       msg.includes('connection was closed') ||
@@ -50,6 +52,22 @@ class GeminiProvider extends BaseAIProvider {
       msg.includes('failed to parse') ||   // model returned non-JSON
       msg.includes('not valid json') ||     // model ignored JSON instruction
       msg.includes('empty response')        // model returned nothing
+    );
+  }
+
+  /**
+   * Daily quota (RPD) errors are per-model and shared across ALL API keys.
+   * Rotating keys does NOT help — skip the model immediately.
+   */
+  isDailyQuotaError(err) {
+    if (!err || !err.message) return false;
+    const msg = err.message.toLowerCase();
+    return (
+      msg.includes('daily') ||
+      msg.includes('per day') ||
+      msg.includes('quota exceeded') ||
+      msg.includes('resource_exhausted') ||
+      msg.includes('resourceexhausted')
     );
   }
 
@@ -76,12 +94,17 @@ class GeminiProvider extends BaseAIProvider {
    * Failover strategy:
    * Outer loop: Models
    * Inner loop: API Keys
-   * It tries all API keys for Model 1. If all API keys fail (e.g. rate limit), it moves to Model 2.
+   *
+   * Key index is reset to 0 at the start of EACH model, so every model
+   * gets a full fresh pass through all keys.
+   *
+   * Daily quota (RPD) errors skip ALL keys for that model immediately —
+   * rotating keys won't help since the daily cap is per-model.
    */
-  async _callWithModelFailover(prompt) {
-    const models = GEMINI_MODEL_FAILOVER && GEMINI_MODEL_FAILOVER.length
-      ? GEMINI_MODEL_FAILOVER
-      : [MODELS.GEMINI];
+  async _callWithModelFailover(prompt, modelList = null) {
+    const models = modelList && modelList.length
+      ? modelList
+      : (GEMINI_MODEL_FAILOVER && GEMINI_MODEL_FAILOVER.length ? GEMINI_MODEL_FAILOVER : [MODELS.GEMINI]);
 
     const totalKeys = Math.max(1, this.apiKeys.length);
     let lastError;
@@ -91,35 +114,43 @@ class GeminiProvider extends BaseAIProvider {
       this.currentModel = modelId;
       this.model = modelId; // update for logging
 
-      // Reset to the first key whenever we start a new model, 
-      // or just rotate through. To strictly do api1, api2... we iterate exactly totalKeys times.
+      // ✅ Fix: Always reset to key[0] at the start of each new model.
+      // Without this, a previous model's key rotations carry over and
+      // the new model starts mid-way through the key list.
+      this.currentKeyIndex = 0;
+      this._initClient();
+
+      // Inner loop: API Keys
       for (let keyAttempt = 1; keyAttempt <= totalKeys; keyAttempt++) {
-        
-        // Initialize client with the current key
-        this._initClient();
-        
+
         try {
           const data = await this._callModel(modelId, prompt);
           console.log(`[Gemini Provider] ✅ Success with model: ${modelId} using key ${keyAttempt}/${totalKeys}`);
           return data;
         } catch (err) {
           lastError = err;
-          
+
+          // ✅ Fix: Daily quota is per-model and shared across all keys.
+          // Skip remaining keys immediately — rotating won't help.
+          if (this.isDailyQuotaError(err)) {
+            console.warn(`[Gemini Provider] ⚠️ Model ${modelId} hit daily quota limit (RPD). Skipping all keys for this model → moving to next model.`);
+            break;
+          }
+
           if (this.isQuotaError(err) || this.isModelUnavailable(err)) {
-            let reason = err.message || "Unknown error";
-            if (this.isQuotaError(err)) reason = "Rate Limit / Quota Exceeded";
-            else if (reason.includes('503') || reason.includes('overloaded')) reason = "Server Busy / Overloaded";
-            
-            console.warn(`[Gemini Provider] ⚠️ Model ${modelId} failed on key ${keyAttempt}/${totalKeys} (Reason: ${reason}) — trying next key/model.`);
-            
-            // If we have more keys to try for this model, rotate the key and try again
+            let reason = err.message || 'Unknown error';
+            if (this.isQuotaError(err)) reason = 'Rate Limit / Quota Exceeded (RPM)';
+            else if (reason.includes('503') || reason.includes('overloaded')) reason = 'Server Busy / Overloaded';
+
+            console.warn(`[Gemini Provider] ⚠️ Model ${modelId} failed on key ${keyAttempt}/${totalKeys} (Reason: ${reason}). Exact Error: ${err.message} — trying next key/model.`);
+
+
             if (keyAttempt < totalKeys) {
               this.rotateKey();
-              continue; 
+              continue;
             } else {
-              // We've exhausted all keys for this model. Break inner loop to move to the next model.
               console.warn(`[Gemini Provider] All API keys exhausted for model ${modelId}. Moving to next model.`);
-              break; 
+              break;
             }
           } else {
             // Non-recoverable error (e.g. bad prompt syntax) — throw immediately
@@ -132,11 +163,12 @@ class GeminiProvider extends BaseAIProvider {
     throw lastError;
   }
 
-  async analyzeResume(prompt)           { return this.normalize(await this._callWithModelFailover(prompt)); }
-  async generateCareerAdvice(prompt)    { return this.normalize(await this._callWithModelFailover(prompt)); }
-  async matchJobDescription(prompt)     { return this.normalize(await this._callWithModelFailover(prompt)); }
-  async generateInterviewQuestions(prompt) { return this.normalize(await this._callWithModelFailover(prompt)); }
-  async scoreProject(prompt)            { return this.normalize(await this._callWithModelFailover(prompt)); }
+  async analyzeResume(prompt)           { return this.normalize(await this._callWithModelFailover(prompt, GEMINI_MODEL_FAILOVER)); }
+  async benchmarkResumes(prompt)        { return this.normalize(await this._callWithModelFailover(prompt, GEMINI_BENCHMARK_MODEL_FAILOVER)); }
+  async generateCareerAdvice(prompt)    { return this.normalize(await this._callWithModelFailover(prompt, GEMINI_ROADMAP_MODEL_FAILOVER)); }
+  async matchJobDescription(prompt)     { return this.normalize(await this._callWithModelFailover(prompt, GEMINI_MODEL_FAILOVER)); }
+  async generateInterviewQuestions(prompt) { return this.normalize(await this._callWithModelFailover(prompt, GEMINI_MODEL_FAILOVER)); }
+  async scoreProject(prompt)            { return this.normalize(await this._callWithModelFailover(prompt, GEMINI_MODEL_FAILOVER)); }
 }
 
 module.exports = GeminiProvider;

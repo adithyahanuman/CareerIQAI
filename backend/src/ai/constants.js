@@ -11,24 +11,35 @@ module.exports = {
     GROK:   'grok-2',
   },
 
-  // ── Model-level failover within Gemini ────────────────────────────────────
-  // Tried in order — first available/working model wins.
-  // All model names below are VERIFIED against the Gemini API (June 2025).
+  // ── Default Failover (Resume Parsing, Projects, Interview Questions, etc.) ─
   GEMINI_MODEL_FAILOVER: [
-    // ── Primary Heavy Hitters ──
+    'gemini-2.5-flash-lite',     // 1st — lighter, faster
+    'gemini-2.5-flash',          // 2nd — stable, reliable
+    'gemini-3.5-flash',          // 3rd — newest Flash, most capable
+    'gemini-3-flash-preview',    // 4th — 3.0 Flash preview
+    'gemini-3.1-flash-lite',     // 5th — lite fallback
+    'gemma-4-26b-a4b-it',        // 6th — Gemma open-weight
+    'gemma-4-31b-it',            // 7th — Gemma open-weight larger
+  ],
+
+  // ── Failover order specifically for Benchmarking ───────────────────────────
+  GEMINI_BENCHMARK_MODEL_FAILOVER: [
+    'gemini-3.1-flash-lite',     // 1st — now at top
+    'gemini-2.5-flash-lite',     
     'gemini-3.5-flash',
-    'gemini-3.0-flash',
+    'gemini-3-flash-preview',
     'gemini-2.5-flash',
-    
-    // ── Fast / Lite Fallbacks ──
-    'gemini-2.5-flash-lite',
-    'gemini-3.1-flash-lite',
-    
-    // ── Legacy Flash Models ──
-    'gemini-1.5-flash-8b',
-    'gemini-1.5-flash',
-    
-    // ── Gemma Models ──
+    'gemma-4-26b-a4b-it',
+    'gemma-4-31b-it',
+  ],
+
+  // ── Failover order specifically for Career Roadmaps ────────────────────────
+  GEMINI_ROADMAP_MODEL_FAILOVER: [
+    'gemini-3.1-flash-lite',     // 1st — now at top
+    'gemini-2.5-flash-lite',     
+    'gemini-3.5-flash',
+    'gemini-3-flash-preview',
+    'gemini-2.5-flash',
     'gemma-4-26b-a4b-it',
     'gemma-4-31b-it',
   ],

@@ -310,6 +310,18 @@ const initApp = async () => {
             );
           }
 
+
+          // Reset benchmarking tab so it re-fetches for the new resume.
+          // The backend fires a new benchmark job after every analysis.
+          // Without this reset, the tab shows stale in-memory results.
+          setTimeout(function() {
+            if (typeof window.benchRun === 'function') {
+              window.benchRun();
+            } else if (typeof window.initBenchmarking === 'function') {
+              window.initBenchmarking();
+            }
+          }, 2000);
+
         } catch (err) {
           console.error('Analysis failed:', err);
           if (window.CareerIQAuth && window.CareerIQAuth.Toast) {
@@ -1664,6 +1676,154 @@ const initApp = async () => {
             ${ap.encouragement ? `<div class="ra-encouragement">${ap.encouragement}</div>` : ""}
             ${D.confidence.confidence_score ? `<div style="margin-top:1rem;display:flex;justify-content:flex-end"><span class="ra-confidence-badge">🛡️ <span style="color:${window.COLORS.getScoreColor(D.confidence.confidence_score)}">Analysis Confidence: ${D.confidence.confidence_score}%</span> · ${D.confidence.extraction_quality || ""}</span></div>` : ""}`;
                     }
+
+                    // ── OVERALL CHANGES REQUIRED ─────────────────────────────────────────
+                    (function buildOverallChanges() {
+                        var el_list  = document.getElementById('raChangesList');
+                        var el_sub   = document.getElementById('raOverallChangesSub');
+                        var el_intro = document.getElementById('raChangesIntro');
+                        var el_wrap  = document.getElementById('raChangesExpandWrap');
+                        var el_btn   = document.getElementById('raChangesExpandBtn');
+                        if (!el_list) return;
+
+                        var seen = {}; // dedup by normalised text
+                        var allChanges = [];
+
+                        function normalise(t) { return (t || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+
+                        function push(item) {
+                            var key = normalise(item.text);
+                            if (!key || seen[key]) return;
+                            seen[key] = true;
+                            allChanges.push(item);
+                        }
+
+                        // ── 1. ACTION PLAN (highest priority) ───────────────
+                        (ap.critical_fixes || []).forEach(function(f) {
+                            push({ text: f.fix || f.action || '',
+                                detail: (f.action && f.fix && f.action !== f.fix) ? f.action : '',
+                                section: f.section || '', time: f.time_to_fix || '',
+                                icon: '🔴', tagClass: 'ra-change-tag-critical', tagLabel: 'Critical' });
+                        });
+
+                        (ap.quick_wins || []).forEach(function(w) {
+                            push({ text: w.action || '',
+                                detail: w.expected_score_gain ? ('+' + w.expected_score_gain + ' pts expected') : '',
+                                section: w.section || '', time: w.time_to_fix || '',
+                                icon: '⚡', tagClass: 'ra-change-tag-quick', tagLabel: 'Quick Win' });
+                        });
+
+                        (ap.this_week_improvements || []).forEach(function(w) {
+                            push({ text: w.improvement || w.action || '',
+                                detail: w.why_it_matters || '',
+                                section: w.section || '', time: '',
+                                icon: '📅', tagClass: 'ra-change-tag-weekly', tagLabel: 'This Week' });
+                        });
+
+                        (ap.long_term_suggestions || []).forEach(function(s) {
+                            var txt = typeof s === 'string' ? s : (s.suggestion || s.action || String(s));
+                            push({ text: txt, detail: '', section: '', time: '',
+                                icon: '🚀', tagClass: 'ra-change-tag-longterm', tagLabel: 'Long Term' });
+                        });
+
+                        (ap.biggest_gaps || []).forEach(function(g) {
+                            push({ text: g, detail: '', section: 'Gap', time: '',
+                                icon: '⚠️', tagClass: 'ra-change-tag-critical', tagLabel: 'Gap' });
+                        });
+
+                        // ── 2. SECTION ISSUES (problems found in the resume) ─
+                        var sectionIssues = [
+                            { data: D.contact,          label: 'Contact' },
+                            { data: D.summary,          label: 'Summary' },
+                            { data: D.experience,       label: 'Experience' },
+                            { data: D.education,        label: 'Education' },
+                            { data: D.skills,           label: 'Skills' },
+                            { data: D.projects,         label: 'Projects' },
+                            { data: D.formatting,       label: 'Formatting' },
+                            { data: D.certifications,   label: 'Certifications' },
+                            { data: D.extracurriculars, label: 'Extracurriculars' }
+                        ];
+                        sectionIssues.forEach(function(sec) {
+                            (sec.data.issues || []).forEach(function(iss) {
+                                var txt = typeof iss === 'string' ? iss : (iss.issue || '');
+                                push({ text: txt, detail: '', section: sec.label, time: '',
+                                    icon: '❌', tagClass: 'ra-change-tag-issue', tagLabel: 'Issue' });
+                            });
+                        });
+
+                        // ── 3. SECTION SUGGESTIONS ─────────────────────────
+                        var sectionSuggestions = [
+                            { arr: D.contact.contact_suggestions,              label: 'Contact' },
+                            { arr: D.summary.summary_suggestions,              label: 'Summary' },
+                            { arr: D.experience.experience_suggestions,        label: 'Experience' },
+                            { arr: D.education.education_suggestions,          label: 'Education' },
+                            { arr: D.skills.skills_suggestions,                label: 'Skills' },
+                            { arr: D.projects.projects_suggestions,            label: 'Projects' },
+                            { arr: D.formatting.formatting_suggestions,        label: 'Formatting' },
+                            { arr: D.certifications.certifications_suggestions,label: 'Certifications' },
+                            { arr: D.certifications.achievements_suggestions,  label: 'Achievements' },
+                            { arr: D.extracurriculars.extracurricular_suggestions, label: 'Extracurriculars' }
+                        ];
+                        sectionSuggestions.forEach(function(sec) {
+                            (sec.arr || []).forEach(function(s) {
+                                var txt = typeof s === 'string' ? s : (s.suggestion || s.action || String(s));
+                                push({ text: txt, detail: '', section: sec.label, time: '',
+                                    icon: '💡', tagClass: 'ra-change-tag-suggestion', tagLabel: 'Suggestion' });
+                            });
+                        });
+
+                        if (allChanges.length === 0) {
+                            var card = document.getElementById('raOverallChangesCard');
+                            if (card) card.style.display = 'none';
+                            return;
+                        }
+
+                        var PREVIEW = 4;
+                        if (el_sub)   el_sub.textContent   = allChanges.length + ' total changes across all sections';
+                        if (el_intro) el_intro.textContent = 'Every issue, suggestion, and improvement needed across your entire resume — all in one place, ordered by priority.';
+
+                        el_list.innerHTML = allChanges.map(function(c, i) {
+                            var hidden = i >= PREVIEW ? ' ra-change-hidden' : '';
+                            var metaParts = [
+                                '<span class="ra-change-tag ' + c.tagClass + '">' + c.tagLabel + '</span>',
+                                c.section ? '<span class="ra-change-section-tag">' + c.section + '</span>' : '',
+                                c.time    ? '<span class="ra-change-time">⏱ ' + c.time + '</span>' : '',
+                                c.detail  ? '<span class="ra-change-time">' + c.detail + '</span>' : ''
+                            ].filter(Boolean).join('');
+                            return '<li class="ra-change-item' + hidden + '" style="animation-delay:' + (i * 0.04) + 's">'
+                                + '<span class="ra-change-icon">' + c.icon + '</span>'
+                                + '<div class="ra-change-body">'
+                                + '<div class="ra-change-text">' + c.text + '</div>'
+                                + (metaParts ? '<div class="ra-change-meta">' + metaParts + '</div>' : '')
+                                + '</div></li>';
+                        }).join('');
+
+                        if (allChanges.length > PREVIEW) {
+                            if (el_wrap) el_wrap.style.display = 'flex';
+                            if (el_btn) {
+                                var initLabel = el_btn.querySelector('.ra-changes-expand-label');
+                                if (initLabel) initLabel.textContent = 'Show all ' + allChanges.length + ' changes';
+                                el_btn.addEventListener('click', function() {
+                                    var isExpanded = el_btn.getAttribute('aria-expanded') === 'true';
+                                    el_btn.setAttribute('aria-expanded', String(!isExpanded));
+                                    var lbl = el_btn.querySelector('.ra-changes-expand-label');
+                                    if (lbl) lbl.textContent = isExpanded ? 'Show all ' + allChanges.length + ' changes' : 'Show less';
+                                    el_list.querySelectorAll('.ra-change-hidden').forEach(function(li) {
+                                        li.style.display = isExpanded ? 'none' : 'flex';
+                                    });
+                                    if (!isExpanded) {
+                                        el_list.querySelectorAll('.ra-change-item').forEach(function(li, idx) {
+                                            if (idx >= PREVIEW) {
+                                                li.style.animation = 'none';
+                                                void li.offsetHeight;
+                                                li.style.animation = 'ra-change-slide-in 0.3s var(--ra-ease) ' + ((idx - PREVIEW) * 0.04) + 's both';
+                                            }
+                                        });
+                                    }
+                                });
+                            }
+                        }
+                    })();
                 };
 
                 // Populate on load if analysis is already available

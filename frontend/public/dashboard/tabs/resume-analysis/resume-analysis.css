@@ -1227,3 +1227,180 @@
                                 border-radius: 50%;
                                 flex-shrink: 0;
                             }
+
+                            /* ── Overall Changes Card ───────────────────────────────────── */
+                            .ra-overall-changes-card {
+                                border-top: 3px solid var(--ra-amber);
+                                position: relative;
+                                overflow: hidden;
+                            }
+                            .ra-overall-changes-card::before {
+                                content: '';
+                                position: absolute;
+                                top: 0; left: 0; right: 0;
+                                height: 80px;
+                                background: linear-gradient(180deg, rgba(245,158,11,0.06) 0%, transparent 100%);
+                                pointer-events: none;
+                            }
+                            .ra-changes-intro {
+                                font-size: 13px;
+                                color: var(--ra-muted);
+                                margin: 0 0 1rem 0;
+                                line-height: 1.6;
+                            }
+                            .ra-changes-list {
+                                list-style: none;
+                                margin: 0;
+                                padding: 0;
+                                display: flex;
+                                flex-direction: column;
+                                gap: 0.55rem;
+                            }
+                            .ra-change-item {
+                                display: flex;
+                                align-items: flex-start;
+                                gap: 0.75rem;
+                                padding: 0.7rem 0.9rem;
+                                border-radius: var(--ra-radius);
+                                background: var(--ra-elevated, #221720);
+                                border: 1px solid var(--ra-border);
+                                transition: border-color 0.2s, background 0.2s;
+                                animation: ra-change-slide-in 0.3s var(--ra-ease) both;
+                            }
+                            .ra-change-item:hover {
+                                border-color: var(--ra-border-h);
+                                background: var(--ra-card);
+                            }
+                            .ra-change-item.ra-change-hidden {
+                                display: none;
+                            }
+                            @keyframes ra-change-slide-in {
+                                from { opacity: 0; transform: translateY(8px); }
+                                to   { opacity: 1; transform: translateY(0);   }
+                            }
+                            .ra-change-icon {
+                                font-size: 16px;
+                                flex-shrink: 0;
+                                margin-top: 1px;
+                            }
+                            .ra-change-body {
+                                flex: 1;
+                                min-width: 0;
+                            }
+                            .ra-change-text {
+                                font-size: 13px;
+                                font-weight: 500;
+                                color: var(--ra-text);
+                                line-height: 1.5;
+                            }
+                            .ra-change-meta {
+                                display: flex;
+                                align-items: center;
+                                gap: 0.4rem;
+                                margin-top: 0.3rem;
+                                flex-wrap: wrap;
+                            }
+                            .ra-change-tag {
+                                font-size: 10px;
+                                font-weight: 600;
+                                letter-spacing: 0.03em;
+                                text-transform: uppercase;
+                                padding: 2px 7px;
+                                border-radius: 20px;
+                            }
+                            .ra-change-tag-critical {
+                                background: rgba(239,68,68,0.15);
+                                color: #ef4444;
+                                border: 1px solid rgba(239,68,68,0.3);
+                            }
+                            .ra-change-tag-quick {
+                                background: rgba(245,158,11,0.15);
+                                color: #f59e0b;
+                                border: 1px solid rgba(245,158,11,0.3);
+                            }
+                            .ra-change-tag-weekly {
+                                background: rgba(59,130,246,0.15);
+                                color: #3b82f6;
+                                border: 1px solid rgba(59,130,246,0.3);
+                            }
+                            .ra-change-tag-longterm {
+                                background: rgba(139,92,246,0.15);
+                                color: #8b5cf6;
+                                border: 1px solid rgba(139,92,246,0.3);
+                            }
+                            .ra-change-tag-issue {
+                                background: rgba(239,68,68,0.12);
+                                color: #f87171;
+                                border: 1px solid rgba(239,68,68,0.25);
+                            }
+                            .ra-change-tag-suggestion {
+                                background: rgba(16,185,129,0.12);
+                                color: #10b981;
+                                border: 1px solid rgba(16,185,129,0.25);
+                            }
+                            .ra-change-section-tag {
+                                font-size: 10px;
+                                color: var(--ra-dim);
+                                background: var(--ra-bg);
+                                border: 1px solid var(--ra-border);
+                                border-radius: 20px;
+                                padding: 2px 7px;
+                            }
+                            .ra-change-time {
+                                font-size: 10px;
+                                color: var(--ra-dim);
+                            }
+
+                            /* Expand button */
+                            .ra-changes-expand-wrap {
+                                margin-top: 1rem;
+                                display: flex;
+                                justify-content: center;
+                            }
+                            .ra-changes-expand-btn {
+                                display: inline-flex;
+                                align-items: center;
+                                gap: 0.4rem;
+                                padding: 0.55rem 1.25rem;
+                                border-radius: 40px;
+                                border: 1px solid var(--ra-border);
+                                background: var(--ra-elevated);
+                                color: var(--ra-muted);
+                                font-size: 13px;
+                                font-weight: 500;
+                                cursor: pointer;
+                                transition: all 0.2s var(--ra-ease);
+                            }
+                            .ra-changes-expand-btn:hover {
+                                border-color: var(--ra-amber);
+                                color: var(--ra-amber);
+                                background: rgba(245,158,11,0.07);
+                            }
+                            .ra-changes-chevron {
+                                transition: transform 0.3s var(--ra-ease);
+                                flex-shrink: 0;
+                            }
+                            .ra-changes-expand-btn[aria-expanded="true"] .ra-changes-chevron {
+                                transform: rotate(180deg);
+                            }
+                            .ra-changes-expand-label {
+                                display: inline;
+                            }
+                            [data-theme="light"] .ra-change-item {
+                                background: #fff8f9;
+                                border-color: #f0c8d0;
+                            }
+                            [data-theme="light"] .ra-change-item:hover {
+                                border-color: #c2849a;
+                                background: #ffffff;
+                            }
+                            [data-theme="light"] .ra-changes-expand-btn {
+                                background: #fff8f9;
+                                border-color: #f0c8d0;
+                                color: #5c3347;
+                            }
+                            [data-theme="light"] .ra-changes-expand-btn:hover {
+                                border-color: #d97706;
+                                color: #d97706;
+                                background: rgba(217,119,6,0.07);
+                            }

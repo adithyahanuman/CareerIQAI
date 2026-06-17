@@ -128,7 +128,7 @@ class AIService {
    * @returns {Promise<NormalizedResponse>}
    */
   async benchmarkResumes(prompt) {
-    return this._execute('analyzeResume', prompt);
+    return this._execute('benchmarkResumes', prompt);
   }
 }
 
