@@ -138,7 +138,7 @@ const initApp = async () => {
       // Fetch active resume from PostgreSQL
       try {
         const token = await firebase.auth().currentUser.getIdToken();
-        const res = await fetch('http://localhost:5000/api/resumes/my/active', {
+        const res = await fetch('https://careeriqai.onrender.com/api/resumes/my/active', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -1850,7 +1850,7 @@ const initApp = async () => {
                                 .auth()
                                 .currentUser.getIdToken();
                             const res = await fetch(
-                                "http://localhost:5000/api/resumes/my/active",
+                                "https://careeriqai.onrender.com/api/resumes/my/active",
                                 {
                                     headers: {
                                         Authorization: `Bearer ${token}`,
@@ -1905,7 +1905,7 @@ const initApp = async () => {
                     try {
                         const tok = await firebase.auth().currentUser?.getIdToken();
                         if (!tok) return;
-                        const res = await fetch('http://localhost:5000/api/career/roadmap/saved', {
+                        const res = await fetch('https://careeriqai.onrender.com/api/career/roadmap/saved', {
                             headers: { Authorization: `Bearer ${tok}` }
                         });
                         if (!res.ok) return;
@@ -2127,7 +2127,7 @@ const initApp = async () => {
 
                         try {
                             const token    = await firebase.auth().currentUser.getIdToken();
-                            const response = await fetch("http://localhost:5000/api/career/roadmap", {
+                            const response = await fetch("https://careeriqai.onrender.com/api/career/roadmap", {
                                 method:  "POST",
                                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
                                 body: JSON.stringify({
@@ -2521,7 +2521,7 @@ const initApp = async () => {
                                 .auth()
                                 .currentUser.getIdToken();
                             const response = await fetch(
-                                "http://localhost:5000/api/career/roadmap",
+                                "https://careeriqai.onrender.com/api/career/roadmap",
                                 {
                                     method: "POST",
                                     headers: {
@@ -2707,7 +2707,7 @@ const initApp = async () => {
                         const formData = new FormData();
                         formData.append('resumeFile', file);
 
-                        const response = await fetch("http://localhost:5000/resume/extract", {
+                        const response = await fetch("https://careeriqai.onrender.com/resume/extract", {
                             method: "POST",
                             body: formData
                         });
@@ -2828,7 +2828,7 @@ const initApp = async () => {
 
                         // 3. Send to backend
                         try {
-                            const res = await fetch('http://localhost:5000/api/chat', {
+                            const res = await fetch('https://careeriqai.onrender.com/api/chat', {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',

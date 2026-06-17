@@ -378,7 +378,7 @@ const OnboardingWizard = {
           gpa: payload.gpa || null
         };
         
-        const pgRes = await fetch('http://localhost:5000/api/students/me', {
+        const pgRes = await fetch('https://careeriqai.onrender.com/api/students/me', {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -612,7 +612,7 @@ const OnboardingWizard = {
         console.log('[Onboarding] Starting backend PDF extraction...');
         const formData = new FormData();
         formData.append('resumeFile', file);
-        const response = await fetch("http://localhost:5000/resume/extract", {
+        const response = await fetch("https://careeriqai.onrender.com/resume/extract", {
           method: "POST",
           body: formData
         });

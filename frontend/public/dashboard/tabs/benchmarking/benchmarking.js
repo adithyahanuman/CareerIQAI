@@ -14,7 +14,7 @@
 'use strict';
 
 (function () {
-    const API_BASE   = window.API_BASE || 'http://localhost:5000/api';
+    const API_BASE   = window.API_BASE || 'https://careeriqai.onrender.com/api';
     const TOP_N      = 10;
     const POLL_MS    = 6000;   // poll every 6 seconds while 'running'
 
