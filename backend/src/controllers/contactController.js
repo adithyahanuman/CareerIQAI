@@ -26,11 +26,12 @@ exports.submitContactForm = async (req, res, next) => {
       });
     }
 
-    // Configure the Nodemailer transporter explicitly for Gmail with timeouts
+    // Configure the Nodemailer transporter explicitly for Gmail
     const transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
       port: 465,
       secure: true,
+      family: 4, // Force IPv4 to prevent ENETUNREACH on Render
       auth: {
         user: env.smtpUser,
         pass: env.smtpPass
