@@ -29,8 +29,8 @@ exports.submitContactForm = async (req, res, next) => {
     // Configure the Nodemailer transporter explicitly for Gmail
     const transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,
+      port: 587,
+      secure: false, // false for 587 (uses STARTTLS)
       family: 4, // Force IPv4 to prevent ENETUNREACH on Render
       auth: {
         user: env.smtpUser,
