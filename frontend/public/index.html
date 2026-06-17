@@ -943,6 +943,30 @@
           setTimeout(() => content.classList.remove('tilt-active'), 500);
         });
       }
+
+      // Mobile Menu Hamburger Logic
+      const hamburger = document.getElementById('hamburger');
+      const mobileMenu = document.getElementById('mobileMenu');
+      if (hamburger && mobileMenu) {
+        hamburger.addEventListener('click', () => {
+          const isExpanded = hamburger.getAttribute('aria-expanded') === 'true';
+          hamburger.setAttribute('aria-expanded', !isExpanded);
+          hamburger.classList.toggle('active');
+          mobileMenu.classList.toggle('active');
+          document.body.style.overflow = isExpanded ? '' : 'hidden'; // Prevent scrolling when menu is open
+        });
+
+        // Close menu when clicking a link
+        const mobileLinks = mobileMenu.querySelectorAll('a');
+        mobileLinks.forEach(link => {
+          link.addEventListener('click', () => {
+            hamburger.setAttribute('aria-expanded', 'false');
+            hamburger.classList.remove('active');
+            mobileMenu.classList.remove('active');
+            document.body.style.overflow = '';
+          });
+        });
+      }
     });
   </script>
 </body>
