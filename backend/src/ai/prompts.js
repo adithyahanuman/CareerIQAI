@@ -26,7 +26,7 @@ const fullResumeAnalysis = (resumeText, targetRoleType = 'internship') => {
   const now = new Date();
   const currentDate = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric', day: 'numeric' });
   const roleInstruction = targetRoleType === 'fulltime' 
-    ? 'CRITICAL INSTRUCTION FOR ROLE RECOMMENDATIONS: The user has explicitly stated they are targeting FULL-TIME JOBS. All role recommendations and advice MUST be optimized for full-time junior/entry-level positions. DO NOT recommend internships.'
+    ? 'CRITICAL EXPLICIT INSTRUCTION: The user is applying EXCLUSIVELY for FULL-TIME JOBS. You MUST NOT mention, recommend, or suggest ANY internships whatsoever. All recommended roles MUST be full-time junior, entry-level, or associate positions (e.g., "Software Engineer", "Junior Data Analyst"). Do NOT output "Intern". Any mention of internships in the action plan or recommended roles is a strict failure of your instructions.'
     : 'CRITICAL INSTRUCTION FOR ROLE RECOMMENDATIONS: The user has explicitly stated they are targeting INTERNSHIPS. All role recommendations and advice MUST be optimized for internship positions (e.g., Software Engineering Intern).';
 
   return `You are an expert resume analyst and university career counselor specializing in helping students land internships or full-time roles. You have reviewed over 30,000 student resumes and know exactly what recruiters at top companies look for.
