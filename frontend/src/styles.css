@@ -2817,8 +2817,19 @@ textarea {
     max-width: 100%;
   }
 
+  /* Navbar */
+  .nav-container {
+    padding: 0 16px;
+    gap: 8px;
+  }
+
   .nav-links {
     display: none;
+  }
+
+  .nav-actions {
+    gap: 8px;
+    flex-shrink: 0;
   }
 
   .nav-actions .btn-ghost,
@@ -2826,8 +2837,18 @@ textarea {
     display: none;
   }
 
+  /* Keep theme-toggle visible and correctly sized */
+  .theme-toggle {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+  }
+
+  /* Hamburger — always visible, properly sized */
   .hamburger {
     display: flex;
+    flex-shrink: 0;
+    margin-left: 4px;
   }
 
   /* Hero */

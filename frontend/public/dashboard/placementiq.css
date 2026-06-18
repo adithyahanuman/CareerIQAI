@@ -1459,6 +1459,60 @@
     .main-container {
         padding: 20px !important;
     }
+
+    /* ── Hero Card: stack gauge above text on mobile ── */
+    .piq-hero-card {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 20px;
+        padding: 24px 20px;
+    }
+
+    .piq-hero-left {
+        flex-shrink: 0;
+    }
+
+    .piq-hero-right {
+        width: 100%;
+    }
+
+    .piq-hero-actions {
+        justify-content: center;
+    }
+
+    /* ── Dashboard grid: single column ── */
+    .piq-dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .piq-metric-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    /* ── Second row / roles: prevent overflow ── */
+    .piq-second-row {
+        grid-template-columns: 1fr;
+    }
+
+    .piq-roles-card,
+    .piq-trend-card {
+        overflow: hidden;
+    }
+
+    /* ── Role items: prevent right-side cutoff ── */
+    .piq-role-item {
+        width: 100%;
+        box-sizing: border-box;
+        overflow: hidden;
+    }
+
+    .piq-role-header {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
 }
 
 /* ── Analyze button in RA empty state styling ── */

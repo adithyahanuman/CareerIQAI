@@ -817,4 +817,61 @@
 @media (max-width: 700px) {
     .bench-tab { padding: 16px; }
     .bench-role-grid { grid-template-columns: 1fr; }
+
+    /* Prevent role cards being cut off on right */
+    .bench-role-card {
+        width: 100%;
+        box-sizing: border-box;
+        overflow: hidden;
+    }
+
+    /* Role card main row: allow rank+info to shrink, keep pill visible */
+    .bench-role-card-main {
+        gap: 8px;
+    }
+
+    .bench-role-rank-badge {
+        width: 24px;
+        font-size: 11px;
+    }
+
+    .bench-role-name {
+        font-size: 13px;
+    }
+
+    .bench-role-category {
+        font-size: 10px;
+        white-space: normal;
+    }
+
+    /* Shrink the score pill slightly so it fits on narrow screens */
+    .bench-score-pill {
+        width: 48px;
+        height: 40px;
+    }
+
+    .bench-score-num {
+        font-size: 14px;
+    }
+
+    .bench-score-label {
+        font-size: 9px;
+    }
+
+    /* Controls bar */
+    .bench-controls {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .bench-search-box {
+        width: 100%;
+    }
+
+    /* Peer comparison section */
+    .bench-section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
 }
