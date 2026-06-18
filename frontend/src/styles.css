@@ -2955,10 +2955,13 @@ textarea {
     padding: 16px 12px;
   }
 
-  .career-match-card,
+  .career-match-card {
+    grid-column: 1;
+  }
+
   .skill-card,
   .roadmap-card {
-    grid-column: 1;
+    display: none;
   }
 
   /* Improve Match Score layout on mobile */
