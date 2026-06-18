@@ -27,11 +27,9 @@ const corsOptions = {
     // Also allow "null" string origin sent by browsers for file:// pages
     if (!origin || origin === 'null') return callback(null, true);
 
-    if (allAllowed.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error(`CORS policy: origin "${origin}" is not allowed.`));
-    }
+    // Allow all origins dynamically (echoes back the requesting origin)
+    // This solves the issue of testing from mobile phones on LAN IPs
+    callback(null, true);
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
