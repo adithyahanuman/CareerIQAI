@@ -17,6 +17,9 @@ window.COLORS = {
 };
 
 const initApp = async () => {
+      // Proactively wake up Render server on dashboard load
+      fetch("https://careeriqai.onrender.com/health").catch(() => {});
+
       const { Session, ProtectedRoute, db } = window.CareerIQAuth;
 
       // Setup Navigation and Toggle actions
@@ -2707,10 +2710,33 @@ const initApp = async () => {
                         const formData = new FormData();
                         formData.append('resumeFile', file);
 
-                        const response = await fetch("https://careeriqai.onrender.com/resume/extract", {
-                            method: "POST",
-                            body: formData
-                        });
+                        // Wake up the Render server first (free tier sleeps after 15 min)
+                        // This prevents "Failed to fetch" on cold starts
+                        try {
+                            const wake = await fetch("https://careeriqai.onrender.com/health", {
+                                method: "GET",
+                                signal: AbortSignal.timeout(20000)
+                            });
+                            if (!wake.ok) throw new Error('wake failed');
+                        } catch (wakeErr) {
+                            // If health check itself fails, server is down
+                            throw new Error('Cannot reach the server. Please check your internet connection and try again in a moment.');
+                        }
+
+                        // Now send the actual file
+                        let response;
+                        try {
+                            response = await fetch("https://careeriqai.onrender.com/resume/extract", {
+                                method: "POST",
+                                body: formData,
+                                signal: AbortSignal.timeout(60000)  // 60s timeout for large PDFs
+                            });
+                        } catch (fetchErr) {
+                            if (fetchErr.name === 'TimeoutError') {
+                                throw new Error('Upload timed out. The server is busy — please try again in 30 seconds.');
+                            }
+                            throw new Error('Failed to reach server. Check your internet connection and try again.');
+                        }
 
                         if (!response.ok) {
                             throw new Error('Failed to extract resume: ' + response.statusText);
