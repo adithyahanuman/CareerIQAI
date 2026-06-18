@@ -93,8 +93,9 @@ const uploadResume = async ({ student_id, resume_text, file_name = 'resume.txt',
     const aiResponse = await aiService.analyzeResume(prompts.fullResumeAnalysis(resume_text, target_role_type));
     const analysis = aiResponse.data;
 
-    // Extract overall score for ats_score column
-    const overallScore = analysis.overall?.overall_score ?? null;
+    // Extract overall score for ats_score column and ensure it is an integer to prevent db cast errors
+    let rawScore = analysis.overall?.overall_score;
+    const overallScore = rawScore != null ? Math.round(Number(rawScore)) : null;
 
     // Sanitize AI hallucinations: if fulltime is requested, strictly remove 'Intern' from roles
     if (target_role_type === 'fulltime') {
