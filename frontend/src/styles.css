@@ -378,7 +378,10 @@ textarea {
 
 /* ---- Typography ---- */
 .gradient-text {
+  color: var(--brand); /* Fallback for browsers that fail on clip */
   background: var(--gradient-text);
+  background-image: var(--gradient-text);
+  background-size: 100%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -3225,36 +3228,37 @@ textarea {
   padding-bottom: 40px;
 }
 
-.hamburger {
-  display: none;
-  flex-direction: column;
-  justify-content: space-between;
-  width: 24px;
-  height: 20px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  z-index: 999;
-}
+@media (max-width: 768px) {
+  .hamburger {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 24px;
+    height: 20px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    z-index: 999;
+  }
 
-.hamburger span {
-  width: 100%;
-  height: 2px;
-  background-color: var(--text-primary);
-  border-radius: 4px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
+  .hamburger span {
+    width: 100%;
+    height: 2px;
+    background-color: var(--text-primary);
+    border-radius: 4px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
 
-.hamburger.active span:nth-child(1) {
-  transform: translateY(9px) rotate(45deg);
-}
+  .hamburger.active span:nth-child(1) {
+    transform: translateY(9px) rotate(45deg);
+  }
 
-.hamburger.active span:nth-child(2) {
-  opacity: 0;
-}
+  .hamburger.active span:nth-child(2) {
+    opacity: 0;
+  }
 
-.hamburger.active span:nth-child(3) {
-  transform: translateY(-9px) rotate(-45deg);
+  .hamburger.active span:nth-child(3) {
+    transform: translateY(-9px) rotate(-45deg);
+  }
 }
-
