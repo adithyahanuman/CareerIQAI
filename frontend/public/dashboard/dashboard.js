@@ -295,6 +295,10 @@ const initApp = async () => {
           const targetRoleType = pd.targetRoleType || 'internship';
           // Call backend — cache is used if analysis already exists for same filename
           const token = await firebase.auth().currentUser.getIdToken();
+          
+          const analyzingModal = document.getElementById('analyzingModal');
+          if (analyzingModal) analyzingModal.style.display = 'flex';
+
           const analysis = await window.GeminiClient.analyzeResume(resumeText, token, resumeName, targetRoleType);
 
           pgResume = analysis;
@@ -332,6 +336,9 @@ const initApp = async () => {
             window.CareerIQAuth.Toast.show('⚠️ ' + (err.message || 'Analysis failed. Make sure the backend is running.'), 'error', 6000);
           }
         } finally {
+          const analyzingModal = document.getElementById('analyzingModal');
+          if (analyzingModal) analyzingModal.style.display = 'none';
+          
           // Restore button states (keep display as-is — success path sets display:none)
           allAnalyzeBtns.forEach(btn => {
             if (btn.dataset.origHtml) btn.innerHTML = btn.dataset.origHtml;
@@ -883,6 +890,19 @@ const initApp = async () => {
                         }),
                     });
 
+                    const el_evLists = document.getElementById("raSkillsEvLists");
+                    if (el_evLists) {
+                        const noEvSkills = sk.skills_without_evidence || [];
+                        const basicSkills = sk.too_basic_flagged || [];
+                        const wEvSkills = allSk.filter((s) => !noEvSkills.includes(s) && !basicSkills.includes(s));
+                        
+                        let html = "";
+                        if (wEvSkills.length > 0) html += `<div><span style="color:#22c55e;font-weight:600">With Evidence:</span> <span style="color:var(--ra-muted)">${wEvSkills.join(", ")}</span></div>`;
+                        if (noEvSkills.length > 0) html += `<div><span style="color:#f59e0b;font-weight:600">No Evidence:</span> <span style="color:var(--ra-muted)">${noEvSkills.join(", ")}</span></div>`;
+                        if (basicSkills.length > 0) html += `<div><span style="color:#ef4444;font-weight:600">Too Basic:</span> <span style="color:var(--ra-muted)">${basicSkills.join(", ")}</span></div>`;
+                        el_evLists.innerHTML = html;
+                    }
+
                     const el_skRows = document.getElementById("raSkillsRows");
                     if (el_skRows) {
                         el_skRows.innerHTML = "";
@@ -924,30 +944,37 @@ const initApp = async () => {
                     const projScores = projList.map(
                         (p) => p.project_score || 0,
                     );
-                    raCreateChart("raChartProjBar", {
-                        type: "bar",
-                        data: {
-                            labels: projNames.map((n) =>
-                                n.length > 16 ? n.slice(0, 14) + "…" : n,
-                            ),
-                            datasets: [
-                                {
-                                    data: projScores,
-                                    backgroundColor: projScores.map((_, i) => window.COLORS.chart[i % window.COLORS.chart.length]),
-                                    borderRadius: 8,
-                                },
-                            ],
-                        },
-                        options: raChartOpts({
-                            scales: {
-                                x: {
-                                    ...raAxisStyle(),
-                                    grid: { display: false },
-                                },
-                                y: { min: 0, max: 10, ...raAxisStyle() },
+                    if (projNames.length === 0) {
+                        const projCanvas = document.getElementById("raChartProjBar");
+                        if (projCanvas) {
+                            projCanvas.parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-secondary);font-style:italic;">No projects identified.</div>';
+                        }
+                    } else {
+                        raCreateChart("raChartProjBar", {
+                            type: "bar",
+                            data: {
+                                labels: projNames.map((n) =>
+                                    n.length > 16 ? n.slice(0, 14) + "…" : n,
+                                ),
+                                datasets: [
+                                    {
+                                        data: projScores,
+                                        backgroundColor: projScores.map((_, i) => window.COLORS.chart[i % window.COLORS.chart.length]),
+                                        borderRadius: 8,
+                                    },
+                                ],
                             },
-                        }),
-                    });
+                            options: raChartOpts({
+                                scales: {
+                                    x: {
+                                        ...raAxisStyle(),
+                                        grid: { display: false },
+                                    },
+                                    y: { min: 0, max: 10, ...raAxisStyle() },
+                                },
+                            }),
+                        });
+                    }
 
                     const withLink = projList.filter((p) => p.has_link).length;
                     const withOutcome = projList.filter(
@@ -956,47 +983,57 @@ const initApp = async () => {
                     const tutorial = projList.filter(
                         (p) => p.is_tutorial_level,
                     ).length;
-                    raCreateChart("raChartProjHealth", {
-                        type: "doughnut",
-                        data: {
-                            labels: ["Has Link", "Has Outcome", "Tutorial"],
-                            datasets: [
-                                {
-                                    data: [withLink, withOutcome, tutorial],
-                                    backgroundColor: [
-                                        window.COLORS.chart[0],
-                                        window.COLORS.chart[1],
-                                        window.COLORS.chart[2]
-                                    ],
-                                    borderColor: "transparent",
-                                    borderWidth: 2,
-                                },
-                            ],
-                        },
-                        options: raChartOpts({ cutout: "58%" }),
-                    });
-                    raHtmlLegend("raLegendProjHealth", [
-                        {
-                            label: "Has Link",
-                            value: withLink,
-                            color: window.COLORS.chart[0],
-                        },
-                        {
-                            label: "Has Outcome",
-                            value: withOutcome,
-                            color: window.COLORS.chart[1],
-                        },
-                        {
-                            label: "Tutorial",
-                            value: tutorial,
-                            color: window.COLORS.chart[2],
-                        },
-                    ]);
+                    if (withLink === 0 && withOutcome === 0 && tutorial === 0) {
+                        const hlthCanvas = document.getElementById("raChartProjHealth");
+                        if (hlthCanvas) {
+                            hlthCanvas.parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-secondary);font-style:italic;">No project data.</div>';
+                        }
+                    } else {
+                        raCreateChart("raChartProjHealth", {
+                            type: "doughnut",
+                            data: {
+                                labels: ["Has Link", "Has Outcome", "Tutorial"],
+                                datasets: [
+                                    {
+                                        data: [withLink, withOutcome, tutorial],
+                                        backgroundColor: [
+                                            window.COLORS.chart[0],
+                                            window.COLORS.chart[1],
+                                            window.COLORS.chart[2]
+                                        ],
+                                        borderColor: "transparent",
+                                        borderWidth: 2,
+                                    },
+                                ],
+                            },
+                            options: raChartOpts({ cutout: "58%" }),
+                        });
+                        raHtmlLegend("raLegendProjHealth", [
+                            {
+                                label: "Has Link",
+                                value: withLink,
+                                color: window.COLORS.chart[0],
+                            },
+                            {
+                                label: "Has Outcome",
+                                value: withOutcome,
+                                color: window.COLORS.chart[1],
+                            },
+                            {
+                                label: "Tutorial",
+                                value: tutorial,
+                                color: window.COLORS.chart[2],
+                            },
+                        ]);
+                    }
 
                     const el_prgrid = document.getElementById("raProjGrid");
                     if (el_prgrid) {
                         el_prgrid.innerHTML = "";
-                        projList.forEach((p, i) => {
+                        if (projList.length === 0) {
+                            el_prgrid.innerHTML = '<div class="ra-section-tip">No projects found on this resume. Consider adding 2-3 strong projects to improve your score.</div>';
+                        } else {
+                            projList.forEach((p, i) => {
                             const complexMap = {
                                 basic: "ra-badge-gray",
                                 intermediate: "ra-badge-amber",
@@ -1027,6 +1064,7 @@ const initApp = async () => {
               </div>`;
                             el_prgrid.appendChild(card);
                         });
+                        }
                     }
 
                     // ── EXPERIENCE ──────────────────────────────────────────────────────
@@ -1049,62 +1087,69 @@ const initApp = async () => {
                         mostly_observation: "#f59e0b",
                         unclear: "#ef4444",
                     };
-                    raCreateChart("raChartExpScores", {
-                        type: "bar",
-                        data: {
-                            labels: roleNames,
-                            datasets: [
-                                {
-                                    data: roleScores,
-                                    backgroundColor: roles.map(
-                                        (r) =>
-                                            dotMap[r.contribution_quality] ||
-                                            "#3b82f6",
-                                    ),
-                                    borderRadius: 6,
-                                },
-                            ],
-                        },
-                        options: raChartOpts({
-                            scales: {
-                                x: {
-                                    ...raAxisStyle(),
-                                    grid: { display: false },
-                                },
-                                y: { min: 0, max: 10, ...raAxisStyle() },
+                    if (roles.length === 0) {
+                        const scoreCanvas = document.getElementById("raChartExpScores");
+                        if (scoreCanvas) scoreCanvas.parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-secondary);font-style:italic;">No roles identified.</div>';
+                        const durCanvas = document.getElementById("raChartExpDuration");
+                        if (durCanvas) durCanvas.parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-secondary);font-style:italic;">No duration data.</div>';
+                    } else {
+                        raCreateChart("raChartExpScores", {
+                            type: "bar",
+                            data: {
+                                labels: roleNames,
+                                datasets: [
+                                    {
+                                        data: roleScores,
+                                        backgroundColor: roles.map(
+                                            (r) =>
+                                                dotMap[r.contribution_quality] ||
+                                                "#3b82f6",
+                                        ),
+                                        borderRadius: 6,
+                                    },
+                                ],
                             },
-                        }),
-                    });
-                    raCreateChart("raChartExpDuration", {
-                        type: "bar",
-                        data: {
-                            labels: roleNames,
-                            datasets: [
-                                {
-                                    data: roleDurations,
-                                    backgroundColor: window.COLORS.chart[0],
-                                    borderColor: window.COLORS.chart[0],
-                                    borderWidth: 1,
-                                    borderRadius: 6,
+                            options: raChartOpts({
+                                scales: {
+                                    x: {
+                                        ...raAxisStyle(),
+                                        grid: { display: false },
+                                    },
+                                    y: { min: 0, max: 10, ...raAxisStyle() },
                                 },
-                            ],
-                        },
-                        options: raChartOpts({
-                            scales: {
-                                x: {
-                                    ...raAxisStyle(),
-                                    grid: { display: false },
-                                },
-                                y: { ...raAxisStyle(), ticks: { stepSize: 1 } },
+                            }),
+                        });
+                        raCreateChart("raChartExpDuration", {
+                            type: "bar",
+                            data: {
+                                labels: roleNames,
+                                datasets: [
+                                    {
+                                        data: roleDurations,
+                                        backgroundColor: window.COLORS.chart[0],
+                                        borderColor: window.COLORS.chart[0],
+                                        borderWidth: 1,
+                                        borderRadius: 6,
+                                    },
+                                ],
                             },
-                        }),
-                    });
+                            options: raChartOpts({
+                                scales: {
+                                    x: {
+                                        ...raAxisStyle(),
+                                        grid: { display: false },
+                                    },
+                                    y: { ...raAxisStyle(), ticks: { stepSize: 1 } },
+                                },
+                            }),
+                        });
+                    }
 
                     const el_tl = document.getElementById("raTimeline");
                     if (el_tl) {
                         el_tl.innerHTML = "";
-                        if (roles.length === 0 && ex.no_experience_note) {
-                            el_tl.innerHTML = `<div class="ra-section-tip"><strong>Note:</strong> ${ex.no_experience_note}</div>`;
+                        if (roles.length === 0) {
+                            el_tl.innerHTML = `<div class="ra-section-tip"><strong>Note:</strong> ${ex.no_experience_note || "No experience entries found."}</div>`;
                         } else {
                             roles.forEach((role) => {
                                 const dotColor =
@@ -1174,12 +1219,18 @@ const initApp = async () => {
                                 },
                             }),
                         });
+                    } else {
+                        const eduCanvas = document.getElementById("raChartEduCoverage");
+                        if (eduCanvas) eduCanvas.parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-secondary);font-style:italic;">No education data.</div>';
                     }
                     const el_eduEnt = document.getElementById("raEduEntries");
                     if (el_eduEnt) {
                         el_eduEnt.innerHTML = "";
-                        eduEntries.forEach((e) => {
-                            const gpaMap = {
+                        if (eduEntries.length === 0) {
+                            el_eduEnt.innerHTML = '<div class="ra-section-tip">No education entries found.</div>';
+                        } else {
+                            eduEntries.forEach((e) => {
+                                const gpaMap = {
                                 "strong (8.5+)": "ra-badge-green",
                                 "good (8.0-6.5)": "ra-badge-blue",
                                 "average (6.49-4.99)": "ra-badge-amber",
@@ -1205,10 +1256,15 @@ const initApp = async () => {
                     )
                     .join("")}
               </div>
-              ${e.specialization_or_minor ? `<div style="font-size:11px;color:var(--ra-muted)">📚 ${e.specialization_or_minor}</div>` : ""}
-              ${ed.education_suggestions ? `<div class="ra-section-tip"><strong>Tip:</strong> ${ed.education_suggestions[0]}</div>` : ""}`;
+              `;
                             el_eduEnt.appendChild(div);
                         });
+                        if (ed.education_suggestions && ed.education_suggestions.length > 0) {
+                            const tipDiv = document.createElement("div");
+                            tipDiv.innerHTML = `<div class="ra-section-tip" style="margin-top:1rem;"><strong>Tip:</strong> ${ed.education_suggestions[0]}</div>`;
+                            el_eduEnt.appendChild(tipDiv);
+                        }
+                        }
                     }
 
                     // ── CERTIFICATIONS & ACHIEVEMENTS ──────────────────────────────────
@@ -1232,60 +1288,70 @@ const initApp = async () => {
                               ? "#f59e0b"
                               : "#ef4444",
                     );
-                    raCreateChart("raChartCertRel", {
-                        type: "pie",
-                        data: {
-                            labels: relLabels,
-                            datasets: [
-                                {
-                                    data: relData,
-                                    backgroundColor: relColors,
-                                    borderColor: "transparent",
-                                    borderWidth: 2,
-                                },
-                            ],
-                        },
-                        options: raChartOpts(),
-                    });
-                    raHtmlLegend(
-                        "raLegendCertRel",
-                        relLabels.map((l, i) => ({
-                            label: l,
-                            value: relData[i],
-                            color: relColors[i],
-                        })),
-                    );
+                    if (relLabels.length === 0) {
+                        const certCanvas = document.getElementById("raChartCertRel");
+                        if (certCanvas) certCanvas.parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-secondary);font-style:italic;">No certifications identified.</div>';
+                    } else {
+                        raCreateChart("raChartCertRel", {
+                            type: "pie",
+                            data: {
+                                labels: relLabels,
+                                datasets: [
+                                    {
+                                        data: relData,
+                                        backgroundColor: relColors,
+                                        borderColor: "transparent",
+                                        borderWidth: 2,
+                                    },
+                                ],
+                            },
+                            options: raChartOpts(),
+                        });
+                        raHtmlLegend(
+                            "raLegendCertRel",
+                            relLabels.map((l, i) => ({
+                                label: l,
+                                value: relData[i],
+                                color: relColors[i],
+                            })),
+                        );
+                    }
 
                     const acts = ex2.activities || [];
-                    raCreateChart("raChartExtraBar", {
-                        type: "bar",
-                        data: {
-                            labels: acts.map((a) =>
-                                ((a.activity_name || "Activity").length > 14 ? (a.activity_name || "Activity").slice(0, 13) + "…" : (a.activity_name || "Activity")),
-                            ),
-                            datasets: [
-                                {
-                                    data: acts.map(
-                                        (a) => a.activity_score || 0,
-                                    ),
-                                    backgroundColor: acts.map((a) =>
-                                        a.is_leadership ? "#8b5cf6" : "#3b82f6",
-                                    ),
-                                    borderRadius: 6,
-                                },
-                            ],
-                        },
-                        options: raChartOpts({
-                            indexAxis: "y",
-                            scales: {
-                                x: { min: 0, max: 10, ...raAxisStyle() },
-                                y: {
-                                    ...raAxisStyle(),
-                                    grid: { display: false },
-                                },
+                    if (acts.length === 0) {
+                        const extraCanvas = document.getElementById("raChartExtraBar");
+                        if (extraCanvas) extraCanvas.parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-secondary);font-style:italic;">No activities identified.</div>';
+                    } else {
+                        raCreateChart("raChartExtraBar", {
+                            type: "bar",
+                            data: {
+                                labels: acts.map((a) =>
+                                    ((a.activity_name || "Activity").length > 14 ? (a.activity_name || "Activity").slice(0, 13) + "…" : (a.activity_name || "Activity")),
+                                ),
+                                datasets: [
+                                    {
+                                        data: acts.map(
+                                            (a) => a.activity_score || 0,
+                                        ),
+                                        backgroundColor: acts.map((a) =>
+                                            a.is_leadership ? "#8b5cf6" : "#3b82f6",
+                                        ),
+                                        borderRadius: 6,
+                                    },
+                                ],
                             },
-                        }),
-                    });
+                            options: raChartOpts({
+                                indexAxis: "y",
+                                scales: {
+                                    x: { min: 0, max: 10, ...raAxisStyle() },
+                                    y: {
+                                        ...raAxisStyle(),
+                                        grid: { display: false },
+                                    },
+                                },
+                            }),
+                        });
+                    }
 
                     const el_cag = document.getElementById("raCertAchieveGrid");
                     if (el_cag) {
@@ -1433,44 +1499,59 @@ const initApp = async () => {
                     
                     const sevL = Object.keys(sevCounts);
                     const sevD = Object.values(sevCounts);
-                    const sevColors = sevL.map((s) =>
-                        s === "Critical" ? "#ef4444" :
-                        s === "Quick Wins" ? "#f59e0b" :
-                        s === "This Week" ? "#3b82f6" :
-                        "#8b5cf6"
-                    );
-                    raCreateChart("raChartActionSev", {
-                        type: "pie",
-                        data: {
-                            labels: sevL,
-                            datasets: [
-                                {
-                                    data: sevD,
-                                    backgroundColor: sevColors,
-                                    borderColor: "transparent",
-                                    borderWidth: 2,
-                                },
-                            ],
-                        },
-                        options: raChartOpts(),
-                    });
-                    raHtmlLegend(
-                        "raLegendActionSev",
-                        sevL.map((l, i) => ({
-                            label: l,
-                            value: sevD[i],
-                            color: sevColors[i],
-                        })),
-                    );
+                    
+                    if (sevL.length === 0) {
+                        const sevCanvas = document.getElementById("raChartActionSev");
+                        if (sevCanvas) {
+                            sevCanvas.parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-secondary);font-style:italic;">No action items required.</div>';
+                        }
+                    } else {
+                        const sevColors = sevL.map((s) =>
+                            s === "Critical" ? "#ef4444" :
+                            s === "Quick Wins" ? "#f59e0b" :
+                            s === "This Week" ? "#3b82f6" :
+                            "#8b5cf6"
+                        );
+                        raCreateChart("raChartActionSev", {
+                            type: "pie",
+                            data: {
+                                labels: sevL,
+                                datasets: [
+                                    {
+                                        data: sevD,
+                                        backgroundColor: sevColors,
+                                        borderColor: "transparent",
+                                        borderWidth: 2,
+                                    },
+                                ],
+                            },
+                            options: raChartOpts(),
+                        });
+                        raHtmlLegend(
+                            "raLegendActionSev",
+                            sevL.map((l, i) => ({
+                                label: l,
+                                value: sevD[i],
+                                color: sevColors[i],
+                            })),
+                        );
+                    }
 
                     const gains = (ap.quick_wins || []).map(
                         (w) => parseInt(w.expected_score_gain) || 1,
                     );
                     const gainLabels = (ap.quick_wins || []).map(w => { let a = w.action || ""; return a.length > 16 ? a.slice(0, 15) + "…" : a; });
-                    const qwCanvas = document.getElementById("raChartQuickWins");
-                    if (qwCanvas) qwCanvas.parentElement.style.height = Math.max(140, gains.length * 32) + "px";
-                    raCreateChart("raChartQuickWins", {
-                        type: "bar",
+                    
+                    if (gains.length === 0) {
+                        const qwCanvas = document.getElementById("raChartQuickWins");
+                        if (qwCanvas) {
+                            qwCanvas.parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-secondary);font-style:italic;">No quick wins identified.</div>';
+                        }
+                    } else {
+                        const qwCanvas = document.getElementById("raChartQuickWins");
+                        if (qwCanvas) qwCanvas.parentElement.style.height = Math.max(140, gains.length * 32) + "px";
+                        raCreateChart("raChartQuickWins", {
+                            type: "bar",
                         data: {
                             labels: gainLabels,
                             datasets: [
@@ -1492,6 +1573,7 @@ const initApp = async () => {
                             },
                         }),
                     });
+                    }
 
                     // Action plan tabs
                     const el_tabBar = document.getElementById("raTabBar");
@@ -1647,38 +1729,43 @@ const initApp = async () => {
 
                     // ── STRENGTHS & GAPS ─────────────────────────────────────────────────
                     const el_sg = document.getElementById("raStrengthsGrid");
-                    if (el_sg && ap.strengths_to_highlight) {
-                        el_sg.innerHTML = `
+                    if (el_sg) {
+                        const strengths = ap.strengths_to_highlight || ap.key_strengths || [];
+                        const gaps = ap.biggest_gaps || ap.areas_for_improvement || [];
+                        
+                        if (strengths.length > 0 || gaps.length > 0) {
+                            el_sg.innerHTML = `
             <div class="ra-card ra-panel-s">
               <div style="font-size:13px;font-weight:600;color:var(--ra-emerald);margin-bottom:0.75rem">💪 Key Strengths</div>
-              <ul class="ra-panel-list">${(ap.strengths_to_highlight || []).map((s) => `<li><span>✅</span><span>${s}</span></li>`).join("")}</ul>
+              <ul class="ra-panel-list">${strengths.map((s) => `<li><span>✅</span><span>${s}</span></li>`).join("")}</ul>
             </div>
             <div class="ra-card ra-panel-g">
               <div style="font-size:13px;font-weight:600;color:var(--ra-rose);margin-bottom:0.75rem">🎯 Biggest Gaps</div>
-              <ul class="ra-panel-list">${(ap.biggest_gaps || []).map((s) => `<li><span>❌</span><span>${s}</span></li>`).join("")}</ul>
+              <ul class="ra-panel-list">${gaps.map((s) => `<li><span>❌</span><span>${s}</span></li>`).join("")}</ul>
             </div>`;
+                        } else {
+                            el_sg.innerHTML = '<div class="ra-panel-note" style="color:var(--text-secondary);font-style:italic;">No strengths or gaps were identified in this analysis.</div>';
+                        }
                     }
 
                     // ── RECOMMENDATIONS ──────────────────────────────────────────────────
                     const el_recs = document.getElementById("raRecsContent");
                     if (el_recs && ap) {
-                        const roles2 = (ap.recommended_roles || ap.recommended_internship_roles || [])
-                            .map(
-                                (r) =>
-                                    `<button class="ra-role-btn">${r}</button>`,
-                            )
-                            .join("");
-                        const certs = (ap.recommended_certifications || [])
-                            .map(
-                                (c) =>
-                                    `<div class="ra-cert-rec-card"><span style="font-size:16px;color:var(--ra-blue)">📜</span><span style="font-weight:500;font-size:12px">${c}</span></div>`,
-                            )
-                            .join("");
+                        const recRoles = ap.recommended_roles || ap.recommended_internship_roles || [];
+                        const rolesHtml = recRoles.length > 0 
+                            ? recRoles.map((r) => `<button class="ra-role-btn">${r}</button>`).join("")
+                            : '<span style="color:var(--text-secondary);font-size:0.9rem;font-style:italic;">No roles recommended</span>';
+                            
+                        const recCerts = ap.recommended_certifications || [];
+                        const certsHtml = recCerts.length > 0
+                            ? recCerts.map((c) => `<div class="ra-cert-rec-card"><span style="font-size:16px;color:var(--ra-blue)">📜</span><span style="font-weight:500;font-size:12px">${c}</span></div>`).join("")
+                            : '<span style="color:var(--text-secondary);font-size:0.9rem;font-style:italic;">No certifications recommended</span>';
+                            
                         el_recs.innerHTML = `
-            <div class="ra-roles-pills">${roles2}</div>
-            <div class="ra-certs-rec-grid">${certs}</div>
+            <div class="ra-roles-pills">${rolesHtml}</div>
+            <div class="ra-certs-rec-grid">${certsHtml}</div>
             ${ap.encouragement ? `<div class="ra-encouragement">${ap.encouragement}</div>` : ""}
-            ${D.confidence.confidence_score ? `<div style="margin-top:1rem;display:flex;justify-content:flex-end"><span class="ra-confidence-badge">🛡️ <span style="color:${window.COLORS.getScoreColor(D.confidence.confidence_score)}">Analysis Confidence: ${D.confidence.confidence_score}%</span> · ${D.confidence.extraction_quality || ""}</span></div>` : ""}`;
+            ${D.confidence?.confidence_score ? `<div style="margin-top:1rem;display:flex;justify-content:flex-end"><span class="ra-confidence-badge">🛡️ <span style="color:${window.COLORS.getScoreColor(D.confidence.confidence_score)}">Analysis Confidence: ${D.confidence.confidence_score}%</span> · ${D.confidence.extraction_quality || ""}</span></div>` : ""}`;
                     }
 
                     // ── OVERALL CHANGES REQUIRED ─────────────────────────────────────────
@@ -1807,7 +1894,7 @@ const initApp = async () => {
                             if (el_btn) {
                                 var initLabel = el_btn.querySelector('.ra-changes-expand-label');
                                 if (initLabel) initLabel.textContent = 'Show all ' + allChanges.length + ' changes';
-                                el_btn.addEventListener('click', function() {
+                                el_btn.onclick = function() {
                                     var isExpanded = el_btn.getAttribute('aria-expanded') === 'true';
                                     el_btn.setAttribute('aria-expanded', String(!isExpanded));
                                     var lbl = el_btn.querySelector('.ra-changes-expand-label');
@@ -1824,7 +1911,7 @@ const initApp = async () => {
                                             }
                                         });
                                     }
-                                });
+                                };
                             }
                         }
                     })();

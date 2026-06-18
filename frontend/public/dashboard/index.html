@@ -18,7 +18,7 @@
         <!-- Dashboard layout & sidebar styles -->
         <link rel="stylesheet" href="dashboard.css?v=1781596867135&v=2" />
         <!-- Tab-specific styles -->
-        <link rel="stylesheet" href="tabs/resume-analysis/resume-analysis.css?v=1781597123038" />
+        <link rel="stylesheet" href="tabs/resume-analysis/resume-analysis.css?v=1781597123040" />
         <link rel="stylesheet" href="tabs/career-roadmap/career-roadmap.css?v=1781597123038" />
         <!-- PlacementIQ Dashboard Styles -->
         <link rel="stylesheet" href="placementiq.css?v=1781596867135&v=2" />
@@ -28,6 +28,7 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
         <!-- Chart.js for analytics -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+        <link rel="icon" type="image/svg+xml" href="../favicon.svg">
     </head>
     <body>
         <div class="app-layout">
@@ -40,13 +41,20 @@
             <aside class="sidebar" id="sidebar">
                 <div class="sidebar-brand">
                     <div class="logo-box">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-                            <polyline points="2 17 12 22 22 17"></polyline>
-                            <polyline points="2 12 12 17 22 12"></polyline>
+                        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#005ed0"/>
+                                    <stop offset="100%" style="stop-color:#afc6ff"/>
+                                </linearGradient>
+                            </defs>
+                            <rect width="28" height="28" rx="8" fill="url(#logoGrad)"/>
+                            <path d="M8 14 L12 10 L16 16 L20 12" stroke="#002d6c" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <circle cx="20" cy="12" r="2" fill="#002d6c"/>
+                            <path d="M8 20 L20 20" stroke="#002d6c" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
                         </svg>
                     </div>
-                    <div class="brand-text">Career <span>IQ AI</span></div>
+                    <div class="brand-text">CareerIQ <span>AI</span></div>
                 </div>
 
                 <div class="sidebar-section-label">WORKSPACE</div>
@@ -146,10 +154,17 @@
                 <!-- Mobile Header -->
                 <header class="mobile-header">
                     <div class="logo-box">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-                            <polyline points="2 17 12 22 22 17"></polyline>
-                            <polyline points="2 12 12 17 22 12"></polyline>
+                        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#005ed0"/>
+                                    <stop offset="100%" style="stop-color:#afc6ff"/>
+                                </linearGradient>
+                            </defs>
+                            <rect width="28" height="28" rx="8" fill="url(#logoGrad)"/>
+                            <path d="M8 14 L12 10 L16 16 L20 12" stroke="#002d6c" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <circle cx="20" cy="12" r="2" fill="#002d6c"/>
+                            <path d="M8 20 L20 20" stroke="#002d6c" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
                         </svg>
                     </div>
                     <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation Menu">
@@ -573,6 +588,7 @@
                                     <div class="ra-chart-panel">
                                         <div class="ra-chart-title">Evidence &amp; Quality</div>
                                         <div class="ra-chart-wrap ra-chart-h180"><canvas id="raChartSkillsEv"></canvas></div>
+                                        <div id="raSkillsEvLists" style="margin-top:1rem; display:flex; flex-direction:column; gap:0.5rem; font-size:12px;"></div>
                                     </div>
                                 </div>
                                 <div id="raSkillsRows"></div>
@@ -858,6 +874,19 @@
             .piq-modal { position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
         </style>
 
+        <!-- AI Analyzing Modal -->
+        <div id="analyzingModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; align-items: center; justify-content: center; z-index: 999999; background: transparent; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);">
+            <div style="background: var(--bg-card); padding: 40px; border-radius: 20px; border: 1px solid var(--border); text-align: center; max-width: 400px; box-shadow: 0 0 50px rgba(139, 92, 246, 0.2);">
+                <div class="ai-scanner-orb"></div>
+                <h3 style="margin-top: 25px; margin-bottom: 15px; color: var(--text-primary); font-size: 1.5rem; font-weight: 600;">Analyzing your resume...</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.95rem; line-height: 1.5;">This deep scan takes about 1-2 mins. Please wait.</p>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.85rem; color: var(--accent);">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    Extracting skills & benchmarking
+                </div>
+            </div>
+        </div>
+
         <!-- ***********************************************
              SCRIPTS
         ************************************************ -->
@@ -872,9 +901,9 @@
         <!-- Gemini API client -->
         <script src="gemini-client.js?v=13"></script>
         <!-- Main Dashboard JS -->
-        <script src="dashboard.js?v=9"></script>
-        <!-- PlacementIQ Dashboard JS -->
-        <script src="placementiq.js?v=1781599348527"></script>
+        <script src="dashboard.js?v=1781803900000"></script>
+        <!-- PlacementIQ Logic for new dashboard structure -->
+        <script src="placementiq.js?v=1781803800000"></script>
         <!-- Benchmarking Tab JS -->
         <script src="tabs/benchmarking/benchmarking.js"></script>
     </body>

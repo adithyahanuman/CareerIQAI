@@ -129,12 +129,20 @@
         const el = document.getElementById('piqRolesList');
         if (!el) return;
 
-        const ap = data.action_plan || data.analysis?.action_plan || {};
+        const ap = data.action_plan_analysis || data.action_plan || data.analysis?.action_plan || {};
         const overall = data.overall_analysis || data.analysis?.overall || {};
         const sk = data.skills_analysis || data.analysis?.skills || {};
 
         const rawRoles = ap.recommended_roles || ap.recommended_internship_roles || overall.recommended_roles || [];
-        if (!rawRoles.length) return;
+        if (!rawRoles.length) {
+            el.innerHTML = `
+                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:2rem 0;">
+                    <span style="font-size:24px; margin-bottom:8px;">🤷</span>
+                    <span style="color:var(--text-secondary); font-size:14px;">No specific roles identified. Try adding more skills.</span>
+                </div>
+            `;
+            return;
+        }
 
         const roleIcons = ['💻', '📊', '🤖', '🎨', '🔧', '📱', '🌐', '⚡'];
         const roleColors = [
@@ -180,13 +188,16 @@
 
     // ── Populate strengths ────────────────────────────────────────────────────
     function populateStrengths(data) {
-        const el = document.getElementById('piqStrengths');
-        if (!el) return;
-        const ap = data.action_plan || data.analysis?.action_plan || {};
-        const strengths = ap.strengths_to_highlight || [];
-        if (!strengths.length) return;
+        const sEl = document.getElementById('piqStrengths');
+        if (!sEl) return;
+        const ap = data.action_plan_analysis || data.action_plan || data.analysis?.action_plan || {};
+        const strengths = ap.strengths_to_highlight || ap.key_strengths || [];
+        if (!strengths.length) {
+            sEl.innerHTML = '<p class="piq-empty-text">No distinct strengths identified.</p>';
+            return;
+        }
 
-        el.innerHTML = strengths.slice(0, 3).map(s => `
+        sEl.innerHTML = strengths.slice(0, 4).map(s => `
             <div class="piq-strength-item">
                 <span class="piq-strength-icon">✅</span>
                 <span>${s}</span>
@@ -198,22 +209,23 @@
     function populateImprovements(data) {
         const el = document.getElementById('piqImprovements');
         if (!el) return;
-        const ap = data.action_plan || data.analysis?.action_plan || {};
-        const fixes = ap.critical_fixes || ap.quick_wins || [];
-        if (!fixes.length) return;
+        const ap = data.action_plan_analysis || data.action_plan || data.analysis?.action_plan || {};
+        const fixes = (ap.critical_fixes && ap.critical_fixes.length > 0) ? ap.critical_fixes : (ap.quick_wins || []);
+        if (!fixes.length) {
+            el.innerHTML = '<p class="piq-empty-text" style="color:var(--ra-emerald);">No critical improvements needed! Great job.</p>';
+            return;
+        }
 
-        const gains = ['+18', '+12', '+8', '+7'];
         el.innerHTML = fixes.slice(0, 4).map((f, i) => `
             <div class="piq-improvement-item">
                 <span class="piq-improvement-text">${f.fix || f.action || f}</span>
-                <span class="piq-improvement-gain">${gains[i] || '+5'}</span>
             </div>
         `).join('');
     }
 
     // ── Populate Growth Roadmap (4 fixed steps) ───────────────────────────────
     function populateRoadmap(data) {
-        const ap       = data.action_plan        || data.analysis?.action_plan || {};
+        const ap       = data.action_plan_analysis || data.action_plan || data.analysis?.action_plan || {};
         const skillsD  = data.skills_analysis    || data.analysis?.skills      || {};
         const projD    = data.projects_analysis  || data.analysis?.projects    || {};
 

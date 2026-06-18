@@ -71,9 +71,10 @@ Certifications & Achievements: 20, Extracurriculars & Leadership: 20
 Return this exact JSON structure (fill all fields based on the resume):
 
 CRITICAL INSTRUCTIONS FOR EXTRACTION:
-1. Do NOT limit lists to 1 item. You must extract ALL projects, ALL roles, and ALL education degrees listed on the resume.
-2. For issues and suggestions, generate comprehensive lists. Always provide 3-5 actionable suggestions and 2+ issues per section where applicable.
-
+1. EXHAUSTIVE EXTRACTION REQUIRED: You MUST extract EVERY SINGLE ITEM present in the resume for Projects, Experience roles, Education entries, Skills, Certifications, and Extracurriculars. Do NOT summarize, group, or omit anything. If the resume lists 5 projects, you MUST output all 5 projects. If it lists 15 skills, you MUST output all 15 skills.
+2. The JSON schema arrays show 1-2 examples purely for structural reference. This DOES NOT mean you should limit your extraction to 1-2 items. Expand the arrays to fit the actual resume content.
+3. For issues and suggestions, generate comprehensive lists. Always provide 3-5 actionable suggestions and 2+ issues per section where applicable.
+4. EDUCATION SPECIFIC RULES: For High School or Intermediate education, DO NOT suggest adding projects, coursework, or tools. ONLY suggest adding percentage/marks or graduating years if they are missing. For Degree/Undergraduate education, DO suggest adding CGPA, relevant coursework, and tools.
 
 {
   "contact": {
@@ -81,7 +82,7 @@ CRITICAL INSTRUCTIONS FOR EXTRACTION:
     "contact_max": 2,
     "contact_grade": "A/B/C/D/F",
     "fields_found": ["name","email","linkedin","github"],
-    "fields_missing": [],
+    "fields_missing": ["string"],
     "email_professionalism": "professional",
     "issues": [{"issue": "describe issue 1 here"}, {"issue": "describe issue 2 here"}],
     "contact_suggestions": ["suggestion 1", "suggestion 2"]
@@ -91,7 +92,7 @@ CRITICAL INSTRUCTIONS FOR EXTRACTION:
     "summary_max": 2,
     "summary_grade": "A/B/C/D/F",
     "summary_type": "objective",
-    "buzzwords_found": [],
+    "buzzwords_found": ["string"],
     "length_assessment": "too short",
     "issues": [{"issue": "describe issue 1 here"}, {"issue": "describe issue 2 here"}],
     "summary_suggestions": ["specific rewrite example 1", "specific rewrite example 2"]
@@ -107,6 +108,14 @@ CRITICAL INSTRUCTIONS FOR EXTRACTION:
         "job_title": "string",
         "company": "string",
         "type": "internship",
+        "duration_months": 0,
+        "contribution_quality": "active",
+        "role_score": 0
+      },
+      {
+        "job_title": "string",
+        "company": "string",
+        "type": "part_time",
         "duration_months": 0,
         "contribution_quality": "active",
         "role_score": 0
@@ -128,8 +137,19 @@ CRITICAL INSTRUCTIONS FOR EXTRACTION:
         "graduation_year": "string",
         "gpa": null,
         "gpa_assessment": "not_listed",
-        "relevant_coursework": [],
-        "tools_in_coursework": [],
+        "relevant_coursework": ["string"],
+        "tools_in_coursework": ["string"],
+        "specialization_or_minor": null
+      },
+      {
+        "institution": "string",
+        "degree_type": "master",
+        "field_of_study": "string",
+        "graduation_year": "string",
+        "gpa": null,
+        "gpa_assessment": "not_listed",
+        "relevant_coursework": ["string"],
+        "tools_in_coursework": ["string"],
         "specialization_or_minor": null
       }
     ],
@@ -142,13 +162,13 @@ CRITICAL INSTRUCTIONS FOR EXTRACTION:
     "skills_max": 20,
     "skills_grade": "A/B/C/D/F",
     "total_skills_count": 0,
-    "technical_skills": [],
-    "tools_and_platforms": [],
-    "frameworks_and_libraries": [],
-    "soft_skills": [],
-    "skills_without_evidence": [],
-    "inflated_claims": [],
-    "too_basic_flagged": [],
+    "technical_skills": ["string"],
+    "tools_and_platforms": ["string"],
+    "frameworks_and_libraries": ["string"],
+    "soft_skills": ["string"],
+    "skills_without_evidence": ["string"],
+    "inflated_claims": ["string"],
+    "too_basic_flagged": ["string"],
     "issues": [{"issue": "issue 1"}, {"issue": "issue 2"}],
     "skills_suggestions": ["suggestion 1", "suggestion 2", "suggestion 3"]
   },
@@ -162,7 +182,18 @@ CRITICAL INSTRUCTIONS FOR EXTRACTION:
         "name": "string",
         "type": "personal",
         "description_quality": "good",
-        "technologies": [],
+        "technologies": ["string"],
+        "has_link": false,
+        "has_outcome": false,
+        "is_tutorial_level": false,
+        "complexity": "intermediate",
+        "project_score": 0
+      },
+      {
+        "name": "string",
+        "type": "academic",
+        "description_quality": "good",
+        "technologies": ["string"],
         "has_link": false,
         "has_outcome": false,
         "is_tutorial_level": false,
@@ -179,16 +210,16 @@ CRITICAL INSTRUCTIONS FOR EXTRACTION:
     "formatting_max": 6,
     "formatting_grade": "A/B/C/D/F",
     "page_count": "1",
-    "sections_present": [],
-    "sections_missing": [],
-    "non_standard_headings": [],
+    "sections_present": ["string"],
+    "sections_missing": ["string"],
+    "non_standard_headings": ["string"],
     "ats_risk_level": "low",
-    "spelling_errors": [],
-    "strong_verbs_found": [],
-    "weak_verbs_found": [],
-    "passive_voice_examples": [],
-    "filler_phrases": [],
-    "grammar_errors": [],
+    "spelling_errors": ["string"],
+    "strong_verbs_found": ["string"],
+    "weak_verbs_found": ["string"],
+    "passive_voice_examples": ["string"],
+    "filler_phrases": ["string"],
+    "grammar_errors": ["string"],
     "issues": [{"issue": "issue 1"}, {"issue": "issue 2"}],
     "formatting_suggestions": ["suggestion 1", "suggestion 2", "suggestion 3"]
   },
@@ -202,6 +233,12 @@ CRITICAL INSTRUCTIONS FOR EXTRACTION:
         "issuer": "string",
         "year": null,
         "relevance": "highly_relevant"
+      },
+      {
+        "name": "string",
+        "issuer": "string",
+        "year": null,
+        "relevance": "moderately_relevant"
       }
     ],
     "has_online_courses": false,
@@ -209,6 +246,12 @@ CRITICAL INSTRUCTIONS FOR EXTRACTION:
       {
         "title": "string",
         "type": "competition_win",
+        "scale": null,
+        "year": null
+      },
+      {
+        "title": "string",
+        "type": "award",
         "scale": null,
         "year": null
       }
@@ -230,6 +273,15 @@ CRITICAL INSTRUCTIONS FOR EXTRACTION:
         "activity_name": "string",
         "role": "string",
         "is_leadership": false,
+        "contribution_described": false,
+        "relevance": "general",
+        "has_scale_or_achievement": false,
+        "activity_score": 0
+      },
+      {
+        "activity_name": "string",
+        "role": "string",
+        "is_leadership": true,
         "contribution_described": false,
         "relevance": "general",
         "has_scale_or_achievement": false,
@@ -267,6 +319,12 @@ CRITICAL INSTRUCTIONS FOR EXTRACTION:
         "severity": "critical",
         "action": "string",
         "time_to_fix": "5 min"
+      },
+      {
+        "fix": "string",
+        "severity": "high",
+        "action": "string",
+        "time_to_fix": "10 min"
       }
     ],
     "quick_wins": [
@@ -274,9 +332,20 @@ CRITICAL INSTRUCTIONS FOR EXTRACTION:
         "action": "string",
         "expected_score_gain": "+X points",
         "time_to_fix": "5 min"
+      },
+      {
+        "action": "string",
+        "expected_score_gain": "+Y points",
+        "time_to_fix": "10 min"
       }
     ],
     "this_week_improvements": [
+      {
+        "improvement": "string",
+        "section": "string",
+        "why_it_matters": "string",
+        "example": "before → after"
+      },
       {
         "improvement": "string",
         "section": "string",
@@ -289,20 +358,26 @@ CRITICAL INSTRUCTIONS FOR EXTRACTION:
         "suggestion": "string",
         "timeline": "1 month",
         "impact": "string"
+      },
+      {
+        "suggestion": "string",
+        "timeline": "3 months",
+        "impact": "string"
       }
     ],
-    "strengths_to_highlight": [],
-    "biggest_gaps": [],
-    "recommended_roles": [],
-    "recommended_certifications": [],
+    "strengths_to_highlight": ["string"],
+    "biggest_gaps": ["string"],
+    "recommended_roles": ["string"],
+    "recommended_certifications": ["string"],
     "encouragement": "string"
   },
   "resume_completeness": {
     "completeness_score": 0,
     "completeness_grade": "A/B/C/D/F",
-    "sections_complete": [],
-    "sections_missing": [],
+    "sections_complete": ["string"],
+    "sections_missing": ["string"],
     "sections_underdeveloped": [
+      {"section": "string", "reason": "string"},
       {"section": "string", "reason": "string"}
     ],
     "resume_density": "adequate",
@@ -314,6 +389,7 @@ CRITICAL INSTRUCTIONS FOR EXTRACTION:
     "confidence_score": 0,
     "extraction_quality": "clean",
     "ambiguities": [
+      {"section": "string", "issue": "string"},
       {"section": "string", "issue": "string"}
     ],
     "low_confidence_note": null

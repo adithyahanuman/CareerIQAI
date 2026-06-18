@@ -45,10 +45,10 @@
             }
 
             .logo-box {
-                width: 32px;
-                height: 32px;
-                background: var(--brand-dark);
-                border: 1px solid var(--border);
+                width: 36px;
+                height: 36px;
+                background: transparent;
+                border: none;
                 border-radius: 6px;
                 display: flex;
                 align-items: center;
@@ -56,13 +56,13 @@
             }
 
             .logo-box svg {
-                width: 18px;
-                height: 18px;
-                stroke: var(--on-brand);
+                width: 36px;
+                height: 36px;
+                /* Removing stroke override so it uses SVG's own colors */
             }
 
             .brand-text {
-                font-size: 18px;
+                font-size: 22px;
                 font-weight: 700;
                 color: var(--text-primary);
                 letter-spacing: -0.3px;
@@ -754,3 +754,40 @@
                     opacity: 1 !important;
                 }
             }
+
+/* AI Analyzing Modal Animation */
+.ai-scanner-orb {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, rgba(139, 92, 246, 0.8), rgba(59, 130, 246, 0.8));
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.5), inset 0 0 20px rgba(255, 255, 255, 0.2);
+    position: relative;
+    animation: ai-pulse 2s infinite ease-in-out, ai-float 4s infinite ease-in-out;
+}
+.ai-scanner-orb::after {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    border-radius: 50%;
+    border: 2px solid rgba(139, 92, 246, 0.5);
+    animation: ai-scan-ring 2s infinite linear;
+    border-top-color: transparent;
+    border-bottom-color: transparent;
+}
+@keyframes ai-pulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 30px rgba(139, 92, 246, 0.5); }
+    50% { transform: scale(1.1); box-shadow: 0 0 50px rgba(59, 130, 246, 0.8); }
+}
+@keyframes ai-float {
+    0%, 100% { top: 0px; }
+    50% { top: -10px; }
+}
+@keyframes ai-scan-ring {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
