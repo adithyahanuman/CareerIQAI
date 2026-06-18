@@ -130,16 +130,10 @@ class GeminiProvider extends BaseAIProvider {
         } catch (err) {
           lastError = err;
 
-          // ✅ Fix: Daily quota is per-model and shared across all keys.
-          // Skip remaining keys immediately — rotating won't help.
-          if (this.isDailyQuotaError(err)) {
-            console.warn(`[Gemini Provider] ⚠️ Model ${modelId} hit daily quota limit (RPD). Skipping all keys for this model → moving to next model.`);
-            break;
-          }
-
-          if (this.isQuotaError(err) || this.isModelUnavailable(err)) {
+          if (this.isQuotaError(err) || this.isModelUnavailable(err) || this.isDailyQuotaError(err)) {
             let reason = err.message || 'Unknown error';
-            if (this.isQuotaError(err)) reason = 'Rate Limit / Quota Exceeded (RPM)';
+            if (this.isDailyQuotaError(err)) reason = 'Daily Quota Exceeded (RPD)';
+            else if (this.isQuotaError(err)) reason = 'Rate Limit / Quota Exceeded (RPM)';
             else if (reason.includes('503') || reason.includes('overloaded')) reason = 'Server Busy / Overloaded';
 
             console.warn(`[Gemini Provider] ⚠️ Model ${modelId} failed on key ${keyAttempt}/${totalKeys} (Reason: ${reason}). Exact Error: ${err.message} — trying next key/model.`);
