@@ -2695,10 +2695,14 @@ const initApp = async () => {
                                 // Check Firestore for existing resume
                                 const snap = await db.collection("user_profiles").doc(uid).get();
                                 const existing = snap.exists ? snap.data() : {};
+                                
+                                const currentTargetRole = targetRoleSelect ? targetRoleSelect.value : 'internship';
+                                const existingTargetRole = existing.targetRoleType || 'internship';
 
-                                // Same filename + already analyzed → just reload analysis
+                                // Same filename + same target role + already analyzed → just reload analysis
                                 if (
                                     file.name === existing.resumeName &&
+                                    currentTargetRole === existingTargetRole &&
                                     pgResume &&
                                     pgResume.file_name === file.name &&
                                     pgResume.overall_analysis
@@ -2706,7 +2710,7 @@ const initApp = async () => {
                                     populateResumeAnalysisTab(pgResume);
                                     if (window.CareerIQAuth?.Toast) {
                                         window.CareerIQAuth.Toast.show(
-                                            "Same resume detected — your saved analysis is displayed.",
+                                            "Same resume and role type detected — your saved analysis is displayed.",
                                             "info",
                                             4000
                                         );
