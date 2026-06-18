@@ -15,7 +15,8 @@
     "wipe:admin": "node scripts/wipeAdminData.js",
     "wipe:firebase": "node scripts/wipeFirebase.js",
     "wipe:everything": "node scripts/wipeEverything.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "backfill": "node scripts/backfillRankings.js"
   },
   "keywords": [],
   "author": "",
