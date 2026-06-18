@@ -23,7 +23,7 @@ const prompts       = require('../ai/prompts');
  */
 const uploadResume = async (req, res, next) => {
   try {
-    const { student_id, resume_text, file_name } = req.body;
+    const { student_id, resume_text, file_name, target_role_type } = req.body;
     const targetStudentId = student_id || req.user.id;
 
     if (req.user.id !== targetStudentId && req.user.role !== 'admin') {
@@ -31,7 +31,7 @@ const uploadResume = async (req, res, next) => {
       return next(new Error('You can only upload resumes for your own account.'));
     }
 
-    const resume = await resumeService.uploadResume({ student_id: targetStudentId, resume_text, file_name });
+    const resume = await resumeService.uploadResume({ student_id: targetStudentId, resume_text, file_name, target_role_type });
 
     // 200 = analysis done (cache hit or fresh); 202 = saved but AI still processing/failed
     const statusCode = resume.status === 'done' && resume.overall_analysis ? 200 : 202;

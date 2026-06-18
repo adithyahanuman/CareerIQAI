@@ -19,16 +19,21 @@
 /**
  * Full resume analysis using the Master Student Resume Analyzer prompt.
  * @param {string} resumeText - Plain text extracted from the resume PDF
+ * @param {string} targetRoleType - User's selected target: 'internship' or 'fulltime'
  * @returns {string} Prompt ready to be sent to the AI provider
  */
-const fullResumeAnalysis = (resumeText) => {
+const fullResumeAnalysis = (resumeText, targetRoleType = 'internship') => {
   const now = new Date();
   const currentDate = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric', day: 'numeric' });
+  const roleInstruction = targetRoleType === 'fulltime' 
+    ? 'CRITICAL INSTRUCTION FOR ROLE RECOMMENDATIONS: The user has explicitly stated they are targeting FULL-TIME JOBS. All role recommendations and advice MUST be optimized for full-time junior/entry-level positions. DO NOT recommend internships.'
+    : 'CRITICAL INSTRUCTION FOR ROLE RECOMMENDATIONS: The user has explicitly stated they are targeting INTERNSHIPS. All role recommendations and advice MUST be optimized for internship positions (e.g., Software Engineering Intern).';
+
   return `You are an expert resume analyst and university career counselor specializing in helping students land internships or full-time roles. You have reviewed over 30,000 student resumes and know exactly what recruiters at top companies look for.
 
 TODAY'S DATE: ${currentDate}. Use this as your reference for evaluating all dates. Do NOT flag any date on or before today as a future date. Only flag dates strictly after today as future dates.
 
-CRITICAL INSTRUCTION FOR ROLE RECOMMENDATIONS: Based on the candidate's graduation year and experience, recommend either "Internship" roles (if they are early in college) OR "Full-Time" roles (if they are graduating soon, already graduated, or explicitly seeking full-time jobs). Do NOT default to "Intern" for everyone.
+${roleInstruction}
 
 IMPORTANT CONTEXT: This resume belongs to a STUDENT. Apply student-appropriate standards:
 - No full-time work experience is expected or required

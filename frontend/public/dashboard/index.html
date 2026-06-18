@@ -834,6 +834,30 @@
             </div>
         </div>
 
+        <!-- Target Role Selection Modal -->
+        <div id="targetRoleModal" class="piq-modal" style="display: none;">
+            <div class="piq-modal-content" style="max-width: 400px; padding: 24px; border-radius: 12px; background: var(--bg-surface); border: 1px solid var(--border-light); margin: 15vh auto;">
+                <h3 style="margin-top: 0; color: var(--text-primary); font-size: 18px; font-weight: 600;">Upload Resume</h3>
+                <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">What kind of opportunities are you currently targeting? Our AI will optimize your analysis for this choice.</p>
+                
+                <div style="margin-bottom: 24px;">
+                    <label for="targetRoleSelect" style="display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px;">Target Role Type</label>
+                    <select id="targetRoleSelect" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-light); background: var(--bg-body); color: var(--text-primary); font-size: 14px; outline: none; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                        <option value="internship">Internships</option>
+                        <option value="fulltime">Full-Time Jobs</option>
+                    </select>
+                </div>
+
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                    <button id="cancelTargetRoleBtn" style="padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border-light); background: transparent; color: var(--text-secondary); cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='var(--bg-body)'" onmouseout="this.style.background='transparent'">Cancel</button>
+                    <button id="confirmTargetRoleBtn" style="padding: 8px 16px; border-radius: 6px; border: none; background: var(--brand); color: white; cursor: pointer; font-weight: 500; transition: all 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Select Resume PDF</button>
+                </div>
+            </div>
+        </div>
+        <style>
+            .piq-modal { position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
+        </style>
+
         <!-- ***********************************************
              SCRIPTS
         ************************************************ -->

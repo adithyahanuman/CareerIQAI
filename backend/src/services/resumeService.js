@@ -28,10 +28,10 @@ function sha256(text) {
 /**
  * Store a new resume text record in PostgreSQL and run master analysis.
  *
- * @param {{ student_id: string, resume_text: string, file_name?: string }} data
+ * @param {{ student_id: string, resume_text: string, file_name?: string, target_role_type?: string }} data
  * @returns {Promise<object>} Created/updated resume row
  */
-const uploadResume = async ({ student_id, resume_text, file_name = 'resume.txt' }) => {
+const uploadResume = async ({ student_id, resume_text, file_name = 'resume.txt', target_role_type = 'internship' }) => {
   // Validate student exists
   const studentCheck = await query(
     'SELECT id FROM students WHERE id = $1 LIMIT 1',
@@ -43,11 +43,11 @@ const uploadResume = async ({ student_id, resume_text, file_name = 'resume.txt' 
     throw err;
   }
 
-  // ── Content-hash cache: only reuse analysis if the TEXT is identical ──────
-  // Compute SHA-256 of the raw resume text so any edit (even one word) busts
+  // ── Content-hash cache: only reuse analysis if the TEXT and TARGET are identical ──────
+  // Compute SHA-256 of the raw resume text + target role type so any edit (even one word) or changing target busts
   // the cache and forces a fresh AI run.
-  const contentHash = sha256(resume_text);
-  console.log(`[resumeService] content hash = ${contentHash.slice(0, 12)}…`);
+  const contentHash = sha256(resume_text + '|' + target_role_type);
+  console.log(`[resumeService] content hash = ${contentHash.slice(0, 12)}… (target: ${target_role_type})`);
 
   const cached = await query(
     `SELECT * FROM resumes
@@ -90,7 +90,7 @@ const uploadResume = async ({ student_id, resume_text, file_name = 'resume.txt' 
 
   // ONE AI call — master prompt returns 13 sections
   try {
-    const aiResponse = await aiService.analyzeResume(prompts.fullResumeAnalysis(resume_text));
+    const aiResponse = await aiService.analyzeResume(prompts.fullResumeAnalysis(resume_text, target_role_type));
     const analysis = aiResponse.data;
 
     // Extract overall score for ats_score column

@@ -292,9 +292,10 @@ const initApp = async () => {
             return;
           }
 
+          const targetRoleType = pd.targetRoleType || 'internship';
           // Call backend — cache is used if analysis already exists for same filename
           const token = await firebase.auth().currentUser.getIdToken();
-          const analysis = await window.GeminiClient.analyzeResume(resumeText, token, resumeName);
+          const analysis = await window.GeminiClient.analyzeResume(resumeText, token, resumeName, targetRoleType);
 
           pgResume = analysis;
 
@@ -2780,11 +2781,13 @@ const initApp = async () => {
                         }
 
                         // Save to Firestore
+                        const targetRoleType = targetRoleSelect ? targetRoleSelect.value : 'internship';
                         const FieldValue = firebase.firestore.FieldValue;
                         await db.collection("user_profiles").doc(uid).set(
                             {
                                 resumeName: file.name,
                                 resumeText: resumeText,
+                                targetRoleType: targetRoleType,
                                 resumeExtractionMethod: extracted.method || 'pdfjs',
                                 resumeExtractedAt: new Date().toISOString(),
                                 resumeAnalysis: FieldValue.delete(),
@@ -2828,6 +2831,31 @@ const initApp = async () => {
                     }
                 };
 
+                // ── Target Role Selection Modal ──
+                const targetRoleModal = document.getElementById("targetRoleModal");
+                const targetRoleSelect = document.getElementById("targetRoleSelect");
+                const cancelTargetRoleBtn = document.getElementById("cancelTargetRoleBtn");
+                const confirmTargetRoleBtn = document.getElementById("confirmTargetRoleBtn");
+                
+                const openTargetRoleModal = () => {
+                    if (targetRoleModal) targetRoleModal.style.display = "block";
+                };
+                
+                const closeTargetRoleModal = () => {
+                    if (targetRoleModal) targetRoleModal.style.display = "none";
+                };
+
+                if (cancelTargetRoleBtn) {
+                    cancelTargetRoleBtn.addEventListener("click", closeTargetRoleModal);
+                }
+
+                if (confirmTargetRoleBtn) {
+                    confirmTargetRoleBtn.addEventListener("click", () => {
+                        closeTargetRoleModal();
+                        if (resumeFileInput) resumeFileInput.click();
+                    });
+                }
+
                 // Wire the shared file input to the handler
                 if (resumeFileInput) {
                     resumeFileInput.addEventListener("change", (e) => {
@@ -2837,14 +2865,14 @@ const initApp = async () => {
 
                 // Wire topbar upload button
                 const uploadResumeBtn = document.getElementById("uploadResumeBtn");
-                if (uploadResumeBtn && resumeFileInput) {
-                    uploadResumeBtn.addEventListener("click", () => resumeFileInput.click());
+                if (uploadResumeBtn) {
+                    uploadResumeBtn.addEventListener("click", openTargetRoleModal);
                 }
 
                 // Wire CTA card upload button
                 const uploadResumeBtnCta = document.getElementById("uploadResumeBtnCta");
-                if (uploadResumeBtnCta && resumeFileInput) {
-                    uploadResumeBtnCta.addEventListener("click", () => resumeFileInput.click());
+                if (uploadResumeBtnCta) {
+                    uploadResumeBtnCta.addEventListener("click", openTargetRoleModal);
                 }
 
                 // ── AI Career Assistant Chat Bot Logic ─────────────────────

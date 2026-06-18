@@ -22,9 +22,10 @@
    * @param {string} resumeText   - Plain text extracted from the resume PDF
    * @param {string} token        - Firebase ID token for auth
    * @param {string} [fileName]   - Original filename (for display)
+   * @param {string} [targetRoleType] - "internship" or "fulltime"
    * @returns {Promise<object>}   - Full resume row from PostgreSQL
    */
-  async function analyzeResume(resumeText, token, fileName = 'resume.pdf') {
+  async function analyzeResume(resumeText, token, fileName = 'resume.pdf', targetRoleType = 'internship') {
     if (!resumeText || resumeText.trim().length < 50) {
       throw new Error('Resume text is too short to analyze.');
     }
@@ -37,7 +38,8 @@
       },
       body: JSON.stringify({
         resume_text: resumeText,
-        file_name:   fileName
+        file_name:   fileName,
+        target_role_type: targetRoleType
       }),
     });
 
