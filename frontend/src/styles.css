@@ -2952,12 +2952,50 @@ textarea {
 
   .mockup-main {
     grid-template-columns: 1fr;
+    padding: 16px 12px;
   }
 
   .career-match-card,
   .skill-card,
   .roadmap-card {
     grid-column: 1;
+  }
+
+  /* Improve Match Score layout on mobile */
+  .match-display {
+    flex-direction: column;
+    text-align: center;
+    gap: 12px;
+  }
+
+  .match-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .match-tags {
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+
+  /* Convert Roadmap into a vertical timeline for mobile */
+  .roadmap-visual {
+    flex-direction: column;
+    align-items: flex-start;
+    padding-left: 8px;
+  }
+
+  .roadmap-step {
+    width: 100%;
+  }
+
+  .roadmap-connector {
+    width: 2px !important;
+    height: 20px;
+    margin: 4px 0 4px 10px; /* Align vertical line exactly under the center of the 22px node */
+    background: linear-gradient(180deg, var(--brand), var(--border));
   }
 
   .floating-badge {
