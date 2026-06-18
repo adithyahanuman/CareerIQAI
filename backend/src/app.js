@@ -36,7 +36,10 @@ if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
 }
 
-// ── Routes ─────────────────────────────────────────────────────────────────────
+// Ignore favicon requests to prevent 404 log clutter
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
+// ── API Routes ─────────────────────────────────────────────────────────────
 app.use('/api/health',    healthRoutes);
 app.use('/api/auth',      authRoutes);
 app.use('/api/students',  studentRoutes);
