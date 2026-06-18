@@ -243,7 +243,13 @@ async function performOCR(pdf) {
 async function extractPdfText(buffer) {
   // Load PDF with PDF.js
   const dataArray = new Uint8Array(buffer);
-  const pdf = await pdfjsLib.getDocument({ data: dataArray }).promise;
+  const path = require('path');
+  const standardFontDataUrl = path.join(path.dirname(require.resolve('pdfjs-dist/package.json')), 'standard_fonts/');
+  
+  const pdf = await pdfjsLib.getDocument({ 
+    data: dataArray,
+    standardFontDataUrl
+  }).promise;
   
   // 1. Try standard text extraction
   const pages = await getRawItems(pdf);
