@@ -81,7 +81,8 @@ class GeminiProvider extends BaseAIProvider {
       generationConfig: {
         temperature: 0.2,
         topP: 0.8,
-        responseMimeType: 'application/json' // force valid JSON output — prevents bullet-point reflections
+        responseMimeType: 'application/json', // force valid JSON output — prevents bullet-point reflections
+        maxOutputTokens: 8192
       }
     });
 
