@@ -2811,6 +2811,12 @@ textarea {
 }
 
 @media (max-width: 768px) {
+  /* Prevent horizontal overflow on the whole page */
+  html, body {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+
   .nav-links {
     display: none;
   }
@@ -2824,25 +2830,73 @@ textarea {
     display: flex;
   }
 
+  /* Hero */
   .hero {
     padding-top: calc(var(--nav-height) + 40px);
     padding-bottom: 60px;
+    overflow: hidden;
+  }
+
+  .hero-container {
+    padding: 0 16px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .hero-headline {
+    font-size: clamp(32px, 8vw, 52px);
+    line-height: 1.1;
+    margin-bottom: 20px;
+  }
+
+  .hero-subheadline {
+    font-size: 15px;
+    padding: 0;
+    margin-bottom: 28px;
+  }
+
+  .hero-cta {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 40px;
+  }
+
+  .hero-cta a {
+    justify-content: center;
+    width: 100%;
   }
 
   .hero-stats {
     gap: 0;
+    flex-wrap: nowrap;
   }
 
   .stat-item {
-    padding: 0 16px;
+    padding: 0 10px;
   }
 
   .stat-number {
-    font-size: 24px;
+    font-size: 22px;
   }
 
+  .stat-unit {
+    font-size: 20px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+  }
+
+  /* Hero Mockup - scale it down to fit the screen */
   .hero-mockup {
-    margin-top: 48px;
+    margin-top: 40px;
+    padding: 0 12px;
+    overflow: hidden;
+  }
+
+  .mockup-window {
+    border-radius: 10px;
   }
 
   .mockup-sidebar {
@@ -2863,23 +2917,46 @@ textarea {
     display: none;
   }
 
+  /* Features section */
   .features-grid {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .feature-card {
+    padding: 24px;
   }
 
   .feature-card-large {
     grid-column: span 1;
     grid-template-columns: 1fr;
+    flex-direction: column;
   }
 
   .feature-card-right {
     direction: ltr;
   }
 
+  /* How It Works */
   .steps-container {
     grid-template-columns: 1fr;
+    gap: 24px;
   }
 
+  .steps-line {
+    display: none;
+  }
+
+  .step-item {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .step-card {
+    padding: 24px;
+  }
+
+  /* Testimonials */
   .testimonials-grid {
     grid-template-columns: 1fr;
   }
@@ -2888,6 +2965,7 @@ textarea {
     grid-column: span 1;
   }
 
+  /* Pricing */
   .pricing-grid {
     grid-template-columns: 1fr;
   }
@@ -2900,21 +2978,67 @@ textarea {
     transform: translateY(-4px);
   }
 
+  /* Footer */
   .footer-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
+    grid-template-columns: 1fr;
+    gap: 32px;
   }
 
   .footer-brand {
-    grid-column: span 2;
+    grid-column: span 1;
   }
 
+  /* Section typography */
   .section-title {
-    font-size: 28px;
+    font-size: 26px;
+    line-height: 1.2;
   }
 
   .section-desc {
-    font-size: 16px;
+    font-size: 15px;
+  }
+
+  .section-header {
+    margin-bottom: 32px;
+  }
+
+  /* Container padding */
+  .container {
+    padding: 0 16px;
+  }
+
+  /* Sections vertical padding */
+  .features-section,
+  .how-it-works,
+  .testimonials-section,
+  .pricing-section,
+  .faq-section {
+    padding: 64px 0;
+  }
+
+  /* CTA Banner */
+  .cta-banner {
+    padding: 64px 0;
+  }
+
+  .cta-title {
+    font-size: 28px;
+  }
+
+  .cta-actions {
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .cta-actions a {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .scroll-top {
+    bottom: 16px;
+    right: 16px;
   }
 }
 
@@ -3113,88 +3237,3 @@ textarea {
   transform: translateY(-9px) rotate(-45deg);
 }
 
-@media (max-width: 768px) {
-  .hamburger {
-    display: flex;
-  }
-  
-  /* Landing Page Typography & Spacing */
-  .hero-title {
-    font-size: 2.5rem;
-    line-height: 1.2;
-  }
-  
-  .hero-subtitle {
-    font-size: 1.1rem;
-    padding: 0 10px;
-  }
-  
-  .hero-section {
-    padding-top: 120px;
-    padding-bottom: 60px;
-  }
-  
-  /* Grids to Single Column */
-  .features-grid,
-  .how-it-works-grid,
-  .benefits-grid,
-  .faq-grid,
-  .pricing-grid {
-    grid-template-columns: 1fr !important;
-    gap: 20px;
-  }
-  
-  /* Sections Padding */
-  .section-padding {
-    padding: 60px 20px;
-  }
-  
-  /* Hero Buttons */
-  .hero-buttons {
-    flex-direction: column;
-    gap: 15px;
-    width: 100%;
-    padding: 0 20px;
-  }
-  
-  .hero-buttons .btn {
-    width: 100%;
-    justify-content: center;
-  }
-  
-  /* Nav actions hide on mobile */
-  .nav-actions {
-    display: none;
-  }
-  
-  /* Steps Container (How It Works) */
-  .steps-container {
-    flex-direction: column !important;
-    gap: 30px;
-    padding-left: 20px;
-  }
-  
-  .steps-line {
-    display: none; /* Hide the horizontal connector line on mobile */
-  }
-  
-  .step-item {
-    width: 100% !important;
-    max-width: none !important;
-  }
-  
-  /* Footer */
-  .footer-grid {
-    grid-template-columns: 1fr;
-    gap: 40px;
-    text-align: center;
-  }
-  
-  .footer-col {
-    align-items: center;
-  }
-  
-  .social-links {
-    justify-content: center;
-  }
-}
