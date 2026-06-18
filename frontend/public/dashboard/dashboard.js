@@ -2722,9 +2722,20 @@ const initApp = async () => {
                                     throw new Error("PDF library not loaded. Please refresh the page and try again.");
                                 }
 
+                                // Workaround for Android Chrome "Failed to fetch" bug:
+                                // Read the file into memory first to resolve virtual file URIs (like Google Drive)
+                                let fileBlob;
+                                try {
+                                    const arrayBuffer = await file.arrayBuffer();
+                                    fileBlob = new Blob([arrayBuffer], { type: 'application/pdf' });
+                                } catch (readErr) {
+                                    throw new Error(`Could not read file from your device [${readErr.message}]. Please try moving the PDF to your local downloads folder first.`);
+                                }
+
                                 // Upload PDF to backend to extract text (with OCR fallback)
                                 const formData = new FormData();
-                                formData.append('resumeFile', file);
+                                // Important: Must pass the original file name so the backend sees it as a PDF
+                                formData.append('resumeFile', fileBlob, file.name);
 
                                 // Wake up the Render server first (free tier sleeps after 15 min)
                                 // This prevents "Failed to fetch" on cold starts
