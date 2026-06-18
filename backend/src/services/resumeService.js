@@ -45,8 +45,8 @@ const uploadResume = async ({ student_id, resume_text, file_name = 'resume.txt',
 
   // ── Content-hash cache: only reuse analysis if the TEXT and TARGET are identical ──────
   // Compute SHA-256 of the raw resume text + target role type so any edit (even one word) or changing target busts
-  // the cache and forces a fresh AI run.
-  const contentHash = sha256(resume_text + '|' + target_role_type);
+  // the cache and forces a fresh AI run. Added |v2 to bust previous hallucinated AI caches.
+  const contentHash = sha256(resume_text + '|' + target_role_type + '|v2');
   console.log(`[resumeService] content hash = ${contentHash.slice(0, 12)}… (target: ${target_role_type})`);
 
   const cached = await query(
@@ -95,6 +95,27 @@ const uploadResume = async ({ student_id, resume_text, file_name = 'resume.txt',
 
     // Extract overall score for ats_score column
     const overallScore = analysis.overall?.overall_score ?? null;
+
+    // Sanitize AI hallucinations: if fulltime is requested, strictly remove 'Intern' from roles
+    if (target_role_type === 'fulltime') {
+      const sanitizeRole = (r) => {
+        if (typeof r === 'string') {
+          return r.replace(/internships?/ig, '').replace(/interns?/ig, 'Junior').trim();
+        } else if (r && typeof r === 'object') {
+          if (r.role) r.role = r.role.replace(/internships?/ig, '').replace(/interns?/ig, 'Junior').trim();
+          if (r.title) r.title = r.title.replace(/internships?/ig, '').replace(/interns?/ig, 'Junior').trim();
+          return r;
+        }
+        return r;
+      };
+
+      if (analysis.overall && analysis.overall.recommended_roles) {
+        analysis.overall.recommended_roles = analysis.overall.recommended_roles.map(sanitizeRole);
+      }
+      if (analysis.action_plan && analysis.action_plan.recommended_roles) {
+        analysis.action_plan.recommended_roles = analysis.action_plan.recommended_roles.map(sanitizeRole);
+      }
+    }
 
     // Build the UPDATE query with all 13 section columns + legacy analysis column
     const updated = await query(
