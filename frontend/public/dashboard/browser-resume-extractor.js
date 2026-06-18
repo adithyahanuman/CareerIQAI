@@ -40,7 +40,12 @@ const ResumeExtractor = (function() {
     // Always set worker src to ensure CDN worker is used
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-    const loadingTask = pdfjsLib.getDocument({ data: fileArrayBuffer });
+    const loadingTask = pdfjsLib.getDocument({ 
+      data: fileArrayBuffer,
+      standardFontDataUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/standard_fonts/',
+      cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+      cMapPacked: true
+    });
     const pdf = await loadingTask.promise;
     const pages = {};
 
