@@ -1,27 +1,34 @@
 require('dotenv').config({ path: __dirname + '/../.env' });
+const dns = require('dns');
+if (dns.setDefaultResultOrder) dns.setDefaultResultOrder('ipv4first');
 const { query } = require('../src/config/db');
 
 async function backfill() {
   try {
-    console.log('Fetching existing benchmark results...');
-    const res = await query('SELECT student_id, role_name, fit_score, detailed_analysis FROM benchmark_results');
+    console.log('Fetching all processed resumes...');
+    const res = await query(`
+      SELECT s.id AS student_id, s.full_name, r.overall_analysis 
+      FROM resumes r
+      JOIN students s ON s.id = r.student_id
+      WHERE r.status = 'done' AND r.is_primary = TRUE
+    `);
     
     console.log(`Found ${res.rows.length} records. Backfilling into rankings table...`);
     
     for (const row of res.rows) {
       if (!row.student_id) continue;
       
-      const fitScore = row.fit_score || 0;
+      const overallScore = Number(row.overall_analysis?.overall_score) || 0;
       
       await query(
         `INSERT INTO rankings
-           (student_id, target_role, target_company, overall_score, details, updated_at)
-         VALUES ($1, $2, $3, $4, $5, NOW())
-         ON CONFLICT (student_id, target_role, target_company) DO UPDATE SET
+           (student_id, student_name, overall_score, updated_at)
+         VALUES ($1, $2, $3, NOW())
+         ON CONFLICT (student_id) DO UPDATE SET
+           student_name  = EXCLUDED.student_name,
            overall_score = EXCLUDED.overall_score,
-           details       = EXCLUDED.details,
            updated_at    = NOW()`,
-        [row.student_id, row.role_name || '', 'Global', fitScore, JSON.stringify(row.detailed_analysis || {})]
+        [row.student_id, row.full_name || 'Unknown', overallScore]
       );
     }
     

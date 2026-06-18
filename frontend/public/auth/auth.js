@@ -45,19 +45,14 @@
       const email = user.email || '';
       const domain = email.includes('@') ? email.split('@')[1] : null;
       let role = isAdminEmail(email) ? 'admin' : 'user';
-      let displayName = user.displayName || email.split('@')[0];
-      let name = displayName;
+      let displayName = '';
+      let name = '';
       try {
         const snap = await db.collection('users').doc(user.uid).get();
         if (snap.exists) {
           if (snap.data().role) role = snap.data().role;
           if (snap.data().name) name = snap.data().name;
           if (snap.data().displayName) displayName = snap.data().displayName;
-          
-          if (user.displayName && user.displayName !== email.split('@')[0] && displayName === email.split('@')[0]) {
-            displayName = user.displayName;
-            await db.collection('users').doc(user.uid).update({ displayName: user.displayName });
-          }
         }
       } catch (e) { }
       if (isAdminEmail(email)) {
@@ -300,12 +295,8 @@
           domain: validation.domain.domain, org: validation.domain.org_name,
           lastLogin: firebase.firestore.FieldValue.serverTimestamp()
         };
-        if (!existing || !existing.name) {
-          userDoc.name = result.user.displayName || email.split('@')[0];
-        }
-        if (!existing || !existing.displayName) {
-          userDoc.displayName = result.user.displayName || email.split('@')[0];
-        }
+        // Do not auto-populate name and displayName for Google Auth
+        // Users will be prompted to fill this during onboarding
         if (isAdminEmail(email)) {
           userDoc.role = 'admin';
         }
@@ -398,12 +389,10 @@
       if (isSignup) {
         if (name) {
           userData.name = name;
-        } else {
-          userData.name = email.split('@')[0];
         }
-        
-        userData.displayName = displayName || name || email.split('@')[0];
-        
+        if (displayName || name) {
+          userData.displayName = displayName || name;
+        }
         if (phone) userData.phone = phone;
       }
 

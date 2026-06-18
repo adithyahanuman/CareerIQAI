@@ -1197,20 +1197,21 @@ const initApp = async () => {
                         el_eduSub.textContent = `${eduEntries.length} institution(s) · grade ${ed.education_grade || "—"}`;
                     if (eduEntries.length > 0) {
                         const first = eduEntries[0];
+                        const firstGpaVal = first.gpa || 0;
+                        const isFirstPerc = firstGpaVal.toString().includes("%") || parseFloat(firstGpaVal) > 10;
+                        const chartScoreLabel = isFirstPerc ? "Percentage" : "GPA×10";
+                        const chartScoreValue = isFirstPerc ? parseFloat(firstGpaVal) : Math.round(parseFloat(firstGpaVal) * 10);
+                        
                         raCreateChart("raChartEduCoverage", {
                             type: "bar",
                             data: {
-                                labels: ["Coursework", "Tools", "GPA×10"],
+                                labels: ["Coursework", "Tools", chartScoreLabel],
                                 datasets: [
                                     {
                                         data: [
-                                            (first.relevant_coursework || [])
-                                                .length,
-                                            (first.tools_in_coursework || [])
-                                                .length,
-                                            Math.round(
-                                                parseFloat(first.gpa || 0) * 10,
-                                            ),
+                                            (first.relevant_coursework || []).length,
+                                            (first.tools_in_coursework || []).length,
+                                            chartScoreValue,
                                         ],
                                         backgroundColor: [
                                             "#3b82f6",
@@ -1248,6 +1249,9 @@ const initApp = async () => {
                                 "average (6.49-4.99)": "ra-badge-amber",
                                 not_listed: "ra-badge-gray",
                             };
+                            const isPerc = e.gpa && (e.gpa.toString().includes("%") || parseFloat(e.gpa) > 10 || (e.degree_type && e.degree_type.toLowerCase().includes("school")));
+                            const badgeLabel = isPerc ? (e.gpa.toString().includes("%") ? "" : "Score ") : "GPA ";
+                            
                             const div = document.createElement("div");
                             div.style.cssText =
                                 "display:flex;flex-direction:column;gap:0.6rem;";
@@ -1255,7 +1259,7 @@ const initApp = async () => {
               <div style="font-size:15px;font-weight:500">${e.institution || "Institution"}</div>
               <div style="color:var(--ra-muted);font-size:12px">${e.degree_type || ""} in ${e.field_of_study || ""} · ${e.graduation_year || "Expected unknown"}</div>
               <div style="display:flex;flex-wrap:wrap;gap:0.35rem;">
-                ${e.gpa ? `<span class="ra-badge ${gpaMap[e.gpa_assessment] || "ra-badge-gray"}">GPA ${e.gpa}</span>` : ""}
+                ${e.gpa ? `<span class="ra-badge ${gpaMap[e.gpa_assessment] || "ra-badge-gray"}">${badgeLabel}${e.gpa}</span>` : ""}
                 ${(e.relevant_coursework || [])
                     .slice(0, 6)
                     .map((c) => `<span class="ra-pill">${c}</span>`)

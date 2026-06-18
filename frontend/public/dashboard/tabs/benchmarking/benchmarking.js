@@ -52,8 +52,8 @@
     function gradeColor(grade) {
         if (!grade) return '#ef4444';
         const g = grade.replace('−', '-');
-        if (g === 'A+' || g === 'A' || g === 'B+') return '#22c55e';
-        if (g === 'A-' || g === 'B' || g === 'C+') return '#f59e0b';
+        if (g === 'A+' || g === 'A' || g === 'A-' || g === 'B+') return '#22c55e';
+        if (g === 'B' || g === 'C+') return '#f59e0b';
         if (g === 'B-' || g === 'C' || g === 'C-') return '#f97316';
         return '#ef4444';
     }

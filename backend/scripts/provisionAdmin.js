@@ -1,7 +1,5 @@
 require('dotenv').config();
-const { admin } = require('./src/config/firebase');
-
-async function provisionAdmin() {
+const { admin } = require('../src/config/firebase');async function provisionAdmin() {
   const email = 'careeriqai.admin@gmail.com';
   const password = 'admin@careeriqai';
   const name = 'Admin User';

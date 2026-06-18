@@ -26,10 +26,10 @@ const poolConfig = connectionString ? {
 
 const pool = new Pool(poolConfig);
 
-async function wipeEverythingExceptAdminAccount() {
+async function wipe() {
     try {
-        console.log('Starting full data wipe, preserving ONLY the admin login details...');
-        const adminEmail = 'careeriqai.admin@gmail.com';
+        console.log('Starting full data wipe, preserving ONLY admin@placementiq.ai...');
+        const adminEmail = 'admin@placementiq.ai';
 
         // 1. Fetch Firebase Users
         let nextPageToken;
@@ -73,29 +73,23 @@ async function wipeEverythingExceptAdminAccount() {
         }
 
         // 4. PostgreSQL Wipe
-        console.log('Truncating PostgreSQL generated data tables...');
-        // Omit projects and rankings in case they don't exist in the current schema
-        const tablesToTry = ['roadmaps', 'benchmark_results', 'benchmark_sessions', 'resumes'];
-        for (const table of tablesToTry) {
+        // Use DELETE to prevent Serverless tier hanging on TRUNCATE CASCADE
+        console.log('Deleting from CockroachDB...');
+        const tables = ['roadmaps', 'benchmark_results', 'benchmark_sessions', 'resumes', 'rankings', 'projects'];
+        for (const table of tables) {
             try {
-                await pool.query(`TRUNCATE TABLE ${table} CASCADE;`);
-                console.log(`Truncated ${table}`);
-            } catch (e) {
-                console.log(`Skipped truncating ${table}: ${e.message}`);
+                await pool.query(`DELETE FROM ${table} WHERE 1=1`);
+                console.log(`Cleared ${table}`);
+            } catch(e) {
+                console.log(`Skipped clearing ${table}: ${e.message}`);
             }
         }
+
+        console.log('Clearing students table except admin...');
+        await pool.query(`DELETE FROM students WHERE email != $1`, [adminEmail]);
+        console.log('Students table cleared.');
         
-        // Now delete all non-admin students
-        console.log('Deleting non-admin users from PostgreSQL students table...');
-        const adminUidObj = allUsers.find(u => u.email === adminEmail);
-        if (adminUidObj) {
-            await pool.query(`DELETE FROM students WHERE firebase_uid != $1`, [adminUidObj.uid]);
-        } else {
-            // In case admin is missing from firebase auth, just truncate everyone to be safe
-            await pool.query(`TRUNCATE TABLE students CASCADE;`);
-        }
-        
-        console.log('Wipe complete. ONLY the admin account remains, with NO generated data attached.');
+        console.log('Wipe complete. ONLY the admin account remains.');
         process.exit(0);
     } catch (err) {
         console.error('Error wiping data:', err);
@@ -103,4 +97,4 @@ async function wipeEverythingExceptAdminAccount() {
     }
 }
 
-wipeEverythingExceptAdminAccount();
+wipe();
