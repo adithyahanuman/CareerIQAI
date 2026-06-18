@@ -16,9 +16,9 @@
         </script>
         <link rel="stylesheet" href="../auth/auth.css?v=1781596867135" />
         <!-- Dashboard layout & sidebar styles -->
-        <link rel="stylesheet" href="dashboard.css?v=1781596867135&v=2" />
+        <link rel="stylesheet" href="dashboard.css?v=1781596867138" />
         <!-- Tab-specific styles -->
-        <link rel="stylesheet" href="tabs/resume-analysis/resume-analysis.css?v=1781597123040" />
+        <link rel="stylesheet" href="tabs/resume-analysis/resume-analysis.css?v=1781597123043" />
         <link rel="stylesheet" href="tabs/career-roadmap/career-roadmap.css?v=1781597123038" />
         <!-- PlacementIQ Dashboard Styles -->
         <link rel="stylesheet" href="placementiq.css?v=1781596867135&v=2" />
@@ -39,7 +39,7 @@
                  SIDEBAR NAVIGATION
             **************************************************** -->
             <aside class="sidebar" id="sidebar">
-                <div class="sidebar-brand">
+                <div class="sidebar-brand" style="display: flex; align-items: center; width: 100%; position: relative;">
                     <div class="logo-box">
                         <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <defs>
@@ -54,17 +54,16 @@
                             <path d="M8 20 L20 20" stroke="#002d6c" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
                         </svg>
                     </div>
-                    <div class="brand-text">CareerIQ <span>AI</span></div>
+                    <div class="brand-text" style="flex: 1;">CareerIQ <span>AI</span></div>
+                    <a href="../index.html" title="Home Page" style="color: var(--text-secondary); display: flex; align-items: center; padding: 4px; border-radius: 6px; transition: all 0.2s;">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                        </svg>
+                    </a>
                 </div>
 
                 <div class="sidebar-section-label">WORKSPACE</div>
                 <nav class="sidebar-menu">
-                    <a href="../index.html" class="menu-item" style="margin-bottom: 8px;">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                        </svg>
-                        Home Page
-                    </a>
                     <a href="#home" class="menu-item active" data-target="home">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2v-4z" />
@@ -879,7 +878,7 @@
             <div style="background: var(--bg-card); padding: 40px; border-radius: 20px; border: 1px solid var(--border); text-align: center; max-width: 400px; box-shadow: 0 0 50px rgba(139, 92, 246, 0.2);">
                 <div class="ai-scanner-orb"></div>
                 <h3 style="margin-top: 25px; margin-bottom: 15px; color: var(--text-primary); font-size: 1.5rem; font-weight: 600;">Analyzing your resume...</h3>
-                <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.95rem; line-height: 1.5;">This deep scan takes about 1-2 mins. Please wait.</p>
+                <p id="analyzingModalDesc" style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.95rem; line-height: 1.5;">This deep scan takes about 1-2 mins. Please wait.</p>
                 <div style="display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.85rem; color: var(--accent);">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                     Extracting skills & benchmarking
@@ -901,7 +900,7 @@
         <!-- Gemini API client -->
         <script src="gemini-client.js?v=13"></script>
         <!-- Main Dashboard JS -->
-        <script src="dashboard.js?v=1781803900000"></script>
+        <script src="dashboard.js?v=1781803900002"></script>
         <!-- PlacementIQ Logic for new dashboard structure -->
         <script src="placementiq.js?v=1781803800000"></script>
         <!-- Benchmarking Tab JS -->

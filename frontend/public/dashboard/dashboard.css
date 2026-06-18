@@ -61,6 +61,19 @@
                 /* Removing stroke override so it uses SVG's own colors */
             }
 
+            .sidebar-brand .brand-text {
+                font-family: 'Hanken Grotesk', sans-serif;
+                font-weight: 800;
+                font-size: 20px;
+                color: var(--text-primary);
+                letter-spacing: -0.02em;
+            }
+
+            .sidebar-brand a:hover {
+                color: var(--brand) !important;
+                background: rgba(175, 198, 255, 0.1);
+            }
+
             .brand-text {
                 font-size: 22px;
                 font-weight: 700;

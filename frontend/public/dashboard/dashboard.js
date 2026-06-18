@@ -297,7 +297,16 @@ const initApp = async () => {
           const token = await firebase.auth().currentUser.getIdToken();
           
           const analyzingModal = document.getElementById('analyzingModal');
-          if (analyzingModal) analyzingModal.style.display = 'flex';
+          if (analyzingModal) {
+            analyzingModal.style.display = 'flex';
+            const desc = document.getElementById('analyzingModalDesc');
+            if (desc) {
+              desc.textContent = "This deep scan takes about 1-2 mins. Please wait.";
+              analyzingModal.dataset.timeoutId = setTimeout(() => {
+                desc.textContent = "The servers are currently experiencing high demand. It may take a few more moments, please wait...";
+              }, 90000);
+            }
+          }
 
           const analysis = await window.GeminiClient.analyzeResume(resumeText, token, resumeName, targetRoleType);
 
@@ -337,7 +346,10 @@ const initApp = async () => {
           }
         } finally {
           const analyzingModal = document.getElementById('analyzingModal');
-          if (analyzingModal) analyzingModal.style.display = 'none';
+          if (analyzingModal) {
+            analyzingModal.style.display = 'none';
+            clearTimeout(analyzingModal.dataset.timeoutId);
+          }
           
           // Restore button states (keep display as-is — success path sets display:none)
           allAnalyzeBtns.forEach(btn => {
@@ -781,7 +793,7 @@ const initApp = async () => {
               </div>
               <div class="ra-sc-foot">
                 <div class="ra-sc-stat"><b style="color:${cAcc}">${sc}</b>earned</div>
-                <div class="ra-sc-stat"><b>${mx - sc}</b>to gain</div>
+                <div class="ra-sc-stat"><b>${parseFloat((mx - sc).toFixed(1))}</b>to gain</div>
                 <div class="ra-sc-stat"><b>${issues.length}</b>issues</div>
               </div>
               ${issues
