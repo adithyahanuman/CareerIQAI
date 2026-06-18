@@ -1661,7 +1661,7 @@ const initApp = async () => {
                     // ── RECOMMENDATIONS ──────────────────────────────────────────────────
                     const el_recs = document.getElementById("raRecsContent");
                     if (el_recs && ap) {
-                        const roles2 = (ap.recommended_internship_roles || [])
+                        const roles2 = (ap.recommended_roles || ap.recommended_internship_roles || [])
                             .map(
                                 (r) =>
                                     `<button class="ra-role-btn">${r}</button>`,

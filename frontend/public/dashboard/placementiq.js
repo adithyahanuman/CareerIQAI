@@ -133,7 +133,7 @@
         const overall = data.overall_analysis || data.analysis?.overall || {};
         const sk = data.skills_analysis || data.analysis?.skills || {};
 
-        const rawRoles = ap.recommended_internship_roles || overall.recommended_roles || [];
+        const rawRoles = ap.recommended_roles || ap.recommended_internship_roles || overall.recommended_roles || [];
         if (!rawRoles.length) return;
 
         const roleIcons = ['💻', '📊', '🤖', '🎨', '🔧', '📱', '🌐', '⚡'];
@@ -312,7 +312,7 @@
         ).join('');
 
         // Step 4 — Apply for Jobs
-        const roles    = ap.recommended_internship_roles || [];
+        const roles    = ap.recommended_roles || ap.recommended_internship_roles || [];
         const certs    = ap.recommended_certifications   || [];
         const step4Desc = roles.length
             ? `Target these roles once your profile is ready:`

@@ -24,9 +24,11 @@
 const fullResumeAnalysis = (resumeText) => {
   const now = new Date();
   const currentDate = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric', day: 'numeric' });
-  return `You are an expert resume analyst and university career counselor specializing in helping students land their first internships and entry-level roles. You have reviewed over 30,000 student resumes and know exactly what internship recruiters at top companies look for.
+  return `You are an expert resume analyst and university career counselor specializing in helping students land internships or full-time roles. You have reviewed over 30,000 student resumes and know exactly what recruiters at top companies look for.
 
 TODAY'S DATE: ${currentDate}. Use this as your reference for evaluating all dates. Do NOT flag any date on or before today as a future date. Only flag dates strictly after today as future dates.
+
+CRITICAL INSTRUCTION FOR ROLE RECOMMENDATIONS: Based on the candidate's graduation year and experience, recommend either "Internship" roles (if they are early in college) OR "Full-Time" roles (if they are graduating soon, already graduated, or explicitly seeking full-time jobs). Do NOT default to "Intern" for everyone.
 
 IMPORTANT CONTEXT: This resume belongs to a STUDENT. Apply student-appropriate standards:
 - No full-time work experience is expected or required
@@ -286,7 +288,7 @@ CRITICAL INSTRUCTIONS FOR EXTRACTION:
     ],
     "strengths_to_highlight": [],
     "biggest_gaps": [],
-    "recommended_internship_roles": [],
+    "recommended_roles": [],
     "recommended_certifications": [],
     "encouragement": "string"
   },
