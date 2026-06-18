@@ -93,10 +93,9 @@
   };
 
   // ---- Domain Management ----
-  const FALLBACK_DOMAINS = [
-    { id: '1', domain: 'vit.ac.in', is_active: true, org_name: 'VIT University', org_logo: '🎓' },
-    { id: '2', domain: 'vit.student.ac.in', is_active: true, org_name: 'VIT Student Portal', org_logo: '📚' },
-    { id: '3', domain: 'vitfaculty.ac.in', is_active: true, org_name: 'VIT Faculty Portal', org_logo: '🏫' }
+  const ALLOWED_DOMAINS = [
+    { id: '1', domain: 'vit.ac.in', is_active: true, org_name: 'Vellore Institute of Technology', org_logo: '🏛️' },
+    { id: '2', domain: 'vitstudent.ac.in', is_active: true, org_name: 'VIT Student Portal', org_logo: '🎓' }
   ];
 
   const getDomains = async () => {
