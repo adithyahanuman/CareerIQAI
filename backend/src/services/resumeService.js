@@ -45,8 +45,8 @@ const uploadResume = async ({ student_id, resume_text, file_name = 'resume.txt',
 
   // ── Content-hash cache: only reuse analysis if the TEXT and TARGET are identical ──────
   // Compute SHA-256 of the raw resume text + target role type so any edit (even one word) or changing target busts
-  // the cache and forces a fresh AI run. Added |v2 to bust previous hallucinated AI caches.
-  const contentHash = sha256(resume_text + '|' + target_role_type + '|v2');
+  // the cache and forces a fresh AI run. Added |v3 to bust previous hallucinated AI caches.
+  const contentHash = sha256(resume_text + '|' + target_role_type + '|v3');
   console.log(`[resumeService] content hash = ${contentHash.slice(0, 12)}… (target: ${target_role_type})`);
 
   const cached = await query(
@@ -93,9 +93,37 @@ const uploadResume = async ({ student_id, resume_text, file_name = 'resume.txt',
     const aiResponse = await aiService.analyzeResume(prompts.fullResumeAnalysis(resume_text, target_role_type));
     const analysis = aiResponse.data;
 
+    // Recalculate raw score and overall score manually to prevent AI math hallucinations
+    let calculatedRawScore = 0;
+    calculatedRawScore += Number(analysis.contact?.contact_score || 0);
+    calculatedRawScore += Number(analysis.summary?.summary_score || 0);
+    calculatedRawScore += Number(analysis.experience?.experience_score || 0);
+    calculatedRawScore += Number(analysis.education?.education_score || 0);
+    calculatedRawScore += Number(analysis.skills?.skills_score || 0);
+    calculatedRawScore += Number(analysis.projects?.projects_score || 0);
+    calculatedRawScore += Number(analysis.formatting?.formatting_score || 0);
+    calculatedRawScore += Number(analysis.certifications?.certifications_score || 0);
+    calculatedRawScore += Number(analysis.extracurriculars?.extracurricular_score || 0);
+
+    const calculatedOverallScore = Math.round((calculatedRawScore / 130) * 100);
+
+    let completeness = 0;
+    if (analysis.contact?.contact_score > 0) completeness += 20;
+    if (analysis.summary?.summary_score > 0) completeness += 20;
+    if (analysis.experience?.experience_score > 0) completeness += 20;
+    if (analysis.education?.education_score > 0) completeness += 20;
+    if (analysis.skills?.skills_score > 0) completeness += 20;
+
+    if (analysis.overall) {
+      analysis.overall.raw_score = calculatedRawScore;
+      analysis.overall.overall_score = calculatedOverallScore;
+    }
+    if (analysis.completeness) {
+      analysis.completeness.completeness_score = completeness;
+    }
+    
     // Extract overall score for ats_score column and ensure it is an integer to prevent db cast errors
-    let rawScore = analysis.overall?.overall_score;
-    const overallScore = rawScore != null ? Math.round(Number(rawScore)) : null;
+    const overallScore = calculatedOverallScore;
 
     // Sanitize AI hallucinations: if fulltime is requested, strictly remove 'Intern' from roles
     if (target_role_type === 'fulltime') {
