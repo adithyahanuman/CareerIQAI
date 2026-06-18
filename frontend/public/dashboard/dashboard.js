@@ -2798,7 +2798,7 @@ const initApp = async () => {
                         );
 
                         // Show Analyze button everywhere
-                        setResumeLabel("📄 " + file.name + " — ready to analyze");
+                        setResumeLabel("📄 " + file.name + " — analyzing...");
                         showAnalyzeButtons(true);
 
                         // Also update the CTA card button text
@@ -2810,11 +2810,14 @@ const initApp = async () => {
 
                         if (window.CareerIQAuth?.Toast) {
                             window.CareerIQAuth.Toast.show(
-                                '✅ Resume saved! Click "Analyze with AI" to get your score.',
+                                '✅ Resume saved! Analyzing with AI now...',
                                 "success",
-                                5000
+                                4000
                             );
                         }
+
+                        // Auto-trigger the AI analysis so the user doesn't have to find the top-bar button
+                        analyzeFromFirestore();
 
                     } catch (err) {
                         console.error("Upload failed:", err);
