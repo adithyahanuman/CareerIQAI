@@ -450,6 +450,22 @@ async function _runAI(studentId, studentRow, rawText, resumeHash, jobRoles, tier
         console.warn(`[benchmark] No role table mapped for role: "${roleName}"`);
       }
 
+      // ── 3. Insert into legacy rankings table ──────────────────────────────────
+      try {
+        await query(
+          `INSERT INTO rankings
+             (student_id, target_role, target_company, overall_score, details, updated_at)
+           VALUES ($1, $2, $3, $4, $5, NOW())
+           ON CONFLICT (student_id, target_role, target_company) DO UPDATE SET
+             overall_score = EXCLUDED.overall_score,
+             details       = EXCLUDED.details,
+             updated_at    = NOW()`,
+          [studentId, roleName, 'Global', fitScore, JSON.stringify(detailedAnalysis)]
+        );
+      } catch (rankingErr) {
+        console.error(`[benchmark] ❌ Legacy rankings table upsert FAILED: ${rankingErr.message}`);
+      }
+
     }
 
     const { rows: [done] } = await query(
@@ -643,6 +659,24 @@ const createSession = async ({ createdBy, candidateIds, jobRoles }) => {
           [session.id, r.student_id, r.student_name||'Unknown', fitScore, r.grade||'F',
            r.major_strength||null, r.improvement_suggestion||null],
         );
+      }
+      
+      // Also insert into legacy rankings table
+      if (r.student_id) {
+        const fitScore = Math.min(100, Math.max(0, Math.round(Number(r.fit_score) || 0)));
+        try {
+          await query(
+            `INSERT INTO rankings
+               (student_id, target_role, target_company, overall_score, updated_at)
+             VALUES ($1, $2, $3, $4, NOW())
+             ON CONFLICT (student_id, target_role, target_company) DO UPDATE SET
+               overall_score = EXCLUDED.overall_score,
+               updated_at    = NOW()`,
+            [r.student_id, r.role_name || '', 'Global', fitScore]
+          );
+        } catch (rankingErr) {
+          console.error(`[benchmark] ❌ Legacy rankings table upsert FAILED: ${rankingErr.message}`);
+        }
       }
     }
 
