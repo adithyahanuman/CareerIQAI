@@ -2660,87 +2660,104 @@ const initApp = async () => {
                     });
                 };
 
-                // Core upload handler
-                const handleFileUpload = async (file) => {
-                    if (!file) return;
+                        // Core upload handler
+                        const handleFileUpload = async (file) => {
+                            if (!file) return;
 
-                    // Only accept PDF
-                    if (!file.name.toLowerCase().endsWith('.pdf')) {
-                        if (window.CareerIQAuth?.Toast) {
-                            window.CareerIQAuth.Toast.show("Please upload a PDF file.", "error");
-                        }
-                        return;
-                    }
-
-                    const uid = user.uid;
-                    setUploadBtnState(true);
-
-                    try {
-                        // Check Firestore for existing resume
-                        const snap = await db.collection("user_profiles").doc(uid).get();
-                        const existing = snap.exists ? snap.data() : {};
-
-                        // Same filename + already analyzed → just reload analysis
-                        if (
-                            file.name === existing.resumeName &&
-                            pgResume &&
-                            pgResume.file_name === file.name &&
-                            pgResume.overall_analysis
-                        ) {
-                            populateResumeAnalysisTab(pgResume);
-                            if (window.CareerIQAuth?.Toast) {
-                                window.CareerIQAuth.Toast.show(
-                                    "Same resume detected — your saved analysis is displayed.",
-                                    "info",
-                                    4000
-                                );
+                            // Validate file size and readability
+                            if (file.size === 0) {
+                                if (window.CareerIQAuth?.Toast) {
+                                    window.CareerIQAuth.Toast.show("File is empty or unreadable. Try downloading it to your device first.", "error");
+                                }
+                                return;
                             }
-                            return;
-                        }
-
-                        // New file → extract text
-                        pgResume = null;
-
-                        // Check pdf.js is loaded
-                        if (typeof pdfjsLib === "undefined") {
-                            throw new Error("PDF library not loaded. Please refresh the page and try again.");
-                        }
-
-                        // Upload PDF to backend to extract text (with OCR fallback)
-                        const formData = new FormData();
-                        formData.append('resumeFile', file);
-
-                        // Wake up the Render server first (free tier sleeps after 15 min)
-                        // This prevents "Failed to fetch" on cold starts
-                        try {
-                            const wake = await fetch("https://careeriqai.onrender.com/health", {
-                                method: "GET",
-                                signal: AbortSignal.timeout(20000)
-                            });
-                            if (!wake.ok) throw new Error('wake failed');
-                        } catch (wakeErr) {
-                            // If health check itself fails, server is down
-                            throw new Error('Cannot reach the server. Please check your internet connection and try again in a moment.');
-                        }
-
-                        // Now send the actual file
-                        let response;
-                        try {
-                            response = await fetch("https://careeriqai.onrender.com/resume/extract", {
-                                method: "POST",
-                                body: formData,
-                                signal: AbortSignal.timeout(60000)  // 60s timeout for large PDFs
-                            });
-                        } catch (fetchErr) {
-                            if (fetchErr.name === 'TimeoutError') {
-                                throw new Error('Upload timed out. The server is busy — please try again in 30 seconds.');
+                            
+                            if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                                if (window.CareerIQAuth?.Toast) {
+                                    window.CareerIQAuth.Toast.show("File is too large. Please upload a PDF under 5MB.", "error");
+                                }
+                                return;
                             }
-                            throw new Error('Failed to reach server. Check your internet connection and try again.');
-                        }
 
-                        if (!response.ok) {
-                            throw new Error('Failed to extract resume: ' + response.statusText);
-                        }
+                            // Only accept PDF
+                            if (!file.name.toLowerCase().endsWith('.pdf')) {
+                                if (window.CareerIQAuth?.Toast) {
+                                    window.CareerIQAuth.Toast.show("Please upload a PDF file.", "error");
+                                }
+                                return;
+                            }
+
+                            const uid = user.uid;
+                            setUploadBtnState(true);
+
+                            try {
+                                // Check Firestore for existing resume
+                                const snap = await db.collection("user_profiles").doc(uid).get();
+                                const existing = snap.exists ? snap.data() : {};
+
+                                // Same filename + already analyzed → just reload analysis
+                                if (
+                                    file.name === existing.resumeName &&
+                                    pgResume &&
+                                    pgResume.file_name === file.name &&
+                                    pgResume.overall_analysis
+                                ) {
+                                    populateResumeAnalysisTab(pgResume);
+                                    if (window.CareerIQAuth?.Toast) {
+                                        window.CareerIQAuth.Toast.show(
+                                            "Same resume detected — your saved analysis is displayed.",
+                                            "info",
+                                            4000
+                                        );
+                                    }
+                                    setUploadBtnState(false);
+                                    return;
+                                }
+
+                                // New file → extract text
+                                pgResume = null;
+
+                                // Check pdf.js is loaded
+                                if (typeof pdfjsLib === "undefined") {
+                                    throw new Error("PDF library not loaded. Please refresh the page and try again.");
+                                }
+
+                                // Upload PDF to backend to extract text (with OCR fallback)
+                                const formData = new FormData();
+                                formData.append('resumeFile', file);
+
+                                // Wake up the Render server first (free tier sleeps after 15 min)
+                                // This prevents "Failed to fetch" on cold starts
+                                try {
+                                    const wake = await fetch("https://careeriqai.onrender.com/health", {
+                                        method: "GET",
+                                        signal: AbortSignal.timeout(20000)
+                                    });
+                                    if (!wake.ok) throw new Error('wake failed');
+                                } catch (wakeErr) {
+                                    // If health check itself fails, server is down
+                                    throw new Error('Cannot reach the server. Please check your internet connection and try again in a moment.');
+                                }
+
+                                // Now send the actual file
+                                let response;
+                                try {
+                                    response = await fetch("https://careeriqai.onrender.com/resume/extract", {
+                                        method: "POST",
+                                        body: formData,
+                                        signal: AbortSignal.timeout(60000)  // 60s timeout for large PDFs
+                                    });
+                                } catch (fetchErr) {
+                                    if (fetchErr.name === 'TimeoutError') {
+                                        throw new Error('Upload timed out. The server is busy — please try again in 30 seconds.');
+                                    }
+                                    // Make error detailed for debugging mobile
+                                    throw new Error(`Failed to reach server [${fetchErr.name}: ${fetchErr.message}]. Check your internet connection and try again.`);
+                                }
+
+                                if (!response.ok) {
+                                    throw new Error(`Failed to extract resume: ${response.status} ${response.statusText}`);
+                                }
 
                         const extracted = await response.json();
                         const resumeText = extracted.raw_text;
