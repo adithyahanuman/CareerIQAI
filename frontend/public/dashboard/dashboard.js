@@ -2767,6 +2767,9 @@ const initApp = async () => {
                                     if (fetchErr.name === 'TimeoutError') {
                                         throw new Error('Upload timed out. The server is busy — please try again in 30 seconds.');
                                     }
+                                    if (fetchErr.message === 'Failed to fetch' || fetchErr.message.toLowerCase().includes('failed to fetch')) {
+                                        throw new Error('Failed to fetch, server is busy please try in 15 seconds.');
+                                    }
                                     // Make error detailed for debugging mobile
                                     throw new Error(`Failed to reach server [${fetchErr.name}: ${fetchErr.message}]. Check your internet connection and try again.`);
                                 }
