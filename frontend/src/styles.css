@@ -2856,39 +2856,44 @@ textarea {
 
   /* Hero */
   .hero {
-    padding-top: calc(var(--nav-height) + 40px);
+    padding-top: calc(var(--nav-height) + 80px); /* Add more top padding to prevent clipping under fixed header */
     padding-bottom: 60px;
     overflow: hidden;
   }
 
   .hero-container {
-    padding: 0 16px;
+    padding: 0 20px;
     width: 100%;
     box-sizing: border-box;
   }
 
   .hero-headline {
-    font-size: clamp(32px, 8vw, 52px);
-    line-height: 1.1;
-    margin-bottom: 20px;
+    font-size: clamp(32px, 10vw, 42px);
+    line-height: 1.15;
+    margin-bottom: 16px;
   }
 
   .hero-subheadline {
-    font-size: 15px;
-    padding: 0;
-    margin-bottom: 28px;
+    font-size: 16px;
+    padding: 0 8px;
+    margin-bottom: 32px;
+    line-height: 1.5;
   }
 
   .hero-cta {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
     margin-bottom: 40px;
   }
 
   .hero-cta a {
-    justify-content: center;
-    width: 100%;
+    width: auto; /* Prevent button from stretching 100% on mobile */
+    min-width: 200px;
+    padding: 14px 28px;
   }
 
   .hero-stats {
