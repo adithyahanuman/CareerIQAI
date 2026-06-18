@@ -2924,8 +2924,26 @@ textarea {
     overflow: hidden;
   }
 
+  /* Transform the hero mockup from a desktop window to a mobile phone frame on mobile */
   .mockup-window {
-    border-radius: 10px;
+    border-radius: 32px;
+    border: 6px solid var(--border);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+  }
+
+  .mockup-titlebar {
+    justify-content: center;
+    padding: 16px 20px;
+    position: relative;
+  }
+
+  .titlebar-dots {
+    display: none;
+  }
+
+  .titlebar-actions {
+    position: absolute;
+    right: 16px;
   }
 
   .mockup-sidebar {
