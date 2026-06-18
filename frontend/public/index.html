@@ -969,6 +969,15 @@
       }
     });
   </script>
+
+  <!-- Wake up Render Backend Server -->
+  <script>
+    window.addEventListener('load', () => {
+      fetch('https://careeriqai.onrender.com/api/health')
+        .then(() => console.log('Backend server waking up...'))
+        .catch(() => console.log('Backend ping failed, but that is okay.'));
+    });
+  </script>
 </body>
 </html>
 
