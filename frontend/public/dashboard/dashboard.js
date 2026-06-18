@@ -1773,11 +1773,17 @@ const initApp = async () => {
                             ? recCerts.map((c) => `<div class="ra-cert-rec-card"><span style="font-size:16px;color:var(--ra-blue)">📜</span><span style="font-weight:500;font-size:12px">${c}</span></div>`).join("")
                             : '<span style="color:var(--text-secondary);font-size:0.9rem;font-style:italic;">No certifications recommended</span>';
                             
+                        let normalizedConf = D.confidence?.confidence_score;
+                        if (normalizedConf !== undefined && normalizedConf !== null) {
+                            if (normalizedConf <= 5) normalizedConf = normalizedConf * 20;
+                            else if (normalizedConf <= 10) normalizedConf = normalizedConf * 10;
+                        }
+
                         el_recs.innerHTML = `
             <div class="ra-roles-pills">${rolesHtml}</div>
             <div class="ra-certs-rec-grid">${certsHtml}</div>
             ${ap.encouragement ? `<div class="ra-encouragement">${ap.encouragement}</div>` : ""}
-            ${D.confidence?.confidence_score ? `<div style="margin-top:1rem;display:flex;justify-content:flex-end"><span class="ra-confidence-badge">🛡️ <span style="color:${window.COLORS.getScoreColor(D.confidence.confidence_score)}">Analysis Confidence: ${D.confidence.confidence_score}%</span> · ${D.confidence.extraction_quality || ""}</span></div>` : ""}`;
+            ${normalizedConf ? `<div style="margin-top:1rem;display:flex;justify-content:flex-end"><span class="ra-confidence-badge">🛡️ <span style="color:${window.COLORS.getScoreColor(normalizedConf)}">Analysis Confidence: ${normalizedConf}%</span> · ${D.confidence.extraction_quality || ""}</span></div>` : ""}`;
                     }
 
                     // ── OVERALL CHANGES REQUIRED ─────────────────────────────────────────

@@ -386,7 +386,7 @@ CRITICAL INSTRUCTIONS FOR EXTRACTION:
   },
   "analysis_confidence": {
     "overall_confidence": "high",
-    "confidence_score": 0,
+    "confidence_score": 0, // Integer between 0 and 100
     "extraction_quality": "clean",
     "ambiguities": [
       {"section": "string", "issue": "string"},
@@ -399,12 +399,12 @@ CRITICAL INSTRUCTIONS FOR EXTRACTION:
 SCORING RULES:
 - contact_score (out of 2): name+0.5, professional email+0.5, LinkedIn+0.5, GitHub+0.5
 - summary_score (out of 2): exists+0.2, mentions target role+1, ideal length+0.5, deduct -0.5 for only generic buzzwords
-- experience_score (out of 20): score=4 (neutral) if no experience; +4 per relevant role up to 2, role quality, quantification, skill context
+- experience_score (out of 20): score=4 (neutral) if no experience; +4 per relevant role (including Research Assistant/Labs) up to 2, role quality, quantification, skill context
 - education_score (out of 20): degree+3, institution+2, graduation year+1, relevance+3, GPA 6+: +2, GPA 8+: +2, coursework+2, capstone+2, tools+1, exchange/minor+1+1
 - skills_score (out of 20): section exists+2, categorized+3, 6+ skills+3, 10+ skills+3, evidence in projects+3, no inflation+2, balance+1, transferable+3
-- projects_score (out of 20): exists+3, 2+ projects+3, descriptive names+1, what/why+3, tech listed+2, personal initiative+2, link/demo+2, scale+2, progression+1; deduct -1 for all tutorials, -1 title-only
+- projects_score (out of 20): exists+3, 2+ projects (including Research Papers/Projects)+3, descriptive names+1, what/why+3, tech listed+2, personal initiative+2, link/demo+2, scale+2, progression+1; deduct -1 for all tutorials, -1 title-only
 - formatting_score (out of 6): section order+1, standard headings+1, no spelling errors+2, no multi-column+0.5, consistent+0.5, no graphics+0.5, strong action verbs+0.5; deduct -1/typo (max-1), -0.5 multi-column, -1 non-standard headings
-- certifications_score (out of 20): section exists+2, relevant cert+4, recognized platform+3, recent (2yr)+2, online courses+1; NO certs=4 neutral. Competition win+3, academic award+2, community recognition+1, scale mentioned+2; NO achievements=2 neutral
+- certifications_score (out of 20): section exists+2, relevant cert+4, recognized platform+3, recent (2yr)+2, online courses+1; NO certs=4 neutral. Published research/journal/conference paper+5, Competition win+3, academic award+2, community recognition+1, scale mentioned+2; NO achievements=2 neutral
 - extracurricular_score (out of 20): section exists+2, 2+ activities+2, leadership role+5, field-relevant+3, contributions described+3, scale/achievement+3, leadership qualities+2; deduct -1 filler; NO extras=2 neutral
 - overall_score = (raw_score / 130) * 100, rounded to integer
 - raw_score = sum of all section scores
