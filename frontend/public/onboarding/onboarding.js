@@ -197,20 +197,7 @@ const OnboardingWizard = {
       });
     });
 
-    const skipBtn = document.querySelector('.onboarding-skip');
-    if (skipBtn) {
-      skipBtn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        CareerIQAuth.Toast.show('Skipping setup. Redirecting to Dashboard...', 'info');
-        try {
-          this.data.onboarding_complete = true;
-          await this.saveData();
-        } catch (err) {
-          console.warn('[Onboarding] Could not save skip state:', err);
-        }
-        setTimeout(() => { window.location.href = '../dashboard/index.html'; }, 800);
-      });
-    }
+
   },
 
   goToStep(n) {
