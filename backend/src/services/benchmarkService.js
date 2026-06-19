@@ -430,9 +430,9 @@ async function _runAI(studentId, studentRow, rawText, resumeHash, jobRoles, tier
         try {
           await query(
             `INSERT INTO ${roleTable}
-               (session_id, student_id, student_name, fit_score, grade, major_strength, improvement_suggestion, detailed_analysis, updated_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
-             ON CONFLICT (student_id) DO UPDATE SET
+               (session_id, student_id, student_name, fit_score, grade, major_strength, improvement_suggestion, detailed_analysis, updated_at, resume_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), $9)
+             ON CONFLICT (resume_id) DO UPDATE SET
                session_id             = EXCLUDED.session_id,
                student_name           = EXCLUDED.student_name,
                fit_score              = EXCLUDED.fit_score,
@@ -441,7 +441,7 @@ async function _runAI(studentId, studentRow, rawText, resumeHash, jobRoles, tier
                improvement_suggestion = EXCLUDED.improvement_suggestion,
                detailed_analysis      = EXCLUDED.detailed_analysis,
                updated_at             = NOW()`,
-            [session.id, studentId, studentRow.full_name, fitScore, grade, strength, suggest, JSON.stringify(detailedAnalysis)],
+            [session.id, studentId, studentRow.full_name, fitScore, grade, strength, suggest, JSON.stringify(detailedAnalysis), studentRow.resume_id],
           );
         } catch (roleErr) {
           console.error(`[benchmark] ❌ Role table upsert FAILED for "${roleName}" → ${roleTable}: ${roleErr.message}`);
@@ -517,6 +517,7 @@ const getRoleLeaderboard = async (roleName, limit = 50) => {
       rt.updated_at,
       s.branch,
       s.course,
+      rt.resume_id,
       RANK()  OVER (ORDER BY rt.fit_score DESC) AS role_rank,
       COUNT(*) OVER ()                           AS total_peers
     FROM ${table} rt
@@ -539,6 +540,7 @@ const getRoleLeaderboard = async (roleName, limit = 50) => {
       improvement_suggestion: r.improvement_suggestion,
       branch:                 r.branch,
       course:                 r.course,
+      resume_id:              r.resume_id,
       updated_at:             r.updated_at,
     })),
   };
@@ -569,6 +571,8 @@ const getMyRoleRanks = async (studentId) => {
           FROM ${table}
         ) ranked
         WHERE student_id = $1
+        ORDER BY fit_score DESC
+        LIMIT 1
       `, [studentId]);
 
       if (!row) return null;
