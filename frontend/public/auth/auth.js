@@ -91,7 +91,10 @@
   const FALLBACK_DOMAINS = [
     { id: '1', domain: 'vit.ac.in', is_active: true, org_name: 'Vellore Institute of Technology', org_logo: '🏛️' },
     { id: '2', domain: 'vitstudent.ac.in', is_active: true, org_name: 'VIT Student Portal', org_logo: '🎓' },
-    { id: '3', domain: 'vitapstudent.ac.in', is_active: true, org_name: 'VIT-AP Student Portal', org_logo: '🎓' }
+    { id: '3', domain: 'vitapstudent.ac.in', is_active: true, org_name: 'VIT-AP Student Portal', org_logo: '🎓' },
+    { id: '4', domain: 'chennai.vit.ac.in', is_active: true, org_name: 'VIT Chennai', org_logo: '🏛️' },
+    { id: '5', domain: 'vitap.ac.in', is_active: true, org_name: 'VIT-AP', org_logo: '🏛️' },
+    { id: '6', domain: 'vitbhopal.ac.in', is_active: true, org_name: 'VIT Bhopal', org_logo: '🏛️' }
   ];
 
   const getDomains = async () => {
