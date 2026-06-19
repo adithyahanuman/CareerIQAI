@@ -370,7 +370,7 @@ const OnboardingWizard = {
       if (fbUser) {
         const token = await fbUser.getIdToken();
         const pgPayload = {
-          full_name: payload.fullName || null,
+          full_name: payload.fullName || "",
           phone: payload.phone || null,
           course: payload.course || null,
           branch: payload.branch || null,
