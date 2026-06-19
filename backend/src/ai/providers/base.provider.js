@@ -39,15 +39,15 @@ class BaseAIProvider {
    * 
    * @returns {string|null} The new active key
    */
-  rotateKey(reason = 'Quota exceeded') {
+  rotateKey() {
     if (this.apiKeys.length <= 1) {
-      console.warn(`[AI Provider ${this.name}] ${reason}, but no backup keys are available.`);
+      console.warn(`[AI Provider ${this.name}] Quota exceeded, but no backup keys are available.`);
       return this.getActiveKey();
     }
     const previousIndex = this.currentKeyIndex;
     this.currentKeyIndex = (this.currentKeyIndex + 1) % this.apiKeys.length;
     const newKey = this.getActiveKey();
-    console.warn(`[AI Provider ${this.name}] ${reason} on key index ${previousIndex}. Rotating to key index ${this.currentKeyIndex}.`);
+    console.warn(`[AI Provider ${this.name}] Quota exceeded on key index ${previousIndex}. Rotating to key index ${this.currentKeyIndex}.`);
     
     // Trigger callback for child providers (e.g. to re-initialize client SDKs)
     if (typeof this.onKeyRotated === 'function') {
