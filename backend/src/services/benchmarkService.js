@@ -248,7 +248,9 @@ const getMyRoleFit = async (studentId) => {
             r.extracurriculars_analysis,
             r.overall_analysis,
             r.confidence_analysis,
-            r.action_plan_analysis
+            r.action_plan_analysis,
+            r.resume_text_hash,
+            r.raw_text
      FROM   students s
      JOIN   resumes  r ON r.student_id = s.id
                        AND r.is_primary  = TRUE
@@ -265,8 +267,8 @@ const getMyRoleFit = async (studentId) => {
   }
 
   // ── Step 2: get current resume text + hash ─────────────────────────────────
-  const rawText     = await _fetchRawText(studentRow.firebase_uid);
-  const currentHash = sha256(rawText);
+  const rawText     = studentRow.raw_text || '';
+  const currentHash = studentRow.resume_text_hash || sha256(rawText);
 
   // ── Step 3: detect current roles expected for this student ─────────────────
   const eduText       = _extractDegreeText(studentRow);

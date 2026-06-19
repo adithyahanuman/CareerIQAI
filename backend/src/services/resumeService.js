@@ -82,10 +82,10 @@ const uploadResume = async ({ student_id, resume_text, file_name = 'resume.txt',
 
   const { rows } = await query(
     `INSERT INTO resumes
-       (student_id, file_name, resume_text_hash, status, is_primary)
-     VALUES ($1, $2, $3, 'parsed', TRUE)
+       (student_id, file_name, resume_text_hash, raw_text, status, is_primary)
+     VALUES ($1, $2, $3, $4, 'parsed', TRUE)
      RETURNING *`,
-    [student_id, file_name, contentHash],
+    [student_id, file_name, contentHash, resume_text],
   );
 
   // ONE AI call — master prompt returns 13 sections
