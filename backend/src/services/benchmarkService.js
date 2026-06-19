@@ -457,13 +457,13 @@ async function _runAI(studentId, studentRow, rawText, resumeHash, jobRoles, tier
         const resumeAnalysisScore = Number(studentRow.overall_analysis?.overall_score) || 0;
         await query(
           `INSERT INTO rankings
-             (student_id, student_name, overall_score, updated_at)
-           VALUES ($1, $2, $3, NOW())
-           ON CONFLICT (student_id) DO UPDATE SET
+             (student_id, student_name, overall_score, updated_at, resume_id)
+           VALUES ($1, $2, $3, NOW(), $4)
+           ON CONFLICT (resume_id) DO UPDATE SET
              student_name  = EXCLUDED.student_name,
              overall_score = EXCLUDED.overall_score,
              updated_at    = NOW()`,
-          [studentId, studentRow.full_name || 'Unknown', resumeAnalysisScore]
+          [studentId, studentRow.full_name || 'Unknown', resumeAnalysisScore, studentRow.resume_id]
         );
       } catch (rankingErr) {
         console.error(`[benchmark] ❌ Legacy rankings table upsert FAILED: ${rankingErr.message}`);
@@ -677,13 +677,13 @@ const createSession = async ({ createdBy, candidateIds, jobRoles }) => {
         try {
           await query(
             `INSERT INTO rankings
-               (student_id, student_name, overall_score, updated_at)
-             VALUES ($1, $2, $3, NOW())
-             ON CONFLICT (student_id) DO UPDATE SET
+               (student_id, student_name, overall_score, updated_at, resume_id)
+             VALUES ($1, $2, $3, NOW(), $4)
+             ON CONFLICT (resume_id) DO UPDATE SET
                student_name  = EXCLUDED.student_name,
                overall_score = EXCLUDED.overall_score,
                updated_at    = NOW()`,
-            [r.student_id, r.student_name || match?.name || 'Unknown', resumeAnalysisScore]
+            [r.student_id, r.student_name || match?.name || 'Unknown', resumeAnalysisScore, r.resume_id]
           );
         } catch (rankingErr) {
           console.error(`[benchmark] ❌ Legacy rankings table upsert FAILED: ${rankingErr.message}`);

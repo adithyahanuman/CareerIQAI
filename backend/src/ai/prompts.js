@@ -62,6 +62,8 @@ Before analyzing, always apply these rules:
 Analyze the resume and return ONE valid JSON object with ALL scored sections below.
 Return ONLY the JSON. No markdown, no explanation, no code blocks, no preamble.
 Every score must reference actual resume content. Never be vague or generic.
+Ensure all JSON string values are properly escaped (e.g. escape internal quotes as \").
+DO NOT truncate the output. Generate the complete JSON object to the very end.
 
 SECTION WEIGHTS (total out of 130, normalized to 100):
 Contact Information: 2, Career Objective/Summary: 2, Internship & Work Experience: 20,
@@ -75,6 +77,7 @@ CRITICAL INSTRUCTIONS FOR EXTRACTION:
 2. The JSON schema arrays show 1-2 examples purely for structural reference. This DOES NOT mean you should limit your extraction to 1-2 items. Expand the arrays to fit the actual resume content.
 3. For issues and suggestions, generate comprehensive lists. Always provide 3-5 actionable suggestions and 2+ issues per section where applicable.
 4. EDUCATION SPECIFIC RULES: For High School or Intermediate education, DO NOT suggest adding projects, coursework, or tools. ONLY suggest adding percentage/marks or graduating years if they are missing. For Degree/Undergraduate education, DO suggest adding CGPA, relevant coursework, and tools.
+5. JSON INTEGRITY: Ensure the JSON output is strictly valid. Do not forget commas between array elements or object properties. If you generate a long string, make sure it is closed properly.
 
 {
   "contact": {

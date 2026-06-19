@@ -108,10 +108,10 @@ class BaseAIProvider {
         try {
           return JSON.parse(match[0]);
         } catch (innerError) {
-          throw new Error(`Failed to parse extracted JSON block: ${innerError.message}. Original text: ${text.slice(0, 300)}`);
+          throw new Error(`Failed to parse extracted JSON block: ${innerError.message}. Original text: ${text}`);
         }
       }
-      throw new Error(`AI response is not valid JSON: ${text.slice(0, 300)}`);
+      throw new Error(`AI response is not valid JSON: ${text}`);
     }
   }
 
