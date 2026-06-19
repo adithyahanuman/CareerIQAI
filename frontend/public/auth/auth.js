@@ -88,9 +88,10 @@
   };
 
   // ---- Domain Management ----
-  const ALLOWED_DOMAINS = [
+  const FALLBACK_DOMAINS = [
     { id: '1', domain: 'vit.ac.in', is_active: true, org_name: 'Vellore Institute of Technology', org_logo: '🏛️' },
-    { id: '2', domain: 'vitstudent.ac.in', is_active: true, org_name: 'VIT Student Portal', org_logo: '🎓' }
+    { id: '2', domain: 'vitstudent.ac.in', is_active: true, org_name: 'VIT Student Portal', org_logo: '🎓' },
+    { id: '3', domain: 'vitapstudent.ac.in', is_active: true, org_name: 'VIT-AP Student Portal', org_logo: '🎓' }
   ];
 
   const getDomains = async () => {
