@@ -123,34 +123,50 @@ class GeminiProvider extends BaseAIProvider {
 
       // Inner loop: API Keys
       for (let keyAttempt = 1; keyAttempt <= totalKeys; keyAttempt++) {
+        let success = false;
+        
+        // Transient error retry loop (up to 3 tries per key)
+        for (let transientAttempt = 1; transientAttempt <= 3; transientAttempt++) {
+          try {
+            const data = await this._callModel(modelId, prompt);
+            console.log(`[Gemini Provider] ✅ Success with model: ${modelId} using key ${keyAttempt}/${totalKeys}`);
+            return data;
+          } catch (err) {
+            lastError = err;
 
-        try {
-          const data = await this._callModel(modelId, prompt);
-          console.log(`[Gemini Provider] ✅ Success with model: ${modelId} using key ${keyAttempt}/${totalKeys}`);
-          return data;
-        } catch (err) {
-          lastError = err;
-
-          if (this.isQuotaError(err) || this.isModelUnavailable(err) || this.isDailyQuotaError(err)) {
-            let reason = err.message || 'Unknown error';
-            if (this.isDailyQuotaError(err)) reason = 'Daily Quota Exceeded (RPD)';
-            else if (this.isQuotaError(err)) reason = 'Rate Limit / Quota Exceeded (RPM)';
-            else if (reason.includes('503') || reason.includes('overloaded')) reason = 'Server Busy / Overloaded';
-
-            console.warn(`[Gemini Provider] ⚠️ Model ${modelId} failed on key ${keyAttempt}/${totalKeys} (Reason: ${reason}). Exact Error: ${err.message} — trying next key/model.`);
-
-
-            if (keyAttempt < totalKeys) {
-              this.rotateKey();
-              continue;
-            } else {
-              console.warn(`[Gemini Provider] All API keys exhausted for model ${modelId}. Moving to next model.`);
+            // If it's a transient error (parse error, 503, network glitch) -> retry same key
+            if (this.isModelUnavailable(err)) {
+              console.warn(`[Gemini Provider] ⚠️ Model ${modelId} transient error on key ${keyAttempt}/${totalKeys} (Attempt ${transientAttempt}/3). Error: ${err.message}`);
+              if (transientAttempt < 3) {
+                // Wait 2 seconds before retrying
+                await new Promise(r => setTimeout(r, 2000));
+                continue;
+              }
+              // If exhausted 3 transient retries, break inner loop and try next key/model
+              console.warn(`[Gemini Provider] Transient retries exhausted for key ${keyAttempt}/${totalKeys}.`);
               break;
             }
-          } else {
+
+            // If it's a quota error -> break inner loop immediately to rotate key
+            if (this.isQuotaError(err) || this.isDailyQuotaError(err)) {
+              let reason = this.isDailyQuotaError(err) ? 'Daily Quota Exceeded (RPD)' : 'Rate Limit / Quota Exceeded (RPM)';
+              console.warn(`[Gemini Provider] ⚠️ Model ${modelId} quota error on key ${keyAttempt}/${totalKeys} (${reason}).`);
+              break;
+            }
+
             // Non-recoverable error (e.g. bad prompt syntax) — throw immediately
             throw err;
           }
+        } // end transient retry loop
+
+        // If we broke out of the transient loop due to quota or exhausting transient retries,
+        // we rotate the key and try the next key.
+        if (keyAttempt < totalKeys) {
+          this.rotateKey(this.isQuotaError(lastError) || this.isDailyQuotaError(lastError) ? 'Quota exceeded' : 'Transient errors');
+          continue;
+        } else {
+          console.warn(`[Gemini Provider] All API keys exhausted for model ${modelId}. Moving to next model.`);
+          break;
         }
       }
     }
