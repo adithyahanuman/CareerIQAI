@@ -13,9 +13,9 @@ module.exports = {
 
   // ── Default Failover (Resume Parsing, Projects, Interview Questions, etc.) ─
   GEMINI_MODEL_FAILOVER: [
-    'gemini-3.5-flash',          // 1st — newest Flash, most capable
-    'gemini-3-flash-preview',    // 2nd — 3.0 Flash preview
-    'gemini-2.5-flash',          // 3rd — stable, reliable
+    'gemini-3-flash-preview',    // 1st — 3.0 Flash preview
+    'gemini-2.5-flash',          // 2nd — stable, reliable
+    'gemini-3.5-flash',          // 3rd — newest Flash, most capable
     'gemini-2.5-flash-lite',     // 4th — lighter, faster
     'gemini-3.1-flash-lite',     // 5th — lite fallback
     'gemma-4-26b-a4b-it',        // 6th — Gemma open-weight
