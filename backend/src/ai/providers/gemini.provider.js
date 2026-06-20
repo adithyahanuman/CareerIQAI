@@ -159,13 +159,20 @@ class GeminiProvider extends BaseAIProvider {
           }
         } // end transient retry loop
 
-        // If we broke out of the transient loop due to quota or exhausting transient retries,
-        // we rotate the key and try the next key.
-        if (keyAttempt < totalKeys) {
-          this.rotateKey(this.isQuotaError(lastError) || this.isDailyQuotaError(lastError) ? 'Quota exceeded' : 'Transient errors');
-          continue;
+        // If we broke out of the transient loop due to quota, rotate key.
+        // If we exhausted transient retries (e.g. parse errors, 503s), rotating the key
+        // will not help. We should immediately move to the next model.
+        if (this.isQuotaError(lastError) || this.isDailyQuotaError(lastError)) {
+          if (keyAttempt < totalKeys) {
+            this.rotateKey(this.isDailyQuotaError(lastError) ? 'Daily Quota exceeded' : 'Quota exceeded');
+            continue;
+          } else {
+            console.warn(`[Gemini Provider] All API keys exhausted for model ${modelId}. Moving to next model.`);
+            break;
+          }
         } else {
-          console.warn(`[Gemini Provider] All API keys exhausted for model ${modelId}. Moving to next model.`);
+          // It was a transient model/network error that failed 3 retries.
+          console.warn(`[Gemini Provider] Non-quota error persists for model ${modelId}. Moving to next model immediately to save time.`);
           break;
         }
       }
