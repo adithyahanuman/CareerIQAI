@@ -432,9 +432,9 @@ async function _runAI(studentId, studentRow, rawText, resumeHash, jobRoles, tier
         try {
           await query(
             `INSERT INTO ${roleTable}
-               (session_id, student_id, student_name, fit_score, grade, major_strength, improvement_suggestion, detailed_analysis, updated_at, resume_id)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), $9)
-             ON CONFLICT (resume_id) DO UPDATE SET
+               (session_id, student_id, student_name, fit_score, grade, major_strength, improvement_suggestion, detailed_analysis, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+             ON CONFLICT (student_id) DO UPDATE SET
                session_id             = EXCLUDED.session_id,
                student_name           = EXCLUDED.student_name,
                fit_score              = EXCLUDED.fit_score,
@@ -443,7 +443,7 @@ async function _runAI(studentId, studentRow, rawText, resumeHash, jobRoles, tier
                improvement_suggestion = EXCLUDED.improvement_suggestion,
                detailed_analysis      = EXCLUDED.detailed_analysis,
                updated_at             = NOW()`,
-            [session.id, studentId, studentRow.full_name, fitScore, grade, strength, suggest, JSON.stringify(detailedAnalysis), studentRow.resume_id],
+            [session.id, studentId, studentRow.full_name, fitScore, grade, strength, suggest, JSON.stringify(detailedAnalysis)],
           );
         } catch (roleErr) {
           console.error(`[benchmark] ❌ Role table upsert FAILED for "${roleName}" → ${roleTable}: ${roleErr.message}`);
@@ -457,13 +457,13 @@ async function _runAI(studentId, studentRow, rawText, resumeHash, jobRoles, tier
         const resumeAnalysisScore = Number(studentRow.overall_analysis?.overall_score) || 0;
         await query(
           `INSERT INTO rankings
-             (student_id, student_name, overall_score, updated_at, resume_id)
-           VALUES ($1, $2, $3, NOW(), $4)
-           ON CONFLICT (resume_id) DO UPDATE SET
+             (student_id, student_name, overall_score, updated_at)
+           VALUES ($1, $2, $3, NOW())
+           ON CONFLICT (student_id) DO UPDATE SET
              student_name  = EXCLUDED.student_name,
              overall_score = EXCLUDED.overall_score,
              updated_at    = NOW()`,
-          [studentId, studentRow.full_name || 'Unknown', resumeAnalysisScore, studentRow.resume_id]
+          [studentId, studentRow.full_name || 'Unknown', resumeAnalysisScore]
         );
       } catch (rankingErr) {
         console.error(`[benchmark] ❌ Legacy rankings table upsert FAILED: ${rankingErr.message}`);
@@ -677,13 +677,13 @@ const createSession = async ({ createdBy, candidateIds, jobRoles }) => {
         try {
           await query(
             `INSERT INTO rankings
-               (student_id, student_name, overall_score, updated_at, resume_id)
-             VALUES ($1, $2, $3, NOW(), $4)
-             ON CONFLICT (resume_id) DO UPDATE SET
+               (student_id, student_name, overall_score, updated_at)
+             VALUES ($1, $2, $3, NOW())
+             ON CONFLICT (student_id) DO UPDATE SET
                student_name  = EXCLUDED.student_name,
                overall_score = EXCLUDED.overall_score,
                updated_at    = NOW()`,
-            [r.student_id, r.student_name || match?.name || 'Unknown', resumeAnalysisScore, r.resume_id]
+            [r.student_id, r.student_name || match?.name || 'Unknown', resumeAnalysisScore]
           );
         } catch (rankingErr) {
           console.error(`[benchmark] ❌ Legacy rankings table upsert FAILED: ${rankingErr.message}`);
