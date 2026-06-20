@@ -45,8 +45,8 @@ const uploadResume = async ({ student_id, resume_text, file_name = 'resume.txt',
 
   // ── Content-hash cache: only reuse analysis if the TEXT and TARGET are identical ──────
   // Compute SHA-256 of the raw resume text + target role type so any edit (even one word) or changing target busts
-  // the cache and forces a fresh AI run. Added |v3 to bust previous hallucinated AI caches.
-  const contentHash = sha256(resume_text + '|' + target_role_type + '|v5');
+  // the cache and forces a fresh AI run. Added |v6 to bust previous hallucinated AI caches.
+  const contentHash = sha256(resume_text + '|' + target_role_type + '|v6');
   console.log(`[resumeService] content hash = ${contentHash.slice(0, 12)}… (target: ${target_role_type})`);
 
   const cached = await query(
