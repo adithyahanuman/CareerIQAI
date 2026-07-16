@@ -7,6 +7,8 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "provision:admin": "node scripts/provisionAdmin.js",
+    "wipe:resumes": "node scripts/wipeResumes.js",
+    "wipe:all": "node scripts/wipeAllData.js",
     "wipe:firebase": "node scripts/wipeFirebase.js"
   },
   "keywords": [],
