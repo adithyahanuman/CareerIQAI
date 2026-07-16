@@ -30,7 +30,7 @@ const findOrCreateStudent = async ({ firebaseUid, email, name, avatar }) => {
   const docRef = db.collection('students').doc(firebaseUid);
   const docSnap = await docRef.get();
 
-  if (docSnap.exists()) {
+  if (docSnap.exists) {
     // ── 1. Update last_login_at timestamp ────────────────────────
     await docRef.update({ last_login_at: new Date() });
     return { id: docSnap.id, ...docSnap.data(), last_login_at: new Date() };
