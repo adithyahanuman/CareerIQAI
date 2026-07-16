@@ -6,14 +6,15 @@
 
 'use strict';
 
-const { testConnection, closePool } = require('../config/db');
+const { db } = require('../config/firebase');
 
 /**
  * @type {import('express').RequestHandler}
  */
 const getHealth = async (_req, res) => {
   try {
-    await testConnection();
+    // Simple query to verify Firestore connectivity
+    await db.collection('students').limit(1).get();
     res.status(200).json({
       success: true,
       message: 'CareerIQ AI API is healthy',

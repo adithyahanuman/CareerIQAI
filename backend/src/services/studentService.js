@@ -1,25 +1,12 @@
 /**
  * services/studentService.js
  *
- * Student business logic – all PostgreSQL queries live here.
- * Controllers stay thin; they call these functions only.
+ * Student business logic – Firestore implementation.
  */
 
 'use strict';
 
-const { query } = require('../config/db');
-
-// ---------------------------------------------------------------------------
-// Safe columns to return (never expose password_hash)
-// ---------------------------------------------------------------------------
-const PUBLIC_COLS = `
-  id, firebase_uid, full_name, email,
-  avatar_url, phone, location,
-  course, branch, year_of_study, gpa,
-  linkedin_url, github_url, website_url,
-  role, is_verified, is_active, last_login_at,
-  created_at, updated_at
-`;
+const { db } = require('../config/firebase');
 
 // ---------------------------------------------------------------------------
 // CREATE
@@ -29,10 +16,8 @@ const PUBLIC_COLS = `
  * Create a brand-new student record manually (admin use / seeding).
  * For normal sign-ups use authService.findOrCreateStudent().
  *
- * @param {{ full_name, email, firebase_uid?, avatar_url?, phone?,
- *           location?, course?, branch?, year_of_study?, gpa?,
- *           linkedin_url?, github_url?, website_url? }} data
- * @returns {Promise<object>} Created student row
+ * @param {object} data
+ * @returns {Promise<object>} Created student document
  */
 const createStudent = async (data) => {
   const {
@@ -43,18 +28,19 @@ const createStudent = async (data) => {
     github_url = null, website_url = null,
   } = data;
 
-  const { rows } = await query(
-    `INSERT INTO students
-       (full_name, email, firebase_uid, avatar_url, phone,
-        location, course, branch, year_of_study, gpa,
-        linkedin_url, github_url, website_url, is_verified)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13, TRUE)
-     RETURNING ${PUBLIC_COLS}`,
-    [full_name, email, firebase_uid, avatar_url, phone,
-     location, course, branch, year_of_study, gpa,
-     linkedin_url, github_url, website_url],
-  );
-  return rows[0];
+  const docId = firebase_uid || require('crypto').randomUUID();
+  const newStudent = {
+    firebase_uid,
+    full_name, email, avatar_url, phone,
+    location, course, branch, year_of_study, gpa,
+    linkedin_url, github_url, website_url,
+    is_verified: true,
+    created_at: new Date(),
+    updated_at: new Date()
+  };
+
+  await db.collection('students').doc(docId).set(newStudent);
+  return { id: docId, ...newStudent };
 };
 
 // ---------------------------------------------------------------------------
@@ -63,39 +49,37 @@ const createStudent = async (data) => {
 
 /**
  * Paginated list of all students.
- *
- * @param {{ page?: number, limit?: number, search?: string }} opts
- * @returns {Promise<{ students: object[], total: number, page: number, limit: number }>}
+ * (Note: Firestore offset/pagination is simpler when using cursors.
+ * Here we provide basic limit/offset for compatibility, but offset gets
+ * expensive for large collections in Firestore.)
  */
 const getAllStudents = async ({ page = 1, limit = 20, search = '' } = {}) => {
   const offset = (page - 1) * limit;
 
-  // Optional full-text search on name + email
-  const whereClause = search
-    ? `WHERE full_name ILIKE $3 OR email ILIKE $3`
-    : '';
-  const params = search
-    ? [limit, offset, `%${search}%`]
-    : [limit, offset];
+  let query = db.collection('students').orderBy('created_at', 'desc');
+  
+  // Note: Firestore does not support native full-text search.
+  // We can only do prefix search or exact match easily. 
+  // For compatibility, we'll do the query and filter in memory if 'search' is provided.
+  // In production, consider using Algolia or Typesense.
+  
+  const snapshot = await query.get();
+  let allStudents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-  const [dataResult, countResult] = await Promise.all([
-    query(
-      `SELECT ${PUBLIC_COLS}
-       FROM   students
-       ${whereClause}
-       ORDER  BY created_at DESC
-       LIMIT  $1 OFFSET $2`,
-      params,
-    ),
-    query(
-      `SELECT COUNT(*) AS total FROM students ${whereClause}`,
-      search ? [`%${search}%`] : [],
-    ),
-  ]);
+  if (search) {
+    const s = search.toLowerCase();
+    allStudents = allStudents.filter(st => 
+      (st.full_name && st.full_name.toLowerCase().includes(s)) ||
+      (st.email && st.email.toLowerCase().includes(s))
+    );
+  }
+
+  const total = allStudents.length;
+  const paginated = allStudents.slice(offset, offset + limit);
 
   return {
-    students: dataResult.rows,
-    total:    parseInt(countResult.rows[0].total, 10),
+    students: paginated,
+    total,
     page,
     limit,
   };
@@ -106,29 +90,13 @@ const getAllStudents = async ({ page = 1, limit = 20, search = '' } = {}) => {
 // ---------------------------------------------------------------------------
 
 /**
- * Get a single student by UUID.
+ * Get a single student by ID.
  * @param {string} id
  * @returns {Promise<object|null>}
  */
 const getStudentById = async (id) => {
-  const { rows } = await query(
-    `SELECT ${PUBLIC_COLS} FROM students WHERE id = $1 LIMIT 1`,
-    [id],
-  );
-  return rows[0] ?? null;
-};
-
-/**
- * Get a single student by email.
- * @param {string} email
- * @returns {Promise<object|null>}
- */
-const getStudentByEmail = async (email) => {
-  const { rows } = await query(
-    `SELECT ${PUBLIC_COLS} FROM students WHERE email = $1 LIMIT 1`,
-    [email],
-  );
-  return rows[0] ?? null;
+  const doc = await db.collection('students').doc(id).get();
+  return doc.exists ? { id: doc.id, ...doc.data() } : null;
 };
 
 // ---------------------------------------------------------------------------
@@ -138,48 +106,41 @@ const getStudentByEmail = async (email) => {
 /**
  * Partially update a student record (only provided fields are changed).
  *
- * @param {string} id   – student UUID
+ * @param {string} id   – student ID
  * @param {object} data – fields to update
- * @returns {Promise<object|null>} Updated student row, or null if not found
+ * @returns {Promise<object|null>} Updated student document
  */
 const updateStudent = async (id, data) => {
-  // Whitelist of updatable columns
   const ALLOWED = [
     'full_name', 'avatar_url', 'phone', 'location',
     'course', 'branch', 'year_of_study', 'gpa',
     'linkedin_url', 'github_url', 'website_url',
   ];
 
-  const fields = Object.keys(data).filter(k => ALLOWED.includes(k));
+  const updateData = {};
+  for (const key of Object.keys(data)) {
+    if (ALLOWED.includes(key)) {
+      updateData[key] = data[key];
+    }
+  }
 
-  if (fields.length === 0) {
+  if (Object.keys(updateData).length === 0) {
     const err = new Error('No valid fields provided for update.');
     err.statusCode = 422;
     throw err;
   }
+  
+  updateData.updated_at = new Date();
 
-  // Build SET clause: "full_name = $1, phone = $2, …"
-  const setClause = fields.map((f, i) => `${f} = $${i + 1}`).join(', ');
-  const values    = fields.map(f => data[f]);
-  values.push(id); // for WHERE id = $N
-
-  const { rows } = await query(
-    `UPDATE students
-     SET    ${setClause}
-     WHERE  id = $${values.length}
-     RETURNING ${PUBLIC_COLS}`,
-    values,
-  );
-  return rows[0] ?? null;
+  const docRef = db.collection('students').doc(id);
+  const docSnap = await docRef.get();
+  
+  if (!docSnap.exists) return null;
+  
+  await docRef.update(updateData);
+  return { id, ...docSnap.data(), ...updateData };
 };
 
-/**
- * Update the profile of the currently logged-in student.
- * Wrapper around updateStudent that uses req.user.id
- * @param {string} id - student UUID
- * @param {object} data - fields to update
- * @returns {Promise<object|null>} Updated student row
- */
 const updateStudentMe = async (id, data) => {
   return updateStudent(id, data);
 };

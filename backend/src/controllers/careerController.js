@@ -8,7 +8,7 @@
  */
 
 const careerService = require('../services/careerService');
-const { query }     = require('../config/db');
+const { db } = require('../config/firebase');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/career/advice
@@ -46,17 +46,15 @@ const getRoadmap = async (req, res, next) => {
         parsedData = JSON.parse(clean);
       } catch (_) { parsedData = { steps: [], raw: roadmapText }; }
 
-      await query(
-        `INSERT INTO roadmaps (student_id, from_role, to_role, roadmap_data, raw_text)
-         VALUES ($1, $2, $3, $4, $5)
-         ON CONFLICT (student_id)
-         DO UPDATE SET from_role   = EXCLUDED.from_role,
-                       to_role     = EXCLUDED.to_role,
-                       roadmap_data= EXCLUDED.roadmap_data,
-                       raw_text    = EXCLUDED.raw_text,
-                       updated_at  = NOW()`,
-        [req.user.id, currentRole, targetRole, JSON.stringify(parsedData), roadmapText],
-      );
+      await db.collection('roadmaps').doc(req.user.id).set({
+        student_id: req.user.id,
+        from_role: currentRole,
+        to_role: targetRole,
+        roadmap_data: parsedData,
+        raw_text: roadmapText,
+        updated_at: new Date()
+      }, { merge: true });
+      
     } catch (dbErr) {
       console.warn('[careerController] Roadmap DB save failed:', dbErr.message);
     }
@@ -74,17 +72,20 @@ const getRoadmap = async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────────────────────
 const getSavedRoadmap = async (req, res, next) => {
   try {
-    const { rows } = await query(
-      `SELECT from_role, to_role, roadmap_data, updated_at
-       FROM   roadmaps
-       WHERE  student_id = $1
-       LIMIT  1`,
-      [req.user.id],
-    );
-    if (rows.length === 0) {
+    const doc = await db.collection('roadmaps').doc(req.user.id).get();
+    if (!doc.exists) {
       return res.status(200).json({ success: true, data: null });
     }
-    res.status(200).json({ success: true, data: rows[0] });
+    const data = doc.data();
+    res.status(200).json({ 
+      success: true, 
+      data: {
+        from_role: data.from_role,
+        to_role: data.to_role,
+        roadmap_data: data.roadmap_data,
+        updated_at: data.updated_at
+      }
+    });
   } catch (err) {
     if (err.statusCode) res.status(err.statusCode);
     next(err);

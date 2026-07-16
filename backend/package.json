@@ -6,17 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "migrate": "node src/db/migrate.js",
-    "migrate:reset": "node src/db/migrate.js --reset",
-    "db:test": "node src/db/testConnection.js",
     "provision:admin": "node scripts/provisionAdmin.js",
-    "wipe:resumes": "node scripts/wipeResumes.js",
-    "wipe:all": "node scripts/wipeAllData.js",
-    "wipe:admin": "node scripts/wipeAdminData.js",
-    "wipe:firebase": "node scripts/wipeFirebase.js",
-    "wipe:everything": "node scripts/wipeEverything.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "backfill": "node scripts/backfillRankings.js"
+    "wipe:firebase": "node scripts/wipeFirebase.js"
   },
   "keywords": [],
   "author": "",
@@ -35,7 +26,6 @@
     "multer": "^2.2.0",
     "nodemailer": "^9.0.0",
     "pdfjs-dist": "^3.11.174",
-    "pg": "^8.21.0",
     "tesseract.js": "^7.0.0"
   },
   "devDependencies": {

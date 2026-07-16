@@ -4,7 +4,7 @@
  * services/careerService.js
  *
  * Career data is now derived from the single fullResumeAnalysis() result
- * already stored in resumes.analysis (JSONB).
+ * already stored in resumes.analysis (Firestore).
  *
  * Flow:
  *   1. User uploads resume → ONE AI call via resumeService
@@ -16,7 +16,7 @@
  * that the resume analysis doesn't contain.
  */
 
-const { query }  = require('../config/db');
+const { db } = require('../config/firebase');
 const aiService  = require('../ai/aiService');
 const prompts    = require('../ai/prompts');
 
@@ -27,19 +27,20 @@ const prompts    = require('../ai/prompts');
 /**
  * Fetch the primary (active) resume analysis for a student from the DB.
  * @param {string} studentId
- * @returns {Promise<object|null>} The full analysis JSONB object
+ * @returns {Promise<object|null>} The full analysis object
  */
 const getStoredAnalysis = async (studentId) => {
-  const { rows } = await query(
-    `SELECT analysis FROM resumes
-     WHERE  student_id = $1
-       AND  is_primary = TRUE
-       AND  status     = 'done'
-       AND  analysis   IS NOT NULL
-     LIMIT  1`,
-    [studentId],
-  );
-  return rows[0]?.analysis ?? null;
+  const snapshot = await db.collection('resumes')
+    .where('student_id', '==', studentId)
+    .where('is_primary', '==', true)
+    .where('status', '==', 'done')
+    .limit(1)
+    .get();
+
+  if (snapshot.empty) return null;
+  
+  const resume = snapshot.docs[0].data();
+  return resume.analysis || null;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

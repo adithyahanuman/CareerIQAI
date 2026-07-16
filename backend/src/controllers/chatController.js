@@ -1,8 +1,7 @@
 'use strict';
 
-const db = require('../config/db');
+const { db, admin } = require('../config/firebase');
 const env = require('../config/env');
-const { admin } = require('../config/firebase');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 /**
@@ -42,29 +41,43 @@ const handleChat = async (req, res, next) => {
     let roadmapData = null;
 
     try {
-      const [resumesRes, benchmarksRes, roadmapsRes] = await Promise.all([
-        db.query(
-          `SELECT overall_analysis FROM resumes WHERE student_id = $1 AND status = 'done' ORDER BY is_primary DESC, created_at DESC LIMIT 1`,
-          [studentId]
-        ),
-        db.query(
-          `SELECT role_name, fit_score, major_strength, improvement_suggestion FROM benchmark_results WHERE student_id = $1 ORDER BY created_at DESC LIMIT 3`,
-          [studentId]
-        ),
-        db.query(
-          `SELECT from_role, to_role, roadmap_data FROM roadmaps WHERE student_id = $1 ORDER BY created_at DESC LIMIT 1`,
-          [studentId]
-        )
+      const [resumesRes, sessionsRes, roadmapsRes] = await Promise.all([
+        db.collection('resumes')
+          .where('student_id', '==', studentId)
+          .where('status', '==', 'done')
+          .where('is_primary', '==', true)
+          .limit(1)
+          .get(),
+        db.collection('benchmark_sessions')
+          .where('created_by', '==', studentId)
+          .where('status', '==', 'done')
+          .orderBy('created_at', 'desc')
+          .limit(1)
+          .get(),
+        db.collection('roadmaps')
+          .where('student_id', '==', studentId)
+          .orderBy('created_at', 'desc')
+          .limit(1)
+          .get()
       ]);
 
-      if (resumesRes.rows.length > 0 && resumesRes.rows[0].overall_analysis) {
-        resumeAnalysis = resumesRes.rows[0].overall_analysis;
+      if (!resumesRes.empty && resumesRes.docs[0].data().overall_analysis) {
+        resumeAnalysis = resumesRes.docs[0].data().overall_analysis;
       }
-      if (benchmarksRes.rows.length > 0) {
-        benchmarkData = benchmarksRes.rows;
+      
+      if (!sessionsRes.empty) {
+        const sessionId = sessionsRes.docs[0].id;
+        const resultsSnap = await db.collection('benchmark_results')
+          .where('session_id', '==', sessionId)
+          .limit(3)
+          .get();
+        if (!resultsSnap.empty) {
+          benchmarkData = resultsSnap.docs.map(d => d.data());
+        }
       }
-      if (roadmapsRes.rows.length > 0) {
-        roadmapData = roadmapsRes.rows[0];
+      
+      if (!roadmapsRes.empty) {
+        roadmapData = roadmapsRes.docs[0].data();
       }
     } catch (dbErr) {
       console.warn('[ChatController] Could not fetch DB insights:', dbErr.message);

@@ -1,17 +1,17 @@
 /**
  * services/authService.js
  *
- * Authentication business logic – Firebase Auth + PostgreSQL.
+ * Authentication business logic – Firebase Auth + Firestore.
  *
  * Core flow:
  *   findOrCreateStudent() is called on every authenticated request.
  *   It looks up the student by firebase_uid; if not found it inserts
- *   a new row automatically (first-login provisioning).
+ *   a new document automatically (first-login provisioning).
  */
 
 'use strict';
 
-const { query } = require('../config/db');
+const { db } = require('../config/firebase');
 
 // ---------------------------------------------------------------------------
 // Core: Find or auto-create a student on first Firebase login
@@ -22,59 +22,60 @@ const { query } = require('../config/db');
  * their first login.
  *
  * @param {{ firebaseUid: string, email: string, name: string, avatar: string|null }} param
- * @returns {Promise<object>} The full student row from PostgreSQL
+ * @returns {Promise<object>} The full student document from Firestore
  */
 const findOrCreateStudent = async ({ firebaseUid, email, name, avatar }) => {
-  // Ensure full_name is never null (schema has NOT NULL constraint)
   name = name || email?.split('@')[0] || 'Student';
 
-  // ── 1. Try to find existing student by Firebase UID ────────────────────────
-  let existing = await getByFirebaseUid(firebaseUid);
-  if (existing) {
-    // Update last_login_at timestamp
-    await query(
-      'UPDATE students SET last_login_at = NOW() WHERE firebase_uid = $1',
-      [firebaseUid],
-    );
-    return { ...existing, last_login_at: new Date() };
+  const docRef = db.collection('students').doc(firebaseUid);
+  const docSnap = await docRef.get();
+
+  if (docSnap.exists()) {
+    // ── 1. Update last_login_at timestamp ────────────────────────
+    await docRef.update({ last_login_at: new Date() });
+    return { id: docSnap.id, ...docSnap.data(), last_login_at: new Date() };
   }
 
   // ── 2. If not found, check if a student with the same email exists ─────────
   if (email) {
-    const emailResult = await query(
-      'SELECT * FROM students WHERE email = $1 LIMIT 1',
-      [email]
-    );
-    if (emailResult.rows.length > 0) {
-      existing = emailResult.rows[0];
+    const emailSnapshot = await db.collection('students')
+      .where('email', '==', email)
+      .limit(1)
+      .get();
+      
+    if (!emailSnapshot.empty) {
+      const existingDoc = emailSnapshot.docs[0];
       console.log(`[authService] Linking existing student email ${email} to Firebase UID: ${firebaseUid}`);
+      
       // Update their firebase_uid and last_login_at
-      const { rows } = await query(
-        `UPDATE students
-         SET    firebase_uid = $1,
-                last_login_at = NOW(),
-                full_name = COALESCE(full_name, $2)
-         WHERE  id = $3
-         RETURNING *`,
-        [firebaseUid, name, existing.id]
-      );
-      return rows[0];
+      const updateData = {
+        firebase_uid: firebaseUid,
+        last_login_at: new Date(),
+        full_name: existingDoc.data().full_name || name
+      };
+      
+      await existingDoc.ref.update(updateData);
+      return { id: existingDoc.id, ...existingDoc.data(), ...updateData };
     }
   }
 
   // ── 3. First login – create new student record ───────────────────────────────
   console.log(`[authService] First login – provisioning student for UID: ${firebaseUid}`);
 
-  const { rows } = await query(
-    `INSERT INTO students
-       (firebase_uid, email, full_name, avatar_url, is_verified, last_login_at)
-     VALUES ($1, $2, $3, $4, TRUE, NOW())
-     RETURNING *`,
-    [firebaseUid, email, name, avatar],
-  );
+  const newStudent = {
+    firebase_uid: firebaseUid,
+    email: email,
+    full_name: name,
+    avatar_url: avatar,
+    is_verified: true,
+    last_login_at: new Date(),
+    created_at: new Date()
+  };
 
-  console.log(`[authService] ✓ Student created – id: ${rows[0].id}`);
-  return rows[0];
+  await docRef.set(newStudent);
+
+  console.log(`[authService] ✓ Student created – id: ${firebaseUid}`);
+  return { id: firebaseUid, ...newStudent };
 };
 
 // ---------------------------------------------------------------------------
@@ -87,39 +88,42 @@ const findOrCreateStudent = async ({ firebaseUid, email, name, avatar }) => {
  * @returns {Promise<object|null>}
  */
 const getByFirebaseUid = async (firebaseUid) => {
-  const { rows } = await query(
-    'SELECT * FROM students WHERE firebase_uid = $1 LIMIT 1',
-    [firebaseUid],
-  );
-  return rows[0] ?? null;
+  const docRef = db.collection('students').doc(firebaseUid);
+  const docSnap = await docRef.get();
+  
+  if (docSnap.exists) {
+    return { id: docSnap.id, ...docSnap.data() };
+  }
+  
+  // Fallback in case the document ID is not the firebaseUid
+  const snapshot = await db.collection('students')
+    .where('firebase_uid', '==', firebaseUid)
+    .limit(1)
+    .get();
+    
+  if (!snapshot.empty) {
+    return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
+  }
+  
+  return null;
 };
 
 /**
- * Find a student by internal PostgreSQL UUID.
+ * Find a student by internal Firestore ID.
  * @param {string} id
  * @returns {Promise<object|null>}
  */
 const getById = async (id) => {
-  const { rows } = await query(
-    'SELECT * FROM students WHERE id = $1 LIMIT 1',
-    [id],
-  );
-  return rows[0] ?? null;
+  const docRef = db.collection('students').doc(id);
+  const docSnap = await docRef.get();
+  return docSnap.exists ? { id: docSnap.id, ...docSnap.data() } : null;
 };
 
 // ---------------------------------------------------------------------------
 // Session helpers (Firebase is stateless – nothing server-side to store)
 // ---------------------------------------------------------------------------
 
-/**
- * Firebase tokens expire automatically – nothing to do server-side.
- * Kept for API consistency.
- */
-const logout = async (_user) => {
-  // Firebase ID tokens expire after 1 hour.
-  // For immediate revocation, call admin.auth().revokeRefreshTokens(uid)
-  // – add that here if you need forced sign-out.
-};
+const logout = async (_user) => {};
 
 // ---------------------------------------------------------------------------
 // Legacy stubs (kept for backward compatibility)

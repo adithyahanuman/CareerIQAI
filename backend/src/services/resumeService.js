@@ -1,19 +1,15 @@
 /**
  * services/resumeService.js
  *
- * Resume business logic – PostgreSQL queries for upload and retrieval.
- * Uses the Master Prompt (13 sections). Each section is stored in its
- * own dedicated JSONB column. The legacy `analysis` column is also
- * populated for backward compatibility.
+ * Resume business logic – Firestore implementation.
  */
 
 'use strict';
 
 const crypto              = require('crypto');
-const { query }           = require('../config/db');
+const { db }              = require('../config/firebase');
 const aiService           = require('../ai/aiService');
 const prompts             = require('../ai/prompts');
-// Lazy-required to avoid a circular dependency at module load time
 const getBenchmarkService = () => require('./benchmarkService');
 
 /** SHA-256 hex of a string */
@@ -25,75 +21,79 @@ function sha256(text) {
 // CREATE / UPLOAD
 // ---------------------------------------------------------------------------
 
-/**
- * Store a new resume text record in PostgreSQL and run master analysis.
- *
- * @param {{ student_id: string, resume_text: string, file_name?: string, target_role_type?: string }} data
- * @returns {Promise<object>} Created/updated resume row
- */
 const uploadResume = async ({ student_id, resume_text, file_name = 'resume.txt', target_role_type = 'internship' }) => {
   // Validate student exists
-  const studentCheck = await query(
-    'SELECT id FROM students WHERE id = $1 LIMIT 1',
-    [student_id],
-  );
-  if (studentCheck.rows.length === 0) {
+  const studentDoc = await db.collection('students').doc(student_id).get();
+  if (!studentDoc.exists) {
     const err = new Error(`Student with id "${student_id}" not found.`);
     err.statusCode = 404;
     throw err;
   }
 
-  // ── Content-hash cache: only reuse analysis if the TEXT and TARGET are identical ──────
-  // Compute SHA-256 of the raw resume text + target role type so any edit (even one word) or changing target busts
-  // the cache and forces a fresh AI run. Added |v6 to bust previous hallucinated AI caches.
   const contentHash = sha256(resume_text + '|' + target_role_type + '|v6');
   console.log(`[resumeService] content hash = ${contentHash.slice(0, 12)}… (target: ${target_role_type})`);
 
-  const cached = await query(
-    `SELECT * FROM resumes
-     WHERE  student_id       = $1
-       AND  resume_text_hash = $2
-       AND  status           = 'done'
-       AND  overall_analysis IS NOT NULL
-     ORDER  BY created_at DESC
-     LIMIT  1`,
-    [student_id, contentHash],
-  );
+  // Try to find cached analysis
+  const cachedSnapshot = await db.collection('resumes')
+    .where('student_id', '==', student_id)
+    .where('resume_text_hash', '==', contentHash)
+    .where('status', '==', 'done')
+    .orderBy('created_at', 'desc')
+    .limit(1)
+    .get();
 
-  if (cached.rows.length > 0) {
-    // Same content already analyzed — just re-promote as primary
-    await query(
-      'UPDATE resumes SET is_primary = FALSE WHERE student_id = $1 AND is_primary = TRUE',
-      [student_id],
-    );
-    const { rows: promoted } = await query(
-      `UPDATE resumes SET is_primary = TRUE WHERE id = $1 RETURNING *`,
-      [cached.rows[0].id],
-    );
+  if (!cachedSnapshot.empty) {
+    const cachedDoc = cachedSnapshot.docs[0];
+    
+    // Set other resumes to is_primary: false
+    const primarySnapshot = await db.collection('resumes')
+      .where('student_id', '==', student_id)
+      .where('is_primary', '==', true)
+      .get();
+      
+    const batch = db.batch();
+    primarySnapshot.forEach(doc => {
+      if (doc.id !== cachedDoc.id) {
+        batch.update(doc.ref, { is_primary: false });
+      }
+    });
+    batch.update(cachedDoc.ref, { is_primary: true });
+    await batch.commit();
+
     console.log('[resumeService] Cache HIT (hash match) – returning existing analysis for:', file_name);
-    return promoted[0];
+    return { id: cachedDoc.id, ...cachedDoc.data(), is_primary: true };
   }
 
   // ── No cache hit — content is new or changed. Insert a fresh record ────────
-  await query(
-    'UPDATE resumes SET is_primary = FALSE WHERE student_id = $1 AND is_primary = TRUE',
-    [student_id],
-  );
+  const primarySnapshot = await db.collection('resumes')
+    .where('student_id', '==', student_id)
+    .where('is_primary', '==', true)
+    .get();
+    
+  const batch = db.batch();
+  primarySnapshot.forEach(doc => {
+    batch.update(doc.ref, { is_primary: false });
+  });
+  
+  const newResumeRef = db.collection('resumes').doc();
+  const newResumeData = {
+    student_id,
+    file_name,
+    resume_text_hash: contentHash,
+    raw_text: resume_text,
+    status: 'parsed',
+    is_primary: true,
+    created_at: new Date(),
+    updated_at: new Date()
+  };
+  
+  batch.set(newResumeRef, newResumeData);
+  await batch.commit();
 
-  const { rows } = await query(
-    `INSERT INTO resumes
-       (student_id, file_name, resume_text_hash, raw_text, status, is_primary)
-     VALUES ($1, $2, $3, $4, 'parsed', TRUE)
-     RETURNING *`,
-    [student_id, file_name, contentHash, resume_text],
-  );
-
-  // ONE AI call — master prompt returns 13 sections
   try {
     const aiResponse = await aiService.analyzeResume(prompts.fullResumeAnalysis(resume_text, target_role_type));
     const analysis = aiResponse.data;
 
-    // Recalculate raw score and overall score manually to prevent AI math hallucinations
     let calculatedRawScore = 0;
     calculatedRawScore += Number(analysis.contact?.contact_score || 0);
     calculatedRawScore += Number(analysis.summary?.summary_score || 0);
@@ -122,10 +122,8 @@ const uploadResume = async ({ student_id, resume_text, file_name = 'resume.txt',
       analysis.completeness.completeness_score = completeness;
     }
     
-    // Extract overall score for ats_score column and ensure it is an integer to prevent db cast errors
     const overallScore = calculatedOverallScore;
 
-    // Sanitize AI hallucinations: if fulltime is requested, strictly remove 'Intern' from roles
     if (target_role_type === 'fulltime') {
       const sanitizeRole = (r) => {
         if (typeof r === 'string') {
@@ -146,67 +144,41 @@ const uploadResume = async ({ student_id, resume_text, file_name = 'resume.txt',
       }
     }
 
-    // Build the UPDATE query with all 13 section columns + legacy analysis column
-    const updated = await query(
-      `UPDATE resumes
-       SET    contact_analysis          = $1,
-              summary_analysis          = $2,
-              experience_analysis       = $3,
-              education_analysis        = $4,
-              skills_analysis           = $5,
-              projects_analysis         = $6,
-              formatting_analysis       = $7,
-              certifications_analysis   = $8,
-              extracurriculars_analysis = $9,
-              overall_analysis          = $10,
-              action_plan_analysis      = $11,
-              completeness_analysis     = $12,
-              confidence_analysis       = $13,
-              analysis                  = $14,
-              ats_score                 = $15,
-              status                    = 'done'
-       WHERE  id = $16
-       RETURNING *`,
-      [
-        JSON.stringify(analysis.contact          ?? null),
-        JSON.stringify(analysis.summary          ?? null),
-        JSON.stringify(analysis.experience       ?? null),
-        JSON.stringify(analysis.education        ?? null),
-        JSON.stringify(analysis.skills           ?? null),
-        JSON.stringify(analysis.projects         ?? null),
-        JSON.stringify(analysis.formatting       ?? null),
-        JSON.stringify(analysis.certifications   ?? null),
-        JSON.stringify(analysis.extracurriculars ?? null),
-        JSON.stringify(analysis.overall          ?? null),
-        JSON.stringify(analysis.action_plan      ?? null),
-        JSON.stringify(analysis.resume_completeness  ?? null),
-        JSON.stringify(analysis.analysis_confidence  ?? null),
-        JSON.stringify(analysis),          // legacy full blob
-        overallScore,
-        rows[0].id,
-      ],
-    );
+    const updateData = {
+      contact_analysis:          analysis.contact ?? null,
+      summary_analysis:          analysis.summary ?? null,
+      experience_analysis:       analysis.experience ?? null,
+      education_analysis:        analysis.education ?? null,
+      skills_analysis:           analysis.skills ?? null,
+      projects_analysis:         analysis.projects ?? null,
+      formatting_analysis:       analysis.formatting ?? null,
+      certifications_analysis:   analysis.certifications ?? null,
+      extracurriculars_analysis: analysis.extracurriculars ?? null,
+      overall_analysis:          analysis.overall ?? null,
+      action_plan_analysis:      analysis.action_plan ?? null,
+      completeness_analysis:     analysis.resume_completeness ?? null,
+      confidence_analysis:       analysis.analysis_confidence ?? null,
+      analysis:                  analysis,
+      ats_score:                 overallScore,
+      status:                    'done',
+      updated_at:                new Date()
+    };
 
-    const saved = updated.rows[0];
+    await newResumeRef.update(updateData);
+    const saved = { id: newResumeRef.id, ...newResumeData, ...updateData };
 
-    // ── Background: refresh role-fit benchmark scores ──────────────────────
-    // Fire-and-forget: does NOT block or affect the resume upload response.
-    const studentId = saved.student_id;
     setImmediate(() => {
       getBenchmarkService()
-        .refreshMyRoleFit(studentId)
-        .then(() => console.log(`[benchmark] Auto-refreshed role-fit for student ${studentId}`))
+        .refreshMyRoleFit(student_id)
+        .then(() => console.log(`[benchmark] Auto-refreshed role-fit for student ${student_id}`))
         .catch(err  => console.warn(`[benchmark] Auto-refresh skipped: ${err.message}`));
     });
 
     return saved;
   } catch (aiErr) {
     console.error('[resumeService] AI analysis failed:', aiErr.message);
-    await query(
-      `UPDATE resumes SET status = 'error', error_message = $1 WHERE id = $2`,
-      [aiErr.message, rows[0].id],
-    );
-    return rows[0];
+    await newResumeRef.update({ status: 'error', error_message: aiErr.message });
+    return { id: newResumeRef.id, ...newResumeData, status: 'error', error_message: aiErr.message };
   }
 };
 
@@ -214,91 +186,65 @@ const uploadResume = async ({ student_id, resume_text, file_name = 'resume.txt',
 // READ
 // ---------------------------------------------------------------------------
 
-/**
- * Get all resumes belonging to a student (newest first).
- */
 const getResumesByStudentId = async (studentId) => {
-  const { rows } = await query(
-    `SELECT
-       id, student_id, file_name,
-       ats_score, status, is_primary, error_message,
-       created_at, updated_at
-     FROM   resumes
-     WHERE  student_id = $1
-     ORDER  BY created_at DESC`,
-    [studentId],
-  );
-  return rows;
+  const snapshot = await db.collection('resumes')
+    .where('student_id', '==', studentId)
+    .orderBy('created_at', 'desc')
+    .get();
+    
+  return snapshot.docs.map(doc => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      student_id: data.student_id,
+      file_name: data.file_name,
+      ats_score: data.ats_score,
+      status: data.status,
+      is_primary: data.is_primary,
+      error_message: data.error_message,
+      created_at: data.created_at,
+      updated_at: data.updated_at
+    };
+  });
 };
 
-/**
- * Get a single resume by its UUID (includes all analysis columns).
- */
 const getResumeById = async (id) => {
-  const { rows } = await query(
-    `SELECT * FROM resumes WHERE id = $1 LIMIT 1`,
-    [id],
-  );
-  return rows[0] ?? null;
+  const doc = await db.collection('resumes').doc(id).get();
+  return doc.exists ? { id: doc.id, ...doc.data() } : null;
 };
 
-/**
- * Get the primary (active) resume for a student — returns all columns
- * so the frontend can read each of the 13 section columns directly.
- */
 const getPrimaryResume = async (studentId) => {
-  const { rows } = await query(
-    `SELECT * FROM resumes
-     WHERE  student_id = $1 AND is_primary = TRUE
-     LIMIT  1`,
-    [studentId],
-  );
-  return rows[0] ?? null;
+  const snapshot = await db.collection('resumes')
+    .where('student_id', '==', studentId)
+    .where('is_primary', '==', true)
+    .limit(1)
+    .get();
+    
+  return snapshot.empty ? null : { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
 };
 
-/**
- * Persist analysis scores back to an existing resume row.
- */
 const updateAnalysis = async (resumeId, analysis) => {
   const overallScore = analysis.overall?.overall_score ?? analysis.overall_resume_score ?? null;
-  await query(
-    `UPDATE resumes
-     SET    contact_analysis          = $1,
-            summary_analysis          = $2,
-            experience_analysis       = $3,
-            education_analysis        = $4,
-            skills_analysis           = $5,
-            projects_analysis         = $6,
-            formatting_analysis       = $7,
-            certifications_analysis   = $8,
-            extracurriculars_analysis = $9,
-            overall_analysis          = $10,
-            action_plan_analysis      = $11,
-            completeness_analysis     = $12,
-            confidence_analysis       = $13,
-            analysis                  = $14,
-            ats_score                 = $15,
-            status                    = 'done'
-     WHERE  id = $16`,
-    [
-      JSON.stringify(analysis.contact          ?? null),
-      JSON.stringify(analysis.summary          ?? null),
-      JSON.stringify(analysis.experience       ?? null),
-      JSON.stringify(analysis.education        ?? null),
-      JSON.stringify(analysis.skills           ?? null),
-      JSON.stringify(analysis.projects         ?? null),
-      JSON.stringify(analysis.formatting       ?? null),
-      JSON.stringify(analysis.certifications   ?? null),
-      JSON.stringify(analysis.extracurriculars ?? null),
-      JSON.stringify(analysis.overall          ?? null),
-      JSON.stringify(analysis.action_plan      ?? null),
-      JSON.stringify(analysis.resume_completeness  ?? null),
-      JSON.stringify(analysis.analysis_confidence  ?? null),
-      JSON.stringify(analysis),
-      overallScore,
-      resumeId,
-    ],
-  );
+  
+  await db.collection('resumes').doc(resumeId).update({
+    contact_analysis:          analysis.contact ?? null,
+    summary_analysis:          analysis.summary ?? null,
+    experience_analysis:       analysis.experience ?? null,
+    education_analysis:        analysis.education ?? null,
+    skills_analysis:           analysis.skills ?? null,
+    projects_analysis:         analysis.projects ?? null,
+    formatting_analysis:       analysis.formatting ?? null,
+    certifications_analysis:   analysis.certifications ?? null,
+    extracurriculars_analysis: analysis.extracurriculars ?? null,
+    overall_analysis:          analysis.overall ?? null,
+    action_plan_analysis:      analysis.action_plan ?? null,
+    completeness_analysis:     analysis.resume_completeness ?? null,
+    confidence_analysis:       analysis.analysis_confidence ?? null,
+    analysis:                  analysis,
+    ats_score:                 overallScore,
+    status:                    'done',
+    updated_at:                new Date()
+  });
 };
 
 module.exports = {

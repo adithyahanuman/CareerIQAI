@@ -10,8 +10,7 @@
 
 require('dotenv').config();
 
-const app              = require('./src/app');
-const { testConnection, closePool } = require('./src/config/db');
+const app = require('./src/app');
 
 const PORT = process.env.PORT || 5000;
 const ENV  = process.env.NODE_ENV || 'development';
@@ -21,22 +20,13 @@ const server = app.listen(PORT, async () => {
   console.log(`\n🚀  CareerIQ AI API is running`);
   console.log(`   ➜  Environment : ${ENV}`);
   console.log(`   ➜  Listening on: http://localhost:${PORT}\n`);
-
-  // Test DB connection on startup
-  try {
-    await testConnection();
-  } catch (err) {
-    console.error('[DB] ✖  Could not connect to PostgreSQL:', err.message);
-    console.error('[DB]    Check your DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD in .env');
-  }
 });
 
 // ── Graceful shutdown ─────────────────────────────────────────────────────────
 const shutdown = (signal) => {
   console.log(`\n${signal} received – shutting down gracefully…`);
-  server.close(async () => {
+  server.close(() => {
     console.log('HTTP server closed.');
-    await closePool();
     process.exit(0);
   });
 };
